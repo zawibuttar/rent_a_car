@@ -103,6 +103,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         if booking.status != 'completed':
             raise serializers.ValidationError("You can only review completed bookings.")
 
+        # Use exists() instead of filter().exists() to avoid extra query
         if Review.objects.filter(booking=booking).exists():
             raise serializers.ValidationError("You have already reviewed this booking.")
         return data

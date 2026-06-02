@@ -52,8 +52,8 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'is_active', 'date_joined']
-        read_only_fields = ['id', 'is_active', 'date_joined']
+        fields = ['id', 'username', 'email', 'role', 'is_superuser', 'is_active', 'date_joined']
+        read_only_fields = ['id', 'is_superuser', 'is_active', 'date_joined']
 
 
 class CustomerProfileSerializer(serializers.ModelSerializer):

@@ -1,107 +1,440 @@
-<!-- templates/dashboards/owner_dashboard.html -->
 {% extends 'base.html' %}
-{% block title %}Owner Dashboard{% endblock %}
+{% block title %}Owner Dashboard — RentACar{% endblock %}
 
 {% block content %}
+<div class="dash-layout">
 
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Owner Dashboard</h1>
-    <p class="page-subtitle">Manage your fleet, watch booking requests, and grow your earnings.</p>
-  </div>
-  <div class="page-actions">
-    <button type="button" class="btn btn-primary" onclick="showAddCarForm()">+ Add New Car</button>
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sAvatar" style="background:var(--warning-light);color:var(--warning)"></div>
+      <div>
+        <div class="sidebar-name" id="sName"></div>
+        <span class="sidebar-role" style="background:var(--warning)">Owner</span>
+      </div>
+    </div>
+
+    <div class="sidebar-menu">
+      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">&#x1F4CA; Overview</button>
+      <button class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">&#x1F697; My Cars</button>
+      <button class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">&#x2795; Add New Car</button>
+      <button class="s-item" id="btn-requests" onclick="showTab('requests', this)">&#x1F4C5; Booking Requests</button>
+      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">&#x1F464; My Profile</button>
+      <button class="s-item" id="btn-password" onclick="showTab('password', this)">&#x1F512; Change Password</button>
+      <div class="s-divider"></div>
+      <button class="s-item danger" onclick="doLogout()">&#x1F6AA; Logout</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="dash-main">
+
+    <!-- ══ OVERVIEW TAB ══ -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="page-head">
+        <div>
+          <h1>Overview</h1>
+          <p id="oWelcome"></p>
+        </div>
+      </div>
+
+      <div class="stats-row" id="oStats">
+        <div class="loading"><span class="spinner"></span></div>
+      </div>
+
+      <!-- My cars preview -->
+      <div class="card">
+        <div class="card-head">
+          <h2>My Cars</h2>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('mycars', document.getElementById('btn-mycars'))">
+            View All &#8594;
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Car</th>
+                <th>Type</th>
+                <th>Price/day</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Available</th>
+              </tr>
+            </thead>
+            <tbody id="oCarsPreview">
+              <tr>
+                <td colspan="6">
+                  <div class="loading"><span class="spinner"></span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent requests preview -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Recent Booking Requests</h2>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('requests', document.getElementById('btn-requests'))">
+            View All &#8594;
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Car</th>
+                <th>Dates</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="oRequestsPreview">
+              <tr>
+                <td colspan="5">
+                  <div class="loading"><span class="spinner"></span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MY CARS TAB ══ -->
+    <div class="tab-panel" id="tab-mycars">
+      <div class="page-head">
+        <div>
+          <h1>My Cars</h1>
+          <p>Manage your listings</p>
+        </div>
+      </div>
+      <div class="cars-grid" id="myCarsGrid">
+        <div class="loading" style="grid-column:1/-1">
+          <span class="spinner spinner-lg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ADD CAR TAB ══ -->
+    <div class="tab-panel" id="tab-addcar">
+      <div class="page-head">
+        <div>
+          <h1>List a New Car</h1>
+          <p>Fill in details — admin will review before publishing</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Brand *</label>
+              <input class="form-control" type="text" id="cBrand" placeholder="e.g. Toyota" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model *</label>
+              <input class="form-control" type="text" id="cModel" placeholder="e.g. Corolla" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Year *</label>
+              <input class="form-control" type="number" id="cYear" placeholder="e.g. 2021" min="1990" max="2026" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Car Type *</label>
+              <select class="form-control" id="cType">
+                <option value="sedan">Sedan</option>
+                <option value="suv">SUV</option>
+                <option value="luxury">Luxury</option>
+                <option value="hatchback">Hatchback</option>
+                <option value="truck">Truck</option>
+                <option value="van">Van</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Price per Day ($) *</label>
+              <input class="form-control" type="number" id="cPrice" placeholder="e.g. 45" min="1" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location *</label>
+              <input class="form-control" type="text" id="cLocation" placeholder="e.g. Lahore, Pakistan" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" id="cDesc" rows="3"
+              placeholder="Describe your car — condition, features, fuel policy...">
+            </textarea>
+          </div>
+
+          <!-- Image upload -->
+          <div class="form-group">
+            <label class="form-label">Car Images</label>
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('cImages').click()">
+              <div style="font-size:28px;margin-bottom:6px">&#x1F4F7;</div>
+              <div style="font-size:13px;font-weight:500">
+                Click to upload car photos
+              </div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:4px">
+                JPG or PNG — you can select multiple
+              </div>
+            </div>
+            <input type="file" id="cImages" multiple accept="image/*" style="display:none"
+              onchange="previewImgs(this)" />
+            <div class="preview-grid" id="imgPreview"></div>
+          </div>
+
+          <div class="err-box" id="addCarErr"></div>
+
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-primary" id="addCarBtn" onclick="addCar()">
+              Submit
+            </button>
+            <button class="btn btn-ghost" onclick="showTab('mycars', document.getElementById('btn-mycars'))">
+              Cancel
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BOOKING REQUESTS TAB ══ -->
+    <div class="tab-panel" id="tab-requests">
+      <div class="page-head">
+        <div>
+          <h1>Booking Requests</h1>
+          <p>Approve or reject incoming requests</p>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <button class="ftab active" onclick="filterReqs('', this)">All</button>
+        <button class="ftab" onclick="filterReqs('pending', this)">Pending</button>
+        <button class="ftab" onclick="filterReqs('approved', this)">Approved</button>
+        <button class="ftab" onclick="filterReqs('completed', this)">Completed</button>
+        <button class="ftab" onclick="filterReqs('rejected', this)">Rejected</button>
+        <button class="ftab" onclick="filterReqs('cancelled', this)">Cancelled</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Customer</th>
+                <th>Car</th>
+                <th>Dates</th>
+                <th>Days</th>
+                <th>Total</th>
+                <th>Note</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reqsTable">
+              <tr>
+                <td colspan="9">
+                  <div class="loading"><span class="spinner"></span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PROFILE TAB ══ -->
+    <div class="tab-panel" id="tab-profile">
+      <div class="page-head">
+        <div>
+          <h1>My Profile</h1>
+          <p>Update your owner information</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start">
+
+        <div class="profile-card">
+          <div class="profile-cover" style="background:linear-gradient(135deg,#fef3c7,#fde68a)"></div>
+          <div class="profile-inner">
+            <div class="profile-av" id="oProfileAv" style="background:var(--warning-light);color:var(--warning)"></div>
+            <div class="profile-name" id="oProfileName"></div>
+            <div class="profile-email" id="oProfileEmail"></div>
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge badge-amber">Owner</span>
+              <span class="badge" id="verifiedBadge"></span>
+            </div>
+            <div class="profile-stats">
+              <div>
+                <div class="ps-val" id="osCars">—</div>
+                <div class="ps-lbl">Cars</div>
+              </div>
+              <div>
+                <div class="ps-val" id="osBookings">—</div>
+                <div class="ps-lbl">Bookings</div>
+              </div>
+              <div>
+                <div class="ps-val" id="osEarnings">—</div>
+                <div class="ps-lbl">Earned</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Edit Profile</h2>
+          </div>
+          <div class="card-body">
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input class="form-control" type="tel" id="oPh" placeholder="+92-300-0000000" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">National ID</label>
+                <input class="form-control" type="text" id="oNid" placeholder="35201-1234567-8" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Address</label>
+              <textarea class="form-control" id="oAddr" placeholder="Your address..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Profile Picture</label>
+              <input class="form-control" type="file" id="oPic" accept="image/*" />
+              <p class="form-hint">JPG or PNG, max 5MB</p>
+            </div>
+
+            <div class="err-box" id="oProfileErr"></div>
+
+            <button class="btn btn-primary" onclick="saveOwnerProfile()">
+              Save Changes
+            </button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CHANGE PASSWORD TAB ══ -->
+    <div class="tab-panel" id="tab-password">
+      <div class="page-head">
+        <div>
+          <h1>Change Password</h1>
+          <p>Update your account password</p>
+        </div>
+      </div>
+      <div class="card" style="max-width:440px">
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input class="form-control" type="password" id="oOldPwd" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input class="form-control" type="password" id="oNewPwd" placeholder="Min 8 characters" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input class="form-control" type="password" id="oNewPwd2" />
+          </div>
+          <div class="err-box" id="oPwdErr"></div>
+          <button class="btn btn-primary" onclick="ownerChangePwd()">
+            Update Password
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- Stats -->
-<div class="stats-row">
-  <div class="stat-card">
-    <div class="stat-number" id="totalCars">—</div>
-    <div class="stat-label">My Cars</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number" id="pendingRequests">—</div>
-    <div class="stat-label">Pending Requests</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number" id="totalEarnings">—</div>
-    <div class="stat-label">Total Earnings</div>
-  </div>
-</div>
+<!-- Edit Car Modal -->
+<div class="modal-bg" id="editCarModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h3>&#x270F; Edit Car</h3>
+      <button class="btn-close-modal" onclick="closeModal('editCarModal')">
+        &#x2715;
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editCarId" />
 
-<!-- Add Car Form (hidden by default) -->
-<div id="addCarForm" class="card" style="display:none;margin-bottom:1.5rem">
-  <h2 style="margin-bottom:1rem">List a New Car</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-    <div class="form-group">
-      <label>Brand</label>
-      <input type="text" id="cBrand" placeholder="e.g. Toyota"/>
-    </div>
-    <div class="form-group">
-      <label>Model</label>
-      <input type="text" id="cModel" placeholder="e.g. Corolla"/>
-    </div>
-    <div class="form-group">
-      <label>Year</label>
-      <input type="number" id="cYear" placeholder="e.g. 2021" min="1990" max="2026"/>
-    </div>
-    <div class="form-group">
-      <label>Type</label>
-      <select id="cType">
-        <option value="sedan">Sedan</option>
-        <option value="suv">SUV</option>
-        <option value="luxury">Luxury</option>
-        <option value="hatchback">Hatchback</option>
-        <option value="truck">Truck</option>
-        <option value="van">Van</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Price per day (PKR)</label>
-      <input type="number" id="cPrice" placeholder="e.g. 45.00" step="0.01"/>
-    </div>
-    <div class="form-group">
-      <label>Location</label>
-      <input type="text" id="cLocation" placeholder="e.g. Lahore"/>
-    </div>
-  </div>
-  <div class="form-group">
-    <label>Description</label>
-    <textarea id="cDescription" rows="3" placeholder="Describe your car..."></textarea>
-  </div>
-  <div class="form-group">
-    <label>Upload Images</label>
-    <input type="file" id="cImages" accept="image/*" multiple />
-    <small style="color:var(--text-muted);font-size:.85rem">You can upload one or more images of the car.</small>
-  </div>
-  <div id="carFormError" class="form-error" style="margin-bottom:.5rem"></div>
-  <div style="display:flex;gap:.75rem">
-    <button type="button" class="btn btn-primary" onclick="addCar()">Submit for Approval</button>
-    <button type="button" class="btn btn-gray"    onclick="hideAddCarForm()">Cancel</button>
-  </div>
-</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Brand</label>
+          <input class="form-control" type="text" id="eBrand" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model</label>
+          <input class="form-control" type="text" id="eModel" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Year</label>
+          <input class="form-control" type="number" id="eYear" min="1990" max="2026" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price per Day ($)</label>
+          <input class="form-control" type="number" id="ePrice" step="0.01" />
+        </div>
+      </div>
 
-<!-- My Cars -->
-<div class="card" style="margin-bottom:1.5rem">
-  <h2 style="margin-bottom:1rem">My Cars</h2>
-  <div id="myCarsGrid" class="car-grid">
-    <p><span class="spinner"></span> Loading...</p>
-  </div>
-</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Car Type</label>
+          <select class="form-control" id="eType">
+            <option value="sedan">Sedan</option>
+            <option value="suv">SUV</option>
+            <option value="luxury">Luxury</option>
+            <option value="hatchback">Hatchback</option>
+            <option value="truck">Truck</option>
+            <option value="van">Van</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input class="form-control" type="text" id="eLocation" />
+        </div>
+      </div>
 
-<!-- Booking Requests -->
-<div class="card">
-  <h2 style="margin-bottom:1rem">Booking Requests</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr><th>#</th><th>Customer</th><th>Car</th><th>Dates</th><th>Cost</th><th>Status</th><th>Action</th></tr>
-      </thead>
-      <tbody id="bookingRequests">
-        <tr><td colspan="7"><span class="spinner"></span></td></tr>
-      </tbody>
-    </table>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" id="eDesc" rows="3"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="eAvailable" />
+          Mark as Available for Rent
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Upload More Images</label>
+        <input class="form-control" type="file" id="eImages" multiple accept="image/*" />
+      </div>
+
+      <div class="err-box" id="editCarErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('editCarModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCarEdit()">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -109,199 +442,520 @@
 
 {% block scripts %}
 <script>
-  if (!API.isLoggedIn()) window.location.href = '/login/';
-  if (API.getRole() !== 'owner') window.location.href = '/';
+  /* ── Guard ──────────────────────────── */
+  if (!API.loggedIn() || API.role() !== 'owner') {
+    window.location.href = '/login/';
+  }
 
-  const STATUS_BADGE = {
-    pending:   'badge-amber',
-    approved:  'badge-green',
-    rejected:  'badge-red',
-    cancelled: 'badge-gray',
-    completed: 'badge-blue',
-  };
+  const user = API.getUser();
+  let allRequests = [];
+  let selectedFiles = [];
 
-  async function loadDashboard() {
+  /* ── Sidebar init ───────────────────── */
+  document.getElementById('sName').textContent = user ? user.username : '';
+  document.getElementById('sAvatar').textContent = initials(user ? user.username : '');
+  document.getElementById('oWelcome').textContent = 'Welcome back, ' + (user ? user.username : '') + '!';
+  document.getElementById('oProfileName').textContent = user ? user.username : '';
+  document.getElementById('oProfileEmail').textContent = user ? user.email : '';
+  document.getElementById('oProfileAv').textContent = initials(user ? user.username : '');
+
+  /* ── Tab switching ──────────────────── */
+  function showTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(function (p) {
+      p.classList.remove('active');
+    });
+    document.querySelectorAll('.s-item').forEach(function (b) {
+      b.classList.remove('active');
+    });
+    var panel = document.getElementById('tab-' + name);
+    if (panel) panel.classList.add('active');
+    if (btn) btn.classList.add('active');
+
+    if (name === 'overview') loadOverview();
+    if (name === 'mycars') loadMyCars();
+    if (name === 'requests') loadRequests();
+    if (name === 'profile') loadOwnerProfile();
+    if (name === 'addcar') resetAddForm();
+  }
+
+  /* ══ OVERVIEW ═══════════════════════ */
+  async function loadOverview() {
     try {
-      // Load profile for earnings
-      const profile = await API.get('/api/accounts/profile/owner/');
-      document.getElementById('totalEarnings').textContent =
-        'PKR ' + parseFloat(profile.total_earnings).toFixed(2);
+      var results = await Promise.all([
+        API.get('/api/cars/my-cars/'),
+        API.get('/api/bookings/owner/'),
+        API.get('/api/accounts/profile/owner/')
+      ]);
+      var cars = results[0].results || results[0];
+      var bookings = results[1].results || results[1];
+      var profile = results[2];
 
-      // Load cars
-      const cars = await API.get('/api/cars/my-cars/');
-      document.getElementById('totalCars').textContent = cars.length;
-      renderMyCars(cars);
+      var pending = bookings.filter(function (b) { return b.status === 'pending'; }).length;
+      var active = bookings.filter(function (b) { return b.status === 'approved'; }).length;
+      var earnings = parseFloat(profile.total_earnings || 0).toFixed(2);
 
-      // Load bookings
-      const bookings = await API.get('/api/bookings/owner/');
-      const pending = bookings.filter(b => b.status === 'pending');
-      document.getElementById('pendingRequests').textContent = pending.length;
-      renderBookingRequests(bookings);
+      /* update profile sidebar stats */
+      document.getElementById('osCars').textContent = cars.length;
+      document.getElementById('osBookings').textContent = bookings.length;
+      document.getElementById('osEarnings').textContent = '$' + earnings;
+
+      /* stat cards */
+      document.getElementById('oStats').innerHTML =
+        statCard('&#x1F697;', cars.length, 'My Cars', '#dbeafe', '#1d4ed8') +
+        statCard('&#x23F3;', pending, 'Pending Requests', '#fef3c7', '#92400e') +
+        statCard('&#x2705;', active, 'Active Rentals', '#dcfce7', '#15803d') +
+        statCard('&#x1F4B0;', '$' + earnings, 'Total Earnings', '#dcfce7', '#15803d');
+
+      /* cars preview table */
+      if (!cars.length) {
+        document.getElementById('oCarsPreview').innerHTML =
+          '<tr><td colspan="6"><div class="empty">'
+          + '<h3>No cars listed yet</h3>'
+          + '<p>Click "Add Car" to list your first car</p>'
+          + '</div></td></tr>';
+      } else {
+        document.getElementById('oCarsPreview').innerHTML =
+          cars.slice(0, 4).map(function (c) {
+            return '<tr>'
+              + '<td><strong>' + c.brand + ' ' + c.model + '</strong>'
+              + '<div style="font-size:11px;color:var(--text-2)">' + c.year + '</div></td>'
+              + '<td><span class="badge badge-blue">' + c.car_type + '</span></td>'
+              + '<td style="font-weight:700;color:var(--primary)">$'
+              + parseFloat(c.price_per_day).toFixed(2) + '</td>'
+              + '<td style="font-size:12px">&#x1F4CD; ' + c.location + '</td>'
+              + '<td>'
+              + (c.is_approved
+                ? '<span class="badge badge-green">Approved</span>'
+                : '<span class="badge badge-amber">Pending</span>')
+              + '</td>'
+              + '<td>'
+              + (c.is_available
+                ? '<span class="badge badge-blue">Available</span>'
+                : '<span class="badge badge-gray">Unavailable</span>')
+              + '</td>'
+              + '</tr>';
+          }).join('');
+      }
+
+      /* requests preview */
+      if (!bookings.length) {
+        document.getElementById('oRequestsPreview').innerHTML =
+          '<tr><td colspan="5"><div class="empty">'
+          + '<h3>No booking requests yet</h3></div></td></tr>';
+      } else {
+        document.getElementById('oRequestsPreview').innerHTML =
+          bookings.slice(0, 5).map(function (b) {
+            return '<tr>'
+              + '<td><strong>' + b.customer.username + '</strong></td>'
+              + '<td>' + b.car.brand + ' ' + b.car.model + '</td>'
+              + '<td style="font-size:12px">'
+              + b.start_date + ' &#8594; ' + b.end_date + '</td>'
+              + '<td style="font-weight:700;color:var(--primary)">$'
+              + parseFloat(b.total_cost).toFixed(2) + '</td>'
+              + '<td>' + statusBadge(b.status) + '</td>'
+              + '</tr>';
+          }).join('');
+      }
+
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  function statCard(icon, val, lbl, bg, color) {
+    return '<div class="stat-card">'
+      + '<div class="stat-icon" style="background:' + bg + ';color:' + color + '">'
+      + icon + '</div>'
+      + '<div class="stat-val">' + val + '</div>'
+      + '<div class="stat-lbl">' + lbl + '</div>'
+      + '</div>';
+  }
+
+  /* ══ MY CARS ════════════════════════ */
+  async function loadMyCars() {
+    var grid = document.getElementById('myCarsGrid');
+    grid.innerHTML = '<div class="loading" style="grid-column:1/-1">'
+      + '<span class="spinner spinner-lg"></span></div>';
+
+    try {
+      var res = await API.get('/api/cars/my-cars/');
+      var cars = res.results || res;
+
+      if (!cars.length) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1">'
+          + '<h3>No cars listed yet</h3>'
+          + '<p>Click "Add New Car" to get started</p>'
+          + '</div>';
+        return;
+      }
+
+      grid.innerHTML = cars.map(function (car) {
+        var img = car.images && car.images.length
+          ? car.images.find(function (i) { return i.is_primary; }) || car.images[0]
+          : null;
+
+        var thumb = img
+          ? '<img src="' + img.image + '" loading="lazy"/>'
+          : '<span style="font-size:36px">&#x1F697;</span>';
+
+        return '<div class="car-card" style="cursor:default">'
+          + '<div class="car-thumb">' + thumb + '</div>'
+          + '<div class="car-body">'
+          + '<div class="car-title">' + car.brand + ' ' + car.model + ' (' + car.year + ')</div>'
+          + '<div class="car-badges">'
+          + (car.is_approved
+            ? '<span class="badge badge-green">&#x2714; Approved</span>'
+            : '<span class="badge badge-amber">&#x23F3; Pending Approval</span>')
+          + '&nbsp;'
+          + (car.is_available
+            ? '<span class="badge badge-blue">Available</span>'
+            : '<span class="badge badge-gray">Unavailable</span>')
+          + '</div>'
+          + '<div class="car-loc">&#x1F4CD; ' + car.location + '</div>'
+          + '<div class="car-footer">'
+          + '<div class="car-price">$'
+          + parseFloat(car.price_per_day).toFixed(2)
+          + '<span>/day</span></div>'
+          + '</div>'
+          + '<div style="display:flex;gap:6px;margin-top:10px">'
+          + '<button class="btn btn-outline btn-sm" style="flex:1" '
+          + 'onclick=\'openEditCar(' + JSON.stringify(car) + ')\'>&#x270F; Edit</button>'
+          + '<button class="btn btn-danger btn-sm" '
+          + 'onclick="deleteCar(' + car.id + ')">&#x1F5D1;</button>'
+          + '</div>'
+          + '</div>'
+          + '</div>';
+      }).join('');
 
     } catch (err) {
-      showFlash(err.message, 'error');
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1">'
+        + '<h3>Failed to load cars</h3><p>' + err.message + '</p></div>';
     }
   }
 
-  function renderMyCars(cars) {
-    if (!cars.length) {
-      document.getElementById('myCarsGrid').innerHTML =
-        `<div class="empty-state"><h3>No cars listed yet</h3><p>Click "Add New Car" to get started.</p></div>`;
-      return;
-    }
+  /* ══ ADD CAR ════════════════════════ */
+  function resetAddForm() {
+    ['cBrand', 'cModel', 'cYear', 'cPrice', 'cLocation', 'cDesc'].forEach(function (id) {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('cType').value = 'sedan';
+    document.getElementById('imgPreview').innerHTML = '';
+    document.getElementById('addCarErr').style.display = 'none';
+    selectedFiles = [];
+  }
 
-    document.getElementById('myCarsGrid').innerHTML = cars.map(car => {
-      const img = car.images.find(i => i.is_primary) || car.images[0];
-      return `
-        <div class="car-card">
-          <img src="${img ? img.image : '/static/images/no-image.svg'}"
-               alt="${car.brand}" style="height:160px;object-fit:cover;width:100%"
-               onerror="this.onerror=null; this.src='/static/images/no-image.svg'"/>
-          <div class="car-card-body">
-            <h3>${car.brand} ${car.model} (${car.year})</h3>
-            <div class="car-meta">
-              <span class="badge ${car.is_approved ? 'badge-green' : 'badge-amber'}">
-                ${car.is_approved ? 'Approved' : 'Pending Approval'}
-              </span>
-              <span class="badge ${car.is_available ? 'badge-blue' : 'badge-gray'}">
-                ${car.is_available ? 'Available' : 'Unavailable'}
-              </span>
-            </div>
-            <div class="car-price">PKR ${car.price_per_day}/day</div>
-            <div style="display:flex;gap:.5rem;margin-top:.5rem">
-              <button class="btn btn-outline" style="flex:1;font-size:.8rem"
-                onclick="toggleAvailability(${car.id}, ${car.is_available})">
-                ${car.is_available ? 'Mark Unavailable' : 'Mark Available'}
-              </button>
-              <button class="btn btn-danger" style="font-size:.8rem;padding:.4rem .75rem"
-                onclick="deleteCar(${car.id})">Delete</button>
-            </div>
-          </div>
-        </div>`;
+  function previewImgs(input) {
+    selectedFiles = Array.from(input.files);
+    var grid = document.getElementById('imgPreview');
+    grid.innerHTML = selectedFiles.map(function (f, i) {
+      var url = URL.createObjectURL(f);
+      return '<div class="preview-item">'
+        + '<img src="' + url + '"/>'
+        + '<button class="preview-rm" onclick="removeImg(' + i + ')">&#x2715;</button>'
+        + '</div>';
     }).join('');
   }
 
-  function renderBookingRequests(bookings) {
-    if (!bookings.length) {
-      document.getElementById('bookingRequests').innerHTML =
-        `<tr><td colspan="7" class="empty-state"><h3>No booking requests yet</h3></td></tr>`;
-      return;
-    }
-
-    document.getElementById('bookingRequests').innerHTML = bookings.map(b => `
-      <tr>
-        <td>#${b.id}</td>
-        <td>${b.customer.username}</td>
-        <td>${b.car.brand} ${b.car.model}</td>
-        <td>${b.start_date} → ${b.end_date}</td>
-        <td>$${b.total_cost}</td>
-        <td><span class="badge ${STATUS_BADGE[b.status]}">${b.status}</span></td>
-        <td>
-          ${b.status === 'pending' ? `
-            <button class="btn btn-success" style="font-size:.8rem;padding:.3rem .6rem;margin-right:.25rem"
-              onclick="updateBooking(${b.id}, 'approved')">Approve</button>
-            <button class="btn btn-danger"  style="font-size:.8rem;padding:.3rem .6rem"
-              onclick="updateBooking(${b.id}, 'rejected')">Reject</button>
-          ` : ''}
-          ${b.status === 'approved' ? `
-            <button class="btn btn-primary" style="font-size:.8rem;padding:.3rem .6rem"
-              onclick="completeBooking(${b.id})">Mark Complete</button>
-          ` : ''}
-          ${!['pending','approved'].includes(b.status) ? '—' : ''}
-        </td>
-      </tr>
-    `).join('');
+  function removeImg(i) {
+    selectedFiles.splice(i, 1);
+    var dt = new DataTransfer();
+    selectedFiles.forEach(function (f) { dt.items.add(f); });
+    document.getElementById('cImages').files = dt.files;
+    previewImgs({ files: dt.files });
   }
 
   async function addCar() {
-    const payload = {
-      brand:         document.getElementById('cBrand').value.trim(),
-      model:         document.getElementById('cModel').value.trim(),
-      year:          parseInt(document.getElementById('cYear').value),
-      car_type:      document.getElementById('cType').value,
-      price_per_day: parseFloat(document.getElementById('cPrice').value),
-      location:      document.getElementById('cLocation').value.trim(),
-      description:   document.getElementById('cDescription').value.trim(),
-    };
+    var brand = document.getElementById('cBrand').value.trim();
+    var model = document.getElementById('cModel').value.trim();
+    var year = parseInt(document.getElementById('cYear').value);
+    var carType = document.getElementById('cType').value;
+    var price = parseFloat(document.getElementById('cPrice').value);
+    var location = document.getElementById('cLocation').value.trim();
+    var desc = document.getElementById('cDesc').value.trim();
+    var errBox = document.getElementById('addCarErr');
+    var btn = document.getElementById('addCarBtn');
 
-    const imagesInput = document.getElementById('cImages');
-    const errEl = document.getElementById('carFormError');
+    errBox.style.display = 'none';
 
-    if (!payload.brand || !payload.model || !payload.year || !payload.price_per_day || !payload.location) {
-      errEl.textContent = 'Please fill all required fields.';
+    if (!brand || !model || !year || !price || !location) {
+      errBox.textContent = 'Please fill all required fields marked with *.';
+      errBox.style.display = 'block';
       return;
     }
 
-    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
 
     try {
-      const carResponse = await API.post('/api/cars/create/', payload);
-      const carId = carResponse.car.id;
+      var resp = await API.post('/api/cars/create/', {
+        brand: brand,
+        model: model,
+        year: year,
+        car_type: carType,
+        price_per_day: price,
+        location: location,
+        description: desc
+      });
 
-      if (imagesInput && imagesInput.files.length) {
-        const formData = new FormData();
-        for (const file of imagesInput.files) {
-          formData.append('images', file);
-        }
-        await API.upload(`/api/cars/${carId}/images/`, formData);
+      /* upload images if any */
+      var carId = resp.car ? resp.car.id : resp.id;
+      if (selectedFiles.length && carId) {
+        var fd = new FormData();
+        selectedFiles.forEach(function (f) { fd.append('images', f); });
+        await API.upload('/api/cars/' + carId + '/images/', fd);
       }
 
-      showFlash('Car submitted for admin approval!', 'success');
-      hideAddCarForm();
-      loadDashboard();
+      toast('Car submitted for admin approval!', 'success');
+      resetAddForm();
+      showTab('mycars', document.getElementById('btn-mycars'));
+
     } catch (err) {
-      errEl.textContent = err.message;
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Submit for Approval';
     }
   }
 
-  async function toggleAvailability(carId, current) {
+  /* ══ EDIT CAR ═══════════════════════ */
+  function openEditCar(car) {
+    document.getElementById('editCarId').value = car.id;
+    document.getElementById('eBrand').value = car.brand;
+    document.getElementById('eModel').value = car.model;
+    document.getElementById('eYear').value = car.year;
+    document.getElementById('ePrice').value = car.price_per_day;
+    document.getElementById('eType').value = car.car_type;
+    document.getElementById('eLocation').value = car.location;
+    document.getElementById('eDesc').value = car.description || '';
+    document.getElementById('eAvailable').checked = car.is_available;
+    document.getElementById('editCarErr').style.display = 'none';
+    openModal('editCarModal');
+  }
+
+  async function saveCarEdit() {
+    var id = document.getElementById('editCarId').value;
+    var errBox = document.getElementById('editCarErr');
+    errBox.style.display = 'none';
+
     try {
-      await API.patch(`/api/cars/${carId}/manage/`, { is_available: !current });
-      showFlash('Car availability updated.', 'success');
-      loadDashboard();
+      await API.patch('/api/cars/' + id + '/manage/', {
+        brand: document.getElementById('eBrand').value,
+        model: document.getElementById('eModel').value,
+        year: parseInt(document.getElementById('eYear').value),
+        price_per_day: parseFloat(document.getElementById('ePrice').value),
+        car_type: document.getElementById('eType').value,
+        location: document.getElementById('eLocation').value,
+        description: document.getElementById('eDesc').value,
+        is_available: document.getElementById('eAvailable').checked
+      });
+
+      /* upload extra images if selected */
+      var newImgs = document.getElementById('eImages').files;
+      if (newImgs.length) {
+        var fd = new FormData();
+        Array.from(newImgs).forEach(function (f) { fd.append('images', f); });
+        await API.upload('/api/cars/' + id + '/images/', fd);
+      }
+
+      closeModal('editCarModal');
+      toast('Car updated. Re-submitted for admin approval.', 'success');
+      loadMyCars();
+      loadOverview();
+
     } catch (err) {
-      showFlash(err.message, 'error');
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
     }
   }
 
-  async function deleteCar(carId) {
-    if (!confirm('Delete this car listing? This cannot be undone.')) return;
+  async function deleteCar(id) {
+    if (!confirm('Delete this car? This cannot be undone.')) return;
     try {
-      await API.delete(`/api/cars/${carId}/manage/`);
-      showFlash('Car deleted.', 'success');
-      loadDashboard();
-    } catch (err) {
-      showFlash(err.message, 'error');
-    }
+      await API.del('/api/cars/' + id + '/manage/');
+      toast('Car deleted.', 'success');
+      loadMyCars();
+      loadOverview();
+    } catch (err) { toast(err.message, 'error'); }
   }
 
-  async function updateBooking(id, newStatus) {
+  /* ══ BOOKING REQUESTS ═══════════════ */
+  async function loadRequests() {
     try {
-      await API.patch(`/api/bookings/${id}/manage/`, { status: newStatus });
-      showFlash(`Booking ${newStatus}.`, 'success');
-      loadDashboard();
-    } catch (err) {
-      showFlash(err.message, 'error');
+      var res = await API.get('/api/bookings/owner/');
+      allRequests = res.results || res;
+      renderRequests(allRequests);
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  function filterReqs(status, btn) {
+    document.querySelectorAll('.ftab').forEach(function (b) {
+      b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+    var list = status
+      ? allRequests.filter(function (b) { return b.status === status; })
+      : allRequests;
+    renderRequests(list);
+  }
+
+  function renderRequests(list) {
+    var tbody = document.getElementById('reqsTable');
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="9">'
+        + '<div class="empty"><h3>No booking requests found</h3></div>'
+        + '</td></tr>';
+      return;
     }
+
+    tbody.innerHTML = list.map(function (b) {
+      var days = Math.round(
+        (new Date(b.end_date) - new Date(b.start_date)) / 86400000
+      );
+      var actions = '';
+
+      if (b.status === 'pending') {
+        actions =
+          '<div style="display:flex;gap:5px">'
+          + '<button class="btn btn-success btn-sm" '
+          + 'onclick="respondBooking(' + b.id + ',\'approved\')">&#x2714; Approve</button>'
+          + '<button class="btn btn-danger btn-sm" '
+          + 'onclick="respondBooking(' + b.id + ',\'rejected\')">&#x2718; Reject</button>'
+          + '</div>';
+      } else if (b.status === 'approved') {
+        actions =
+          '<button class="btn btn-primary btn-sm" '
+          + 'onclick="completeBooking(' + b.id + ')">Mark Complete</button>';
+      } else {
+        actions = '<span style="color:var(--text-3);font-size:12px">—</span>';
+      }
+
+      return '<tr>'
+        + '<td style="color:var(--text-3);font-size:12px">#' + b.id + '</td>'
+        + '<td>'
+        + '<strong>' + b.customer.username + '</strong>'
+        + '<div style="font-size:11px;color:var(--text-2)">'
+        + (b.customer.email || '') + '</div>'
+        + '</td>'
+        + '<td>' + b.car.brand + ' ' + b.car.model + '</td>'
+        + '<td style="font-size:12px">'
+        + b.start_date + '<br/>&#8594; ' + b.end_date
+        + '</td>'
+        + '<td style="font-size:12px">' + days + 'd</td>'
+        + '<td style="font-weight:700;color:var(--primary)">$'
+        + parseFloat(b.total_cost).toFixed(2) + '</td>'
+        + '<td style="font-size:12px;color:var(--text-2);max-width:100px">'
+        + (b.note || '—') + '</td>'
+        + '<td>' + statusBadge(b.status) + '</td>'
+        + '<td>' + actions + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  async function respondBooking(id, status) {
+    try {
+      await API.patch('/api/bookings/' + id + '/manage/', { status: status });
+      toast('Booking ' + status + '.', 'success');
+      loadRequests();
+      loadOverview();
+    } catch (err) { toast(err.message, 'error'); }
   }
 
   async function completeBooking(id) {
+    if (!confirm('Mark this booking as completed?')) return;
     try {
-      await API.patch(`/api/bookings/${id}/complete/`, {});
-      showFlash('Booking marked as completed. Earnings updated!', 'success');
-      loadDashboard();
+      await API.patch('/api/bookings/' + id + '/complete/', {});
+      toast('Booking completed. Earnings updated!', 'success');
+      loadRequests();
+      loadOverview();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  /* ══ OWNER PROFILE ══════════════════ */
+  async function loadOwnerProfile() {
+    try {
+      var p = await API.get('/api/accounts/profile/owner/');
+      document.getElementById('oPh').value = p.phone_number || '';
+      document.getElementById('oNid').value = p.national_id_number || '';
+      document.getElementById('oAddr').value = p.address || '';
+
+      var vb = document.getElementById('verifiedBadge');
+      if (p.is_verified) {
+        vb.textContent = 'Verified';
+        vb.className = 'badge badge-green';
+      } else {
+        vb.textContent = 'Not Verified';
+        vb.className = 'badge badge-red';
+      }
+
+      if (p.profile_picture) {
+        document.getElementById('oProfileAv').innerHTML =
+          '<img src="' + p.profile_picture + '" '
+          + 'style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
+      }
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  async function saveOwnerProfile() {
+    var fd = new FormData();
+    fd.append('phone_number', document.getElementById('oPh').value);
+    fd.append('national_id_number', document.getElementById('oNid').value);
+    fd.append('address', document.getElementById('oAddr').value);
+
+    var pic = document.getElementById('oPic').files[0];
+    if (pic) fd.append('profile_picture', pic);
+
+    var errBox = document.getElementById('oProfileErr');
+    errBox.style.display = 'none';
+
+    try {
+      await API.uploadPatch('/api/accounts/profile/owner/', fd);
+      toast('Profile updated!', 'success');
+      loadOwnerProfile();
     } catch (err) {
-      showFlash(err.message, 'error');
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
     }
   }
 
-  function showAddCarForm()  {
-    const form = document.getElementById('addCarForm');
-    form.style.display = 'block';
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  function hideAddCarForm()  { document.getElementById('addCarForm').style.display = 'none'; }
+  /* ══ CHANGE PASSWORD ════════════════ */
+  async function ownerChangePwd() {
+    var old = document.getElementById('oOldPwd').value;
+    var n1 = document.getElementById('oNewPwd').value;
+    var n2 = document.getElementById('oNewPwd2').value;
+    var errBox = document.getElementById('oPwdErr');
+    errBox.style.display = 'none';
 
-  loadDashboard();
+    if (!old || !n1 || !n2) {
+      errBox.textContent = 'Please fill in all fields.';
+      errBox.style.display = 'block'; return;
+    }
+    if (n1 !== n2) {
+      errBox.textContent = 'New passwords do not match.';
+      errBox.style.display = 'block'; return;
+    }
+    if (n1.length < 8) {
+      errBox.textContent = 'Password must be at least 8 characters.';
+      errBox.style.display = 'block'; return;
+    }
+
+    try {
+      await API.post('/api/accounts/change-password/', {
+        old_password: old,
+        new_password: n1,
+        new_password2: n2
+      });
+      toast('Password changed. Please log in again.', 'success');
+      setTimeout(function () {
+        API.clear();
+        window.location.href = '/login/';
+      }, 1500);
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    }
+  }
+
+  /* ── Boot ───────────────────────────── */
+  loadOverview();
 </script>
 {% endblock %}

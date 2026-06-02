@@ -1,91 +1,135 @@
-<!-- templates/accounts/register.html -->
 {% extends 'base.html' %}
-{% block title %}Create Account{% endblock %}
+{% block title %}Register — RentACar{% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-box">
-    <h2>Create your account</h2>
+<div class="auth-page">
+  <div class="auth-box" style="max-width:500px">
 
-    <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="username" placeholder="Choose a username"/>
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="email" placeholder="your@email.com"/>
-    </div>
-    <div class="form-group">
-      <label>I want to</label>
-      <select id="role">
-        <option value="customer">Rent a car (Customer)</option>
-        <option value="owner">List my car (Owner)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="password" placeholder="Min 8 characters"/>
-    </div>
-    <div class="form-group">
-      <label>Confirm Password</label>
-      <input type="password" id="password2" placeholder="Repeat your password"/>
+    <h1>Create your account</h1>
+    <p class="sub">Join as a customer or list your car as an owner</p>
+
+    <!-- Role selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div id="roleCustomer" class="role-card active" onclick="selectRole('customer')">
+        <div style="font-size:24px;margin-bottom:6px">&#x1F464;</div>
+        <div style="font-weight:600;font-size:13px">Customer</div>
+        <div style="font-size:11px;color:var(--text-2);margin-top:2px">I want to rent cars</div>
+      </div>
+      <div id="roleOwner" class="role-card" onclick="selectRole('owner')">
+        <div style="font-size:24px;margin-bottom:6px">&#x1F697;</div>
+        <div style="font-weight:600;font-size:13px">Car Owner</div>
+        <div style="font-size:11px;color:var(--text-2);margin-top:2px">I want to list my car</div>
+      </div>
     </div>
 
-    <div id="regError" class="form-error" style="margin-bottom:.75rem;"></div>
+    <input type="hidden" id="role" value="customer"/>
 
-    <button class="btn btn-primary" style="width:100%" onclick="doRegister()" id="regBtn">
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-control" type="text" id="username" placeholder="Choose a username"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" id="email" placeholder="your@email.com"/>
+      </div>
+    </div>
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" id="password" placeholder="Min 8 characters"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input class="form-control" type="password" id="password2" placeholder="Repeat password"/>
+      </div>
+    </div>
+
+    <div class="err-box" id="regErr"></div>
+
+    <button class="btn btn-primary btn-block btn-lg" id="regBtn" onclick="doRegister()">
       Create Account
     </button>
 
-    <p class="auth-note">
-      Already have an account? <a href="/login/">Login here</a>
-    </p>
+    <div class="footer">
+      Already have an account? <a href="/login/">Sign in</a>
+    </div>
+
   </div>
 </div>
+
+<style>
+.role-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--white);
+}
+.role-card:hover  { border-color: var(--primary); }
+.role-card.active { border-color: var(--primary); background: var(--primary-light); }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function doRegister() {
-    const username  = document.getElementById('username').value.trim();
-    const email     = document.getElementById('email').value.trim();
-    const role      = document.getElementById('role').value;
-    const password  = document.getElementById('password').value;
-    const password2 = document.getElementById('password2').value;
-    const btn       = document.getElementById('regBtn');
-    const errEl     = document.getElementById('regError');
+function selectRole(role) {
+  document.getElementById('role').value = role;
+  document.getElementById('roleCustomer').classList.toggle('active', role === 'customer');
+  document.getElementById('roleOwner').classList.toggle('active',   role === 'owner');
+}
 
-    if (!username || !email || !password || !password2) {
-      errEl.textContent = 'Please fill in all fields.';
-      return;
-    }
+async function doRegister() {
+  const username  = document.getElementById('username').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const role      = document.getElementById('role').value;
+  const password  = document.getElementById('password').value;
+  const password2 = document.getElementById('password2').value;
+  const errBox    = document.getElementById('regErr');
+  const btn       = document.getElementById('regBtn');
 
-    if (password !== password2) {
-      errEl.textContent = 'Passwords do not match.';
-      return;
-    }
+  errBox.style.display = 'none';
 
-    btn.disabled      = true;
-    btn.innerHTML     = '<span class="spinner"></span> Creating account...';
-    errEl.textContent = '';
-
-    try {
-      const data = await API.post('/api/accounts/register/', {
-        username, email, role, password, password2
-      });
-      API.saveSession(data.token, data.user);
-      showFlash('Account created! Redirecting...', 'success');
-
-      setTimeout(() => {
-        if (role === 'owner')    window.location.href = '/dashboard/owner/';
-        else window.location.href = '/dashboard/customer/';
-      }, 800);
-
-    } catch (err) {
-      errEl.textContent = err.message;
-      btn.disabled  = false;
-      btn.innerHTML = 'Create Account';
-    }
+  if (!username || !email || !password || !password2) {
+    errBox.textContent   = 'Please fill in all fields.';
+    errBox.style.display = 'block';
+    return;
   }
+  if (password !== password2) {
+    errBox.textContent   = 'Passwords do not match.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if (password.length < 8) {
+    errBox.textContent   = 'Password must be at least 8 characters.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Creating account...';
+
+  try {
+    const data = await API.post('/api/accounts/register/', {
+      username, email, role, password, password2
+    });
+    API.save(data.token, data.user);
+    toast('Account created successfully!', 'success');
+
+    setTimeout(function() {
+      if (role === 'owner') window.location.href = '/dashboard/owner/';
+      else                  window.location.href = '/dashboard/customer/';
+    }, 600);
+
+  } catch(err) {
+    errBox.textContent   = err.message;
+    errBox.style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = 'Create Account';
+  }
+}
 </script>
 {% endblock %}

@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
 from accounts.permissions import IsCustomer, IsOwner, IsPlatformAdmin
+from rentacar.caching import CacheHeadersMixin
 
 # Create your views here.
 
@@ -24,9 +25,11 @@ class BookingCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MyBookingsView(generics.ListAPIView):
+class MyBookingsView(CacheHeadersMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
+    pagination_class   = None
+    cache_timeout = 300  # Cache for 5 minutes (user-specific data)
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -70,9 +73,11 @@ class CancelBookingView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class OwnerBookingsView(generics.ListAPIView):
+class OwnerBookingsView(CacheHeadersMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+    pagination_class   = None
+    cache_timeout = 300  # Cache for 5 minutes
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -123,7 +128,9 @@ class CompleteBookingView(APIView):
 
         booking.status = 'completed'
         booking.save()
-        owner_profile = request.user.owner_profile
+        # Fetch owner_profile directly to avoid N+1 when user has many profiles
+        from accounts.models import OwnerProfile
+        owner_profile = OwnerProfile.objects.get(user=request.user)
         owner_profile.total_earnings += booking.total_cost
         owner_profile.save()
         return Response({
@@ -148,17 +155,22 @@ class ReviewCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AdminBookingListView(generics.ListAPIView):
+class AdminBookingListView(CacheHeadersMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     queryset           = Booking.objects.all().select_related('car__owner', 'customer').prefetch_related('car__images')
+    pagination_class = None
+    cache_timeout = 300  # Cache for 5 minutes
 
 
 class AdminBookingActionView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
 
     def patch(self, request, pk):
-        booking    = get_object_or_404(Booking, pk=pk)
+        booking = get_object_or_404(
+            Booking.objects.select_related('car__owner', 'customer').prefetch_related('car__images'),
+            pk=pk
+        )
         new_status = request.data.get('status')
         allowed = ['approved', 'rejected', 'cancelled', 'completed']
         if new_status not in allowed:

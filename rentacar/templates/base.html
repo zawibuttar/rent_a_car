@@ -1,113 +1,59 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}RentACar{% endblock %}</title>
-  {% load static %}
-  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
-  <link rel="shortcut icon" href="{% static 'favicon.svg' %}" />
-  <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
 </head>
+
 <body>
 
-  <!-- ── Navbar ───────────────────────────── -->
   <nav class="navbar">
-    <div class="nav-container">
-      <div class="nav-brand-wrap">
-        <a href="/" class="nav-brand">🚗 RentACar</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu">☰</button>
-      </div>
+    <div class="navbar-inner">
+      <a href="/" class="nav-brand">&#x1F697; RentACar</a>
+      <a href="/" class="nav-link">Home</a>
+      <a href="/cars/" class="nav-link">Browse Cars</a>
 
-      <div class="nav-links" id="navLinks">
-        <a href="/">Home</a>
-        <a href="/cars/">Discover Cars</a>
-
-        <!-- Shown only when logged out -->
-        <span id="guestLinks">
+      <div class="nav-right">
+        <span id="nav-guest" style="display:flex;gap:8px">
           <a href="/login/" class="btn btn-outline">Login</a>
-          <a href="/register/" class="btn btn-outline">Register</a>
+          <a href="/register/" class="btn btn-primary">Register</a>
         </span>
-
-        <!-- Shown only when logged in -->
-        <div id="authLinks" class="auth-links" style="display:none">
-          <span id="customerNav" style="display:none">
-            <a href="/dashboard/customer/">My Bookings</a>
-          </span>
-          <span id="ownerNav" style="display:none">
-            <a href="/dashboard/owner/">My Cars</a>
-          </span>
-          <span id="adminNav" style="display:none">
-            <a href="/dashboard/admin/">Admin Panel</a>
-          </span>
-          <span id="navUsername" class="nav-user"></span>
-          <button onclick="logout()" class="btn btn-outline">Logout</button>
-        </div>
+        <span id="nav-auth" style="display:none;align-items:center;gap:10px">
+          <a href="/dashboard/" class="btn btn-ghost" id="nav-dash-link">Dashboard</a>
+          <span id="nav-uname" style="font-size:13px;color:var(--text-2)"></span>
+          <div class="nav-avatar" id="nav-av"></div>
+        </span>
       </div>
     </div>
   </nav>
 
-  <!-- ── Flash messages ───────────────────── -->
-  <div id="flash" class="flash" style="display:none"></div>
+  {% block content %}{% endblock %}
 
-  <!-- ── Page content ─────────────────────── -->
-  <main class="main-content">
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- ── Footer ───────────────────────────── -->
-  <footer class="footer">
-    <p>© 2025 RentACar. All rights reserved.</p>
-  </footer>
+  <div class="footer">© 2025 RentACar. All rights reserved.</div>
 
   <script src="{% static 'js/api.js' %}"></script>
+  <script>
+    // Set dashboard link based on role
+    document.addEventListener('DOMContentLoaded', function () {
+      const role = API.role();
+      const link = document.getElementById('nav-dash-link');
+      if (link && role) {
+        if (role === 'owner') link.href = '/dashboard/owner/';
+        else if (role === 'admin') link.href = '/dashboard/admin/';
+        else link.href = '/dashboard/customer/';
+      }
+      // Highlight active nav link
+      document.querySelectorAll('.nav-link').forEach(a => {
+        if (a.href === window.location.href) a.classList.add('active');
+      });
+    });
+  </script>
   {% block scripts %}{% endblock %}
 
-  <script>
-    // Run on every page — checks login state and updates navbar
-    (function() {
-      const token = localStorage.getItem('token');
-      const role  = localStorage.getItem('role');
-      const username = localStorage.getItem('username');
-
-      if (token) {
-        document.getElementById('guestLinks').style.display = 'none';
-        document.getElementById('authLinks').style.display  = 'inline-flex';
-        document.getElementById('navUsername').textContent  = '👤 ' + username;
-
-        if (role === 'customer')
-          document.getElementById('customerNav').style.display = 'inline';
-        if (role === 'owner')
-          document.getElementById('ownerNav').style.display = 'inline';
-        if (role === 'admin')
-          document.getElementById('adminNav').style.display = 'inline';
-      }
-
-      const navToggle = document.getElementById('navToggle');
-      const navLinks  = document.getElementById('navLinks');
-      navToggle?.addEventListener('click', () => navLinks.classList.toggle('open'));
-      document.addEventListener('click', (event) => {
-        if (!event.target.closest('.navbar')) navLinks.classList.remove('open');
-      });
-    })();
-
-    function logout() {
-      API.post('/api/accounts/logout/', {})
-        .then(() => {
-          localStorage.clear();
-          showFlash('Logged out successfully.', 'success');
-          setTimeout(() => window.location.href = '/', 800);
-        });
-    }
-
-    function showFlash(msg, type='success') {
-      const el = document.getElementById('flash');
-      el.textContent = msg;
-      el.className   = 'flash flash-' + type;
-      el.style.display = 'block';
-      setTimeout(() => el.style.display = 'none', 3500);
-    }
-  </script>
-
 </body>
+
 </html>

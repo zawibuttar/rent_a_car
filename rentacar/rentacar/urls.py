@@ -33,6 +33,7 @@ urlpatterns = [
     path('cars/<int:pk>/', page_views.car_detail, name='car-detail-page'),
     path('login/', page_views.login_page, name='login-page'),
     path('register/', page_views.register_page, name='register-page'),
+    path('dashboard/', page_views.main_dashboard, name='main-dashboard'),
     path('dashboard/customer/', page_views.customer_dashboard, name='customer-dashboard'),
     path('dashboard/owner/', page_views.owner_dashboard, name='owner-dashboard'),
     path('dashboard/admin/', page_views.admin_dashboard, name='admin-dashboard'),

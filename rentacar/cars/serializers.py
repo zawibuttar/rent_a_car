@@ -12,13 +12,14 @@ class CarImageSerializer(serializers.ModelSerializer):
 
 class CarListSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
-    owner_name = serializers.SerializerMethodField()
+    owner_name = serializers.CharField(source='owner.username', read_only=True)
 
     class Meta:
         model = Car
         fields = ['id', 'brand', 'model', 'year', 'car_type', 'price_per_day', 'location', 'is_available', 'primary_image', 'owner_name']
 
     def get_primary_image(self, obj):
+        # Check for annotated primary_image first (from queryset)
         image_path = getattr(obj, 'primary_image', None)
         if image_path:
             full_path = settings.MEDIA_URL + image_path.lstrip('/')
@@ -27,18 +28,18 @@ class CarListSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(full_path)
             return full_path
 
-        images = list(obj.images.all())
-        image = next((img for img in images if img.is_primary), None)
-        if not image and images:
-            image = images[0]
-        if image and image.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(image.image.url)
+        # Fallback: Check prefetched images if annotation not available
+        # This is safe because CarListView uses prefetch_related('images')
+        if hasattr(obj, '_prefetched_objects_cache') and 'images' in obj._prefetched_objects_cache:
+            images = list(obj.images.all())
+            image = next((img for img in images if img.is_primary), None)
+            if not image and images:
+                image = images[0]
+            if image and image.image:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(image.image.url)
         return None
-    
-    def get_owner_name(self, obj):
-        return obj.owner.username
 
 
 class CarDetailSerializer(serializers.ModelSerializer):

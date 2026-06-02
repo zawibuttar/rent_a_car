@@ -9,11 +9,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
 from .serializers import *
 from accounts.permissions import IsOwner, IsPlatformAdmin
+from rentacar.caching import CacheHeadersMixin
 
 # Create your views here.
 
 # Customer sides
-class CarListView(generics.ListAPIView):
+class CarListView(CacheHeadersMixin, generics.ListAPIView):
     serializer_class   = CarListSerializer
     permission_classes = [permissions.AllowAny]
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
@@ -21,6 +22,7 @@ class CarListView(generics.ListAPIView):
     ordering_fields = ['price_per_day', 'year', 'created_at']
     ordering        = ['-created_at']
     filterset_fields = ['car_type', 'is_available', 'brand']
+    cache_timeout = 600  # Cache for 10 minutes
 
     def get_queryset(self):
         primary_image_subquery = CarImage.objects.filter(
@@ -30,7 +32,7 @@ class CarListView(generics.ListAPIView):
         queryset = Car.objects.filter(
             is_approved=True,
             is_available=True,
-        ).select_related('owner').only(
+        ).select_related('owner').prefetch_related('images').only(
             'id', 'brand', 'model', 'year', 'car_type', 'price_per_day', 'location', 'is_available',
             'owner__username'
         ).annotate(primary_image=Subquery(primary_image_subquery))
@@ -45,9 +47,10 @@ class CarListView(generics.ListAPIView):
         return queryset
     
 
-class CarDetailView(generics.RetrieveAPIView):
+class CarDetailView(CacheHeadersMixin, generics.RetrieveAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.AllowAny]
+    cache_timeout = 600  # Cache for 10 minutes
 
     def get_queryset(self):
         return Car.objects.filter(is_approved=True).prefetch_related('images').select_related('owner')
@@ -75,6 +78,7 @@ class CarCreateView(generics.CreateAPIView):
 class MyCarListView(generics.ListAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+    pagination_class   = None
 
     def get_queryset(self):
         return Car.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('images')
@@ -85,7 +89,7 @@ class CarUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def get_queryset(self):
-        return Car.objects.filter(owner=self.request.user)
+        return Car.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('images')
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -109,7 +113,10 @@ class CarImageUploadView(APIView):
     parser_classes     = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
-        car = get_object_or_404(Car, pk=pk, owner=request.user)
+        car = get_object_or_404(
+            Car.objects.prefetch_related('images'),
+            pk=pk, owner=request.user
+        )
         images = request.FILES.getlist('images')
 
         if not images:
@@ -133,7 +140,10 @@ class CarImageDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def delete(self, request, pk):
-        image = get_object_or_404(CarImage, pk=pk, car__owner=request.user)
+        image = get_object_or_404(
+            CarImage.objects.select_related('car__owner'),
+            pk=pk, car__owner=request.user
+        )
         image.delete()
         return Response(
             {"message": "Image deleted successfully."},
@@ -142,10 +152,12 @@ class CarImageDeleteView(APIView):
 
 
 # Admin sides
-class AdminCarListView(generics.ListAPIView):
+class AdminCarListView(CacheHeadersMixin, generics.ListAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     queryset           = Car.objects.all().prefetch_related('images').select_related('owner')
+    pagination_class = None
+    cache_timeout = 300  # Cache for 5 minutes
 
 
 class AdminCarApprovalView(APIView):

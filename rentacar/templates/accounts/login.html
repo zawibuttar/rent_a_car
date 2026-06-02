@@ -1,75 +1,78 @@
-<!-- templates/accounts/login.html -->
 {% extends 'base.html' %}
-{% block title %}Login{% endblock %}
+{% block title %}Login — RentACar{% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
+<div class="auth-page">
   <div class="auth-box">
-    <h2>Welcome back</h2>
+
+    <h1>Welcome back</h1>
+    <p class="sub">Sign in to your RentACar account</p>
 
     <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="username" placeholder="Enter your username"/>
+      <label class="form-label">Username</label>
+      <input class="form-control" type="text" id="username" placeholder="Enter your username" autofocus/>
     </div>
+
     <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="password" placeholder="Enter your password"/>
+      <label class="form-label">Password</label>
+      <input class="form-control" type="password" id="password" placeholder="Enter your password"/>
     </div>
 
-    <div id="loginError" class="form-error" style="margin-bottom:.75rem;"></div>
+    <div class="err-box" id="loginErr"></div>
 
-    <button class="btn btn-primary" style="width:100%" onclick="doLogin()" id="loginBtn">
-      Login
+    <button class="btn btn-primary btn-block btn-lg" id="loginBtn" onclick="doLogin()">
+      Sign In
     </button>
 
-    <p class="auth-note">
-      Don't have an account? <a href="/register/">Register here</a>
-    </p>
+    <div class="footer">
+      Don't have an account? <a href="/register/">Create one free</a>
+    </div>
+
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function doLogin() {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    const btn      = document.getElementById('loginBtn');
-    const errEl    = document.getElementById('loginError');
+async function doLogin() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const errBox   = document.getElementById('loginErr');
+  const btn      = document.getElementById('loginBtn');
 
-    if (!username || !password) {
-      errEl.textContent = 'Please fill in all fields.';
-      return;
-    }
+  errBox.style.display = 'none';
 
-    btn.disabled     = true;
-    btn.innerHTML    = '<span class="spinner"></span> Logging in...';
-    errEl.textContent = '';
-
-    try {
-      const data = await API.post('/api/accounts/login/', { username, password });
-      API.saveSession(data.token, data.user);
-      showFlash('Login successful! Redirecting...', 'success');
-
-      // Redirect based on role
-      setTimeout(() => {
-        const role = data.user.role;
-        if (role === 'customer') window.location.href = '/dashboard/customer/';
-        else if (role === 'owner') window.location.href = '/dashboard/owner/';
-        else if (role === 'admin') window.location.href = '/dashboard/admin/';
-        else window.location.href = '/';
-      }, 800);
-
-    } catch (err) {
-      errEl.textContent = err.message;
-      btn.disabled  = false;
-      btn.innerHTML = 'Login';
-    }
+  if (!username || !password) {
+    errBox.textContent    = 'Please enter your username and password.';
+    errBox.style.display  = 'block';
+    return;
   }
 
-  // Allow pressing Enter to login
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
+  btn.disabled    = true;
+  btn.textContent = 'Signing in...';
+
+  try {
+    const data = await API.post('/api/accounts/login/', { username, password });
+    API.save(data.token, data.user);
+    toast('Login successful!', 'success');
+
+    setTimeout(function() {
+      const role = data.user.role;
+      if      (role === 'owner') window.location.href = '/dashboard/owner/';
+        else if (role === 'admin' || data.user.is_superuser) window.location.href = '/dashboard/admin/';
+        else window.location.href = '/dashboard/customer/';
+      }, 600);
+
+    } catch(err) {
+      errBox.textContent   = err.message;
+      errBox.style.display = 'block';
+      btn.disabled    = false;
+      btn.textContent = 'Sign In';
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
 </script>
 {% endblock %}

@@ -26,11 +26,11 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == self.Role.ADMIN
-    
+        return self.role == self.Role.ADMIN or self.is_superuser
+
     @property
     def is_platform_admin(self):
-        return self.is_admin and self.is_superuser
+        return self.is_admin
 
 
 class CustomerProfile(models.Model):
@@ -55,6 +55,9 @@ class OwnerProfile(models.Model):
     is_verified = models.BooleanField(default=False)
     total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.user.username}'s Owner Profile"

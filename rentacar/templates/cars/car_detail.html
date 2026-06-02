@@ -1,164 +1,303 @@
-<!-- templates/cars/car_detail.html -->
 {% extends 'base.html' %}
-{% block title %}Car Details{% endblock %}
+{% block title %}Car Details — RentACar{% endblock %}
 
 {% block content %}
-<div id="carDetail">
-  <p><span class="spinner"></span> Loading car details...</p>
+<div class="page-wrap">
+
+  <!-- Back button -->
+  <a href="/cars/" class="btn btn-ghost btn-sm" style="margin-bottom:16px;display:inline-flex">
+    &#8592; Back to Cars
+  </a>
+
+  <!-- Car detail content injected here -->
+  <div id="carDetail">
+    <div class="loading"><span class="spinner spinner-lg"></span> Loading car details...</div>
+  </div>
+
 </div>
+
+<!-- Booking Modal -->
+<div class="modal-bg" id="bookModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>&#x1F4C5; Book this Car</h3>
+      <button class="btn-close-modal" onclick="closeModal('bookModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input class="form-control" type="date" id="startDate" onchange="calcCost()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Date</label>
+          <input class="form-control" type="date" id="endDate" onchange="calcCost()"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Note for Owner (optional)</label>
+        <textarea class="form-control" id="bookNote"
+          placeholder="Any special requests or info for the owner..."></textarea>
+      </div>
+
+      <!-- Cost preview -->
+      <div class="cost-box" id="costBox" style="display:none">
+        <div class="cost-row">
+          <span>Duration</span>
+          <span id="costDays"></span>
+        </div>
+        <div class="cost-row">
+          <span>Price per day</span>
+          <span id="costPpd"></span>
+        </div>
+        <div class="cost-total">
+          <span>Total Cost</span>
+          <span id="costTotal"></span>
+        </div>
+      </div>
+
+      <div class="err-box" id="bookErr"></div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('bookModal')">Cancel</button>
+      <button class="btn btn-primary" id="confirmBtn" onclick="confirmBooking()">
+        Confirm Booking
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-  const CAR_ID = {{ car_id }};
+const CAR_ID = {{ car_id }};
+let carData  = null;
 
-  async function loadCar() {
-    try {
-      const car = await API.get(`/api/cars/${CAR_ID}/`);
-      renderCar(car);
-    } catch (err) {
-      document.getElementById('carDetail').innerHTML =
-        `<p style="color:red">Error: ${err.message}</p>`;
-    }
+/* ── Load car ─────────────────────── */
+async function loadCar() {
+  try {
+    carData = await API.get('/api/cars/' + CAR_ID + '/');
+    renderCar(carData);
+  } catch(err) {
+    document.getElementById('carDetail').innerHTML =
+      '<div class="empty"><h3>Failed to load car</h3><p>' + err.message + '</p></div>';
+  }
+}
+
+/* ── Render car ───────────────────── */
+function renderCar(car) {
+  const images  = car.images || [];
+  const mainImg = images.find(function(i) { return i.is_primary; }) || images[0];
+  const role    = API.role();
+  const loggedIn = API.loggedIn();
+
+  /* booking button logic */
+  let bookBtn = '';
+  if (!loggedIn) {
+    bookBtn = '<a href="/login/" class="btn btn-outline btn-lg btn-block">Login to Book</a>';
+  } else if (role === 'customer' && car.is_available) {
+    bookBtn = '<button class="btn btn-primary btn-lg btn-block" onclick="openModal(\'bookModal\')">&#x1F4C5; Book this Car</button>';
+  } else if (role === 'owner' || role === 'admin') {
+    bookBtn = '<div style="padding:10px;background:var(--bg);border-radius:var(--radius);font-size:13px;color:var(--text-2);text-align:center">Only customers can book cars</div>';
+  } else {
+    bookBtn = '<div style="padding:10px;background:var(--bg);border-radius:var(--radius);font-size:13px;color:var(--text-2);text-align:center">This car is currently unavailable</div>';
   }
 
-  function renderCar(car) {
-    const images = car.images || [];
-    const mainImg = images.find(i => i.is_primary) || images[0];
+  /* images strip */
+  const thumbs = images.length > 1
+    ? images.map(function(img) {
+        return '<img src="' + img.image + '" '
+          + 'onclick="switchMain(\'' + img.image + '\', this)" '
+          + 'style="width:70px;height:52px;object-fit:cover;border-radius:6px;'
+          + 'cursor:pointer;border:2px solid var(--border);flex-shrink:0" '
+          + 'loading="lazy"/>';
+      }).join('')
+    : '';
 
-    document.getElementById('carDetail').innerHTML = `
-      <div class="detail-grid">
+  document.getElementById('carDetail').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start">'
 
-        <!-- Left: Images -->
-        <div>
-          <img
-            class="featured-image"
-            src="${mainImg ? mainImg.image : '/static/images/no-image.svg'}"
-            alt="${car.brand} ${car.model}"
-            onerror="this.onerror=null; this.src='/static/images/no-image.svg'"
-          />
-          <div class="image-gallery">
-            ${images.map(img => `
-              <img
-                src="${img.image}"
-                onclick="setMain(this.src)"
-                alt="Car image"
-              />
-            `).join('')}
-          </div>
-        </div>
+    /* ── Left column ── */
+    + '<div>'
 
-        <!-- Right: Info -->
-        <div class="card car-detail-panel">
-          <h1 style="font-size:1.6rem;margin-bottom:.5rem">${car.brand} ${car.model}</h1>
-          <div class="car-meta" style="margin-bottom:1rem">
-            <span class="badge badge-blue">${car.car_type.toUpperCase()}</span>
-            <span class="badge badge-gray">${car.year}</span>
-            <span class="badge badge-${car.is_available ? 'green' : 'red'}">
-              ${car.is_available ? 'Available' : 'Not Available'}
-            </span>
-          </div>
+    /* main image */
+    + '<div style="border-radius:var(--radius-lg);overflow:hidden;background:var(--bg);'
+    + 'aspect-ratio:16/10;display:flex;align-items:center;justify-content:center">'
+    + (mainImg
+        ? '<img id="mainImg" src="' + mainImg.image + '" '
+          + 'style="width:100%;height:100%;object-fit:cover" alt="' + car.brand + '"/>'
+        : '<span style="font-size:60px;color:var(--text-3)">&#x1F697;</span>')
+    + '</div>'
 
-          <p style="color:var(--text-muted);margin-bottom:.5rem">📍 ${car.location}</p>
-          <p style="margin-bottom:1rem">${car.description || 'No description provided.'}</p>
+    /* thumbnails */
+    + (thumbs
+        ? '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' + thumbs + '</div>'
+        : '')
 
-          <div class="car-price" style="font-size:1.6rem;margin-bottom:1.25rem">
-            PKR ${car.price_per_day}<span style="font-size:1rem;font-weight:400;color:var(--text-muted)">/day</span>
-          </div>
+    /* description card */
+    + '<div class="card" style="margin-top:16px">'
+    + '<div class="card-head"><h2>About this Car</h2></div>'
+    + '<div class="card-body">'
+    + '<p style="color:var(--text-2);line-height:1.8;font-size:13px">'
+    + (car.description || 'No description provided.')
+    + '</p>'
+    + '</div>'
+    + '</div>'
 
-          <p style="font-size:.9rem;color:var(--text-muted);margin-bottom:.25rem">
-            Listed by: <strong>${car.owner.username}</strong>
-          </p>
+    + '</div>'  /* end left column */
 
-          <!-- Booking form — shown only to logged-in customers -->
-          <div id="bookingSection" class="booking-panel" style="display:none">
-            <hr />
-            <h3>Book this car</h3>
-            <div class="form-group">
-              <label>Start Date</label>
-              <input type="date" id="startDate"/>
-            </div>
-            <div class="form-group">
-              <label>End Date</label>
-              <input type="date" id="endDate"/>
-            </div>
-            <div class="form-group">
-              <label>Note (optional)</label>
-              <textarea id="bookingNote" rows="2" placeholder="Any special requests..."></textarea>
-            </div>
-            <div id="costPreview" style="background:#eff6ff;padding:.75rem;border-radius:8px;margin-bottom:1rem;display:none">
-              <strong>Estimated cost: </strong><span id="costAmount"></span>
-            </div>
-            <div id="bookingError" class="form-error" style="margin-bottom:.5rem"></div>
-            <button class="btn btn-primary" style="width:100%" onclick="bookCar(${car.id}, ${car.price_per_day})">
-              Request Booking
-            </button>
-          </div>
+    /* ── Right column ── */
+    + '<div style="display:flex;flex-direction:column;gap:14px">'
 
-          <!-- Message for guests -->
-          <div id="guestBooking" style="margin-top:1.5rem">
-            <a href="/login/" class="btn btn-outline" style="width:100%;text-align:center">
-              Login to Book this Car
-            </a>
-          </div>
-        </div>
-      </div>
-    `;
+    /* main info card */
+    + '<div class="card">'
+    + '<div class="card-body">'
 
-    // Show booking form only to logged-in customers
-    if (API.isLoggedIn() && API.getRole() === 'customer') {
-      document.getElementById('bookingSection').style.display = 'block';
-      document.getElementById('guestBooking').style.display   = 'none';
+    + '<h1 style="font-size:20px;font-weight:700;margin-bottom:4px">'
+    + car.brand + ' ' + car.model
+    + '</h1>'
+    + '<p style="font-size:13px;color:var(--text-2);margin-bottom:12px">'
+    + (car.year || '') + ' &middot; ' + car.car_type.toUpperCase()
+    + '</p>'
 
-      // Set min date to today
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('startDate').min = today;
-      document.getElementById('endDate').min   = today;
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'
+    + (car.is_available
+        ? '<span class="badge badge-green">&#x2714; Available</span>'
+        : '<span class="badge badge-red">&#x2718; Unavailable</span>')
+    + '<span class="badge badge-blue">' + car.car_type.toUpperCase() + '</span>'
+    + '</div>'
 
-      // Live cost preview
-      ['startDate', 'endDate'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => {
-          const s = document.getElementById('startDate').value;
-          const e = document.getElementById('endDate').value;
-          if (s && e && e > s) {
-            const days = (new Date(e) - new Date(s)) / 86400000;
-            const cost = (days * car.price_per_day).toFixed(2);
-            document.getElementById('costAmount').textContent = `PKR ${cost} (${days} day${days>1?'s':''})`;
-            document.getElementById('costPreview').style.display = 'block';
-          }
-        });
-      });
-    }
+    /* info rows */
+    + '<div class="info-list">'
+    + '<div class="info-row"><span class="info-lbl">&#x1F4CD; Location</span><span class="info-val">' + car.location + '</span></div>'
+    + '<div class="info-row"><span class="info-lbl">&#x1F464; Owner</span><span class="info-val">' + car.owner.username + '</span></div>'
+    + '<div class="info-row"><span class="info-lbl">&#x1F4C5; Listed</span><span class="info-val">' + new Date(car.created_at).toLocaleDateString() + '</span></div>'
+    + '</div>'
+
+    /* price */
+    + '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">'
+    + '<div style="font-size:28px;font-weight:700;color:var(--primary)">'
+    + '$' + parseFloat(car.price_per_day).toFixed(2)
+    + '<span style="font-size:14px;font-weight:400;color:var(--text-2)">/day</span>'
+    + '</div>'
+    + '</div>'
+
+    /* booking button */
+    + '<div style="margin-top:14px">' + bookBtn + '</div>'
+
+    + '</div>'  /* card-body */
+    + '</div>'  /* card */
+
+    /* owner mini card */
+    + '<div class="card">'
+    + '<div class="card-body-sm" style="display:flex;align-items:center;gap:12px">'
+    + '<div class="sidebar-avatar" style="width:42px;height:42px;font-size:14px;'
+    + 'background:var(--primary-light);color:var(--primary);border-radius:50%;'
+    + 'display:flex;align-items:center;justify-content:center;font-weight:700">'
+    + initials(car.owner.username)
+    + '</div>'
+    + '<div>'
+    + '<div style="font-weight:600;font-size:13px">' + car.owner.username + '</div>'
+    + '<div style="font-size:12px;color:var(--text-2)">Car Owner</div>'
+    + '</div>'
+    + '</div>'
+    + '</div>'
+
+    + '</div>'  /* end right column */
+    + '</div>'; /* end grid */
+
+  /* set min date on booking inputs */
+  const today = new Date().toISOString().split('T')[0];
+  const sd = document.getElementById('startDate');
+  const ed = document.getElementById('endDate');
+  if (sd) { sd.min = today; }
+  if (ed) { ed.min = today; }
+}
+
+/* ── Switch main image ─────────────── */
+function switchMain(src, thumb) {
+  const main = document.getElementById('mainImg');
+  if (main) main.src = src;
+  /* highlight selected thumb */
+  document.querySelectorAll('#carDetail img[onclick]').forEach(function(t) {
+    t.style.borderColor = 'var(--border)';
+  });
+  if (thumb) thumb.style.borderColor = 'var(--primary)';
+}
+
+/* ── Cost calculator ───────────────── */
+function calcCost() {
+  const sd  = document.getElementById('startDate').value;
+  const ed  = document.getElementById('endDate').value;
+  const box = document.getElementById('costBox');
+
+  if (!sd || !ed || !carData) { box.style.display = 'none'; return; }
+
+  const days = Math.round((new Date(ed) - new Date(sd)) / 86400000);
+  if (days < 1) { box.style.display = 'none'; return; }
+
+  const ppd   = parseFloat(carData.price_per_day);
+  const total = days * ppd;
+
+  document.getElementById('costDays').textContent  = days + ' day' + (days !== 1 ? 's' : '');
+  document.getElementById('costPpd').textContent   = '$' + ppd.toFixed(2);
+  document.getElementById('costTotal').textContent = '$' + total.toFixed(2);
+  box.style.display = 'block';
+
+  /* also update end date min */
+  document.getElementById('endDate').min = sd;
+}
+
+/* ── Confirm booking ───────────────── */
+async function confirmBooking() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate   = document.getElementById('endDate').value;
+  const note      = document.getElementById('bookNote').value;
+  const errBox    = document.getElementById('bookErr');
+  const btn       = document.getElementById('confirmBtn');
+
+  errBox.style.display = 'none';
+
+  if (!startDate || !endDate) {
+    errBox.textContent   = 'Please select start and end dates.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if (new Date(endDate) <= new Date(startDate)) {
+    errBox.textContent   = 'End date must be after start date.';
+    errBox.style.display = 'block';
+    return;
   }
 
-  function setMain(src) {
-    document.querySelector('#carDetail img') .src = src;
+  btn.disabled    = true;
+  btn.textContent = 'Booking...';
+
+  try {
+    await API.post('/api/bookings/create/', {
+      car:        CAR_ID,
+      start_date: startDate,
+      end_date:   endDate,
+      note:       note
+    });
+
+    closeModal('bookModal');
+    toast('Booking request submitted! Redirecting to dashboard...', 'success');
+    setTimeout(function() {
+      window.location.href = '/dashboard/customer/';
+    }, 1200);
+
+  } catch(err) {
+    errBox.textContent   = err.message;
+    errBox.style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = 'Confirm Booking';
   }
+}
 
-  async function bookCar(carId, pricePerDay) {
-    const startDate = document.getElementById('startDate').value;
-    const endDate   = document.getElementById('endDate').value;
-    const note      = document.getElementById('bookingNote').value;
-    const errEl     = document.getElementById('bookingError');
-
-    if (!startDate || !endDate) {
-      errEl.textContent = 'Please select start and end dates.';
-      return;
-    }
-
-    errEl.textContent = '';
-
-    try {
-      await API.post('/api/bookings/create/', {
-        car: carId, start_date: startDate, end_date: endDate, note
-      });
-      showFlash('Booking request submitted! Check your dashboard.', 'success');
-      setTimeout(() => window.location.href = '/dashboard/customer/', 1200);
-    } catch (err) {
-      errEl.textContent = err.message;
-    }
-  }
-
-  loadCar();
+loadCar();
 </script>
 {% endblock %}
