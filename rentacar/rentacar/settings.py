@@ -29,10 +29,16 @@ else:
     if not SECRET_KEY:
         raise ValueError('SECRET_KEY environment variable is required when DEBUG is false.')
 
-_allowed = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost')
+_allowed = os.getenv(
+    'ALLOWED_HOSTS',
+    '127.0.0.1,localhost,.ngrok-free.app,.ngrok-free.dev,.ngrok.io,.ngrok.app',
+)
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
 
-_csrf = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+_csrf = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io,https://*.ngrok.app',
+)
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 
 # Upload limits (car images)

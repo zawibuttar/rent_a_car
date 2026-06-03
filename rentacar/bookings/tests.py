@@ -173,13 +173,15 @@ class BookingRentalTypeTests(APITestCase):
     def test_hourly_prorated_cost(self):
         start = timezone.now() + timedelta(hours=2)
         end = start + timedelta(hours=1, minutes=20)
+        expected = float(compute_total(self.car, RENTAL_HOURLY, start, end))
         response = self.client.post(
             self.create_url,
             _booking_payload(self.car.pk, RENTAL_HOURLY, start, end),
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(float(response.data['booking']['total_cost']), 16.0)
+        self.assertEqual(float(response.data['booking']['total_cost']), expected)
+        self.assertEqual(expected, 20.0)
 
     def test_weekly_without_seven_days_rejected(self):
         start_d = date.today() + timedelta(days=10)

@@ -39,7 +39,8 @@ services:
     environment:
       SECRET_KEY: "django-insecure-rentacar-dev-only-change-me"
       DEBUG: "1"
-      ALLOWED_HOSTS: "127.0.0.1,localhost"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,.ngrok-free.app,.ngrok-free.dev,.ngrok.io,.ngrok.app"
+      CSRF_TRUSTED_ORIGINS: "https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io,https://*.ngrok.app"
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: rentacar
       DB_USER: rentacar_user
