@@ -59,7 +59,7 @@
     <button class="btn btn-ghost btn-sm"
       onclick="resetFilters()"
       style="margin-top:18px">
-      &#x21BA; Reset
+      Reset
     </button>
   </div>
 
@@ -117,10 +117,7 @@ async function loadCars() {
     }
 
     grid.innerHTML = cars.map(function(car) {
-      const img = car.primary_image
-        ? '<img src="' + car.primary_image + '" alt="'
-          + car.brand + '" loading="lazy"/>'
-        : '<span style="font-size:40px">&#x1F697;</span>';
+      const img = UI.carThumb(car.primary_image, window.STATIC_NO_IMAGE);
 
       const avail = car.is_available
         ? '<span class="badge badge-green">Available</span>'
@@ -139,10 +136,7 @@ async function loadCars() {
         + car.car_type.toUpperCase() + '</span>'
         + '&nbsp;' + avail
         + '</div>'
-        + '<div class="car-loc">'
-        + '&#x1F4CD; ' + car.location
-        + ' &middot; ' + (car.owner_name || '')
-        + '</div>'
+        + UI.locationLine(car.location, car.owner_name || '')
         + '<div class="car-footer">'
         + '<div class="car-price">$'
         + parseFloat(car.price_per_day).toFixed(2)

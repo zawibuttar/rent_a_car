@@ -27,6 +27,30 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
+# Cache (Redis when CACHE_ENABLED=1, else in-memory for local dev)
+CACHE_ENABLED = os.getenv('CACHE_ENABLED', '0').lower() in ('1', 'true', 'yes')
+CACHE_TTL_ADMIN_LIST = int(os.getenv('CACHE_TTL_ADMIN_LIST', '120'))
+CACHE_TTL_PUBLIC_LIST = int(os.getenv('CACHE_TTL_PUBLIC_LIST', '600'))
+
+if CACHE_ENABLED:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'rentacar',
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'rentacar-local',
+        }
+    }
+
 
 # Application definition
 

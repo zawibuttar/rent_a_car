@@ -8,7 +8,12 @@ from django.contrib.auth import login, logout
 from .models import *
 from .serializers import *
 from .permissions import IsPlatformAdmin
-from rentacar.caching import CacheHeadersMixin
+from rentacar.caching import (
+    NoCacheMixin,
+    RedisListCacheMixin,
+    admin_owners_key,
+    invalidate_admin_lists,
+)
 
 # Create your views here.
 
@@ -127,12 +132,12 @@ class OwnerProfileView(generics.RetrieveUpdateAPIView):
         return super().update(request, *args, **kwargs)
 
 
-class AdminOwnerListView(CacheHeadersMixin, generics.ListAPIView):
+class AdminOwnerListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     serializer_class = OwnerProfileSerializer
     queryset = OwnerProfile.objects.all().select_related('user')
     pagination_class = None
-    cache_timeout = 300  # Cache for 5 minutes
+    redis_cache_key = admin_owners_key()
 
 
 class AdminOwnerVerificationView(APIView):
@@ -157,6 +162,7 @@ class AdminOwnerVerificationView(APIView):
 
         profile.is_verified = bool(is_verified)
         profile.save()
+        invalidate_admin_lists()
         return Response({
             'message': f"Owner profile has been {'verified' if profile.is_verified else 'marked as unverified' }.",
             'owner_profile': OwnerProfileSerializer(profile).data

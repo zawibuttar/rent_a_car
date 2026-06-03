@@ -11,9 +11,21 @@ const API = {
     return h;
   },
 
+  shouldBypassCache(url) {
+    return /\/api\/cars\//.test(url)
+      || /\/admin\//.test(url)
+      || /\/my-cars\//.test(url)
+      || /\/my-bookings\//.test(url)
+      || /\/bookings\/owner\//.test(url)
+      || /\/profile\//.test(url);
+  },
+
   async req(method, url, body, multipart) {
     const opts = { method, headers: this.headers(multipart) };
     if (body) opts.body = multipart ? body : JSON.stringify(body);
+    if (method === 'GET' && this.shouldBypassCache(url)) {
+      opts.cache = 'no-store';
+    }
     const res  = await fetch(url, opts);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {

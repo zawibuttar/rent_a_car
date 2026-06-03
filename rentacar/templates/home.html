@@ -96,9 +96,7 @@ async function loadCars() {
     }
 
     grid.innerHTML = cars.map(function(car) {
-      const img = car.primary_image
-        ? '<img src="' + car.primary_image + '" alt="' + car.brand + '" loading="lazy"/>'
-        : '&#x1F697;';
+      const img = UI.carThumb(car.primary_image, window.STATIC_NO_IMAGE);
       const avail = car.is_available
         ? '<span class="badge badge-green">Available</span>'
         : '<span class="badge badge-gray">Unavailable</span>';
@@ -110,7 +108,7 @@ async function loadCars() {
         + '<span class="badge badge-blue">' + car.car_type.toUpperCase() + '</span>'
         + avail
         + '</div>'
-        + '<div class="car-loc">&#x1F4CD; ' + car.location + ' &middot; ' + car.owner_name + '</div>'
+        + UI.locationLine(car.location, car.owner_name)
         + '<div class="car-footer">'
         + '<div class="car-price">$' + parseFloat(car.price_per_day).toFixed(2) + '<span>/day</span></div>'
         + '<button class="btn btn-primary btn-sm">View</button>'

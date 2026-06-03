@@ -2,7 +2,7 @@
 {% block title %}Admin Panel — RentACar{% endblock %}
 
 {% block content %}
-<div class="dash-layout">
+<div class="dash-layout role-admin">
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
@@ -16,16 +16,22 @@
     </div>
 
     <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview"
-        onclick="showTab('overview', this)">&#x1F4CA; Overview</button>
-      <button class="s-item" id="btn-cars"
-        onclick="showTab('cars', this)">&#x1F697; All Cars</button>
-      <button class="s-item" id="btn-owners"
-        onclick="showTab('owners', this)">&#x1F464; Owner Approvals</button>
-      <button class="s-item" id="btn-bookings"
-        onclick="showTab('bookings', this)">&#x1F4C5; All Bookings</button>
+      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </button>
+      <button class="s-item" id="btn-cars" onclick="showTab('cars', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
+      </button>
+      <button class="s-item" id="btn-owners" onclick="showTab('owners', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg> Owner Verifications
+      </button>
+      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
+      </button>
       <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">&#x1F6AA; Logout</button>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
     </div>
   </aside>
 
@@ -50,7 +56,7 @@
       <!-- Recent bookings -->
       <div class="card">
         <div class="card-head">
-          <h2>&#x1F4C5; Recent Bookings</h2>
+          <h2>Recent Bookings</h2>
           <button class="btn btn-ghost btn-sm"
             onclick="showTab('bookings', document.getElementById('btn-bookings'))">
             View All &#8594;
@@ -84,6 +90,8 @@
 
       <div class="filter-tabs">
         <button class="ftab active" onclick="filterCars('all', this)">All</button>
+        <button class="ftab" onclick="filterCars('live', this)">Live</button>
+        <button class="ftab" onclick="filterCars('hidden', this)">Hidden from browse</button>
         <button class="ftab" onclick="filterCars('available', this)">Available</button>
         <button class="ftab" onclick="filterCars('unavailable', this)">Unavailable</button>
       </div>
@@ -94,7 +102,7 @@
             <thead>
               <tr>
                 <th>#</th><th>Car</th><th>Owner</th><th>Type</th>
-                <th>Price/day</th><th>Location</th><th>Available</th>
+                <th>Price/day</th><th>Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="allCarsTable">
@@ -238,14 +246,14 @@ async function loadOverview() {
 
     /* stat cards */
     document.getElementById('aStats').innerHTML =
-      statCard('&#x1F697;', totalCars,       'Total Cars',         '#dbeafe', '#1d4ed8') +
-      statCard('&#x2705;',  available,        'Available Cars',     '#dcfce7', '#15803d') +
-      statCard('&#x1F464;', allAdminOwners.length, 'Owner Profiles', '#ede9fe', '#7c3aed') +
-      statCard('&#x2705;',  verifiedOwners,   'Verified Owners',    '#dcfce7', '#15803d') +
-      statCard('&#x23F3;',  pendingOwners,    'Pending Verification','#fef3c7', '#92400e') +
-      statCard('&#x1F4C5;', totalBooks,      'Total Bookings',     '#dbeafe', '#1d4ed8') +
-      statCard('&#x1F7E2;', activeBooks,     'Active Rentals',     '#dcfce7', '#15803d') +
-      statCard('&#x1F4B0;', '$' + revenue.toFixed(0), 'Platform Revenue', '#dcfce7', '#15803d');
+      UI.statCard('cars', totalCars, 'Total Cars') +
+      UI.statCard('active', available, 'Available Cars') +
+      UI.statCard('owners', allAdminOwners.length, 'Owner Profiles') +
+      UI.statCard('verified', verifiedOwners, 'Verified Owners') +
+      UI.statCard('pending', pendingOwners, 'Pending Verification') +
+      UI.statCard('bookings', totalBooks, 'Total Bookings') +
+      UI.statCard('active', activeBooks, 'Active Rentals') +
+      UI.statCard('revenue', '$' + revenue.toFixed(0), 'Platform Revenue');
 
     /* bookings preview */
     if (!allAdminBookings.length) {
@@ -272,15 +280,6 @@ async function loadOverview() {
   } catch(err) { toast(err.message, 'error'); }
 }
 
-function statCard(icon, val, lbl, bg, color) {
-  return '<div class="stat-card">'
-    + '<div class="stat-icon" style="background:' + bg + ';color:' + color + '">'
-    + icon + '</div>'
-    + '<div class="stat-val">' + val + '</div>'
-    + '<div class="stat-lbl">' + lbl + '</div>'
-    + '</div>';
-}
-
 /* ══ ALL CARS ═══════════════════════ */
 async function loadAllCars() {
   try {
@@ -296,9 +295,20 @@ function filterCars(filter, btn) {
   if (btn) btn.classList.add('active');
 
   var list = allAdminCars;
+  if (filter === 'live')        list = list.filter(function(c){ return c.is_approved && c.is_available; });
+  if (filter === 'hidden')      list = list.filter(function(c){ return !c.is_approved; });
   if (filter === 'available')   list = list.filter(function(c){ return c.is_available; });
   if (filter === 'unavailable') list = list.filter(function(c){ return !c.is_available; });
   renderCarsTable(list);
+}
+
+async function setCarVisibility(id, isApproved) {
+  try {
+    await API.patch('/api/cars/admin/' + id + '/approve/', { is_approved: isApproved });
+    toast(isApproved ? 'Listing restored on Browse Cars.' : 'Listing hidden from customers.', 'success');
+    loadAllCars();
+    loadOverview();
+  } catch (err) { toast(err.message, 'error'); }
 }
 
 function renderCarsTable(list) {
@@ -306,13 +316,19 @@ function renderCarsTable(list) {
 
   if (!list.length) {
     tbody.innerHTML =
-      '<tr><td colspan="7">'
+      '<tr><td colspan="9">'
       + '<div class="empty"><h3>No cars found</h3></div>'
       + '</td></tr>';
     return;
   }
 
   tbody.innerHTML = list.map(function(c) {
+    var vis = c.is_approved
+      ? '<span class="badge badge-green">On marketplace</span>'
+      : '<span class="badge badge-red">Hidden</span>';
+    var actions = c.is_approved
+      ? '<button class="btn btn-sm btn-danger" onclick="setCarVisibility(' + c.id + ', false)">Hide</button>'
+      : '<button class="btn btn-sm btn-primary" onclick="setCarVisibility(' + c.id + ', true)">Restore</button>';
     return '<tr>'
       + '<td style="color:var(--text-3);font-size:12px">#' + c.id + '</td>'
       + '<td>'
@@ -324,12 +340,14 @@ function renderCarsTable(list) {
       + '<td><span class="badge badge-blue">' + c.car_type + '</span></td>'
       + '<td style="font-weight:700;color:var(--primary)">$'
       + parseFloat(c.price_per_day).toFixed(2) + '</td>'
-      + '<td style="font-size:12px">&#x1F4CD; ' + c.location + '</td>'
+      + '<td style="font-size:12px">' + c.location + '</td>'
+      + '<td>' + vis + '</td>'
       + '<td>'
       + (c.is_available
           ? '<span class="badge badge-green">Yes</span>'
           : '<span class="badge badge-gray">No</span>')
       + '</td>'
+      + '<td>' + actions + '</td>'
       + '</tr>';
   }).join('');
 }

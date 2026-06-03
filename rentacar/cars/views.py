@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.db.models import OuterRef, Subquery
 from rest_framework import status, generics, permissions, filters
 from rest_framework.response import Response
@@ -9,12 +8,17 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
 from .serializers import *
 from accounts.permissions import IsOwner, IsPlatformAdmin
-from rentacar.caching import CacheHeadersMixin
+from rentacar.caching import (
+    NoCacheMixin,
+    RedisListCacheMixin,
+    admin_cars_key,
+    invalidate_car_caches,
+)
 
 # Create your views here.
 
 # Customer sides
-class CarListView(CacheHeadersMixin, generics.ListAPIView):
+class CarListView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = CarListSerializer
     permission_classes = [permissions.AllowAny]
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
@@ -22,7 +26,6 @@ class CarListView(CacheHeadersMixin, generics.ListAPIView):
     ordering_fields = ['price_per_day', 'year', 'created_at']
     ordering        = ['-created_at']
     filterset_fields = ['car_type', 'is_available', 'brand']
-    cache_timeout = 600  # Cache for 10 minutes
 
     def get_queryset(self):
         primary_image_subquery = CarImage.objects.filter(
@@ -45,16 +48,15 @@ class CarListView(CacheHeadersMixin, generics.ListAPIView):
         if max_price:
             queryset = queryset.filter(price_per_day__lte=max_price)
         return queryset
-    
 
-class CarDetailView(CacheHeadersMixin, generics.RetrieveAPIView):
+
+class CarDetailView(NoCacheMixin, generics.RetrieveAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.AllowAny]
-    cache_timeout = 600  # Cache for 10 minutes
 
     def get_queryset(self):
         return Car.objects.filter(is_approved=True).prefetch_related('images').select_related('owner')
-    
+
 
 # Owner sides
 class CarCreateView(generics.CreateAPIView):
@@ -68,14 +70,15 @@ class CarCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             car = serializer.save()
+            invalidate_car_caches()
             return Response({
                 "message" : "Car listed successfully!",
                 "car"     : CarDetailSerializer(car, context={'request': request}).data,
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
-class MyCarListView(generics.ListAPIView):
+
+class MyCarListView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
     pagination_class   = None
@@ -97,16 +100,18 @@ class CarUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         response.data['message'] = "Car updated successfully."
+        invalidate_car_caches()
         return response
 
     def destroy(self, request, *args, **kwargs):
         car = self.get_object()
         car.delete()
+        invalidate_car_caches()
         return Response(
             {"message": "Car listing deleted successfully."},
             status=status.HTTP_200_OK
         )
-    
+
 
 class CarImageUploadView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
@@ -130,6 +135,7 @@ class CarImageUploadView(APIView):
             is_primary = (index == 0) and not car.images.exists()
             img = CarImage.objects.create(car=car, image=image_file, is_primary=is_primary)
             uploaded.append(CarImageUploadSerializer(img).data)
+        invalidate_car_caches()
         return Response({
             "message": f"{len(uploaded)} image(s) uploaded successfully.",
             "images" : uploaded,
@@ -145,6 +151,7 @@ class CarImageDeleteView(APIView):
             pk=pk, car__owner=request.user
         )
         image.delete()
+        invalidate_car_caches()
         return Response(
             {"message": "Image deleted successfully."},
             status=status.HTTP_200_OK
@@ -152,12 +159,12 @@ class CarImageDeleteView(APIView):
 
 
 # Admin sides
-class AdminCarListView(CacheHeadersMixin, generics.ListAPIView):
-    serializer_class   = CarDetailSerializer
+class AdminCarListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
+    serializer_class   = AdminCarListSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
-    queryset           = Car.objects.all().prefetch_related('images').select_related('owner')
+    queryset           = Car.objects.all().select_related('owner')
     pagination_class = None
-    cache_timeout = 300  # Cache for 5 minutes
+    redis_cache_key = admin_cars_key()
 
 
 class AdminCarApprovalView(APIView):
@@ -173,6 +180,7 @@ class AdminCarApprovalView(APIView):
             )
         car.is_approved = is_approved
         car.save()
+        invalidate_car_caches()
         action = "approved" if is_approved else "rejected"
         return Response({
             "message": f"Car has been {action}.",

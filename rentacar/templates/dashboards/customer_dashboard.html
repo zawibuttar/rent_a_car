@@ -2,7 +2,7 @@
 {% block title %}Customer Dashboard — RentACar{% endblock %}
 
 {% block content %}
-<div class="dash-layout">
+<div class="dash-layout role-customer">
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
@@ -16,20 +16,24 @@
 
     <div class="sidebar-menu">
       <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
-        &#x1F4CA; Overview
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
       </button>
       <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
-        &#x1F4C5; My Bookings
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> My Bookings
       </button>
       <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
-        &#x1F464; My Profile
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
       <button class="s-item" id="btn-password" onclick="showTab('password', this)">
-        &#x1F512; Change Password
+        <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
       </button>
       <div class="s-divider"></div>
-      <a href="/cars/" class="s-item">&#x1F50D; Browse Cars</a>
-      <button class="s-item danger" onclick="doLogout()">&#x1F6AA; Logout</button>
+      <a href="/cars/" class="s-item">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg> Browse Cars
+      </a>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
     </div>
   </aside>
 
@@ -263,18 +267,18 @@
 <div class="modal-bg" id="reviewModal">
   <div class="modal">
     <div class="modal-head">
-      <h3>&#x2B50; Leave a Review</h3>
-      <button class="btn-close-modal" onclick="closeModal('reviewModal')">&#x2715;</button>
+      <h3>Leave a Review</h3>
+      <button class="btn-close-modal" onclick="closeModal('reviewModal')" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Rating</label>
         <select class="form-control" id="reviewRating">
-          <option value="5">&#x2B50;&#x2B50;&#x2B50;&#x2B50;&#x2B50; — Excellent (5)</option>
-          <option value="4">&#x2B50;&#x2B50;&#x2B50;&#x2B50; — Good (4)</option>
-          <option value="3">&#x2B50;&#x2B50;&#x2B50; — Average (3)</option>
-          <option value="2">&#x2B50;&#x2B50; — Poor (2)</option>
-          <option value="1">&#x2B50; — Terrible (1)</option>
+          <option value="5">Excellent (5)</option>
+          <option value="4">Good (4)</option>
+          <option value="3">Average (3)</option>
+          <option value="2">Poor (2)</option>
+          <option value="1">Terrible (1)</option>
         </select>
       </div>
       <div class="form-group">
@@ -357,10 +361,10 @@
 
       /* stats cards */
       document.getElementById('statsRow').innerHTML =
-        statCard('&#x1F4C5;', total, 'Total Bookings', '#dbeafe', '#1d4ed8') +
-        statCard('&#x2705;', active, 'Active Rentals', '#dcfce7', '#15803d') +
-        statCard('&#x23F3;', pending, 'Pending Approval', '#fef3c7', '#92400e') +
-        statCard('&#x2B50;', completed, 'Completed', '#dbeafe', '#1d4ed8');
+        UI.statCard('bookings', total, 'Total Bookings') +
+        UI.statCard('active', active, 'Active Rentals') +
+        UI.statCard('pending', pending, 'Pending Approval') +
+        UI.statCard('bookings', completed, 'Completed');
 
       /* recent bookings — last 5 */
       const recent = bookings.slice(0, 5);
@@ -383,14 +387,6 @@
     } catch (err) {
       toast(err.message, 'error');
     }
-  }
-
-  function statCard(icon, val, lbl, bg, color) {
-    return '<div class="stat-card">'
-      + '<div class="stat-icon" style="background:' + bg + ';color:' + color + '">' + icon + '</div>'
-      + '<div class="stat-val">' + val + '</div>'
-      + '<div class="stat-lbl">' + lbl + '</div>'
-      + '</div>';
   }
 
   /* ── BOOKINGS ───────────────────────── */
@@ -437,7 +433,7 @@
           + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>';
       } else if (b.status === 'completed') {
         actions = '<button class="btn btn-outline btn-sm" '
-          + 'onclick="openReview(' + b.id + ')">&#x2B50; Review</button>';
+          + 'onclick="openReview(' + b.id + ')">Review</button>';
       } else {
         actions = '<span style="color:var(--text-3);font-size:12px">—</span>';
       }
@@ -451,7 +447,7 @@
         + (b.car.year || '') + ' &middot; ' + b.car.car_type
         + '</div>'
         + '</td>'
-        + '<td style="font-size:12px">&#x1F4CD; ' + b.car.location + '</td>'
+        + '<td style="font-size:12px">' + b.car.location + '</td>'
         + '<td style="font-size:12px">' + b.start_date + '</td>'
         + '<td style="font-size:12px">' + b.end_date + '</td>'
         + '<td style="font-size:12px">' + days + 'd</td>'

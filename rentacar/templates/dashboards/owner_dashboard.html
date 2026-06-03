@@ -2,7 +2,7 @@
 {% block title %}Owner Dashboard — RentACar{% endblock %}
 
 {% block content %}
-<div class="dash-layout">
+<div class="dash-layout role-owner">
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
@@ -15,14 +15,28 @@
     </div>
 
     <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">&#x1F4CA; Overview</button>
-      <button class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">&#x1F697; My Cars</button>
-      <button class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">&#x2795; Add New Car</button>
-      <button class="s-item" id="btn-requests" onclick="showTab('requests', this)">&#x1F4C5; Booking Requests</button>
-      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">&#x1F464; My Profile</button>
-      <button class="s-item" id="btn-password" onclick="showTab('password', this)">&#x1F512; Change Password</button>
+      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </button>
+      <button class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> My Cars
+      </button>
+      <button class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add Listing
+      </button>
+      <button class="s-item" id="btn-requests" onclick="showTab('requests', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> Booking Requests
+      </button>
+      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
+      </button>
+      <button class="s-item" id="btn-password" onclick="showTab('password', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
+      </button>
       <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">&#x1F6AA; Logout</button>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
     </div>
   </aside>
 
@@ -121,90 +135,141 @@
 
     <!-- ══ ADD CAR TAB ══ -->
     <div class="tab-panel" id="tab-addcar">
-      <div class="page-head">
+      <div class="page-head page-head--stack">
         <div>
           <h1>List a New Car</h1>
-          <p>Fill in details — admin will review before publishing</p>
+          <p>Add your vehicle — it goes live on Browse Cars as soon as you publish.</p>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-body">
+      <div class="listing-tip" role="status">
+        <span class="listing-tip-icon" aria-hidden="true">
+          <svg class="icon"><use href="#icon-check"/></svg>
+        </span>
+        <div>
+          <strong>Instant publishing</strong>
+          <span>Customers can book right away. You can hide or edit the listing anytime from My Cars.</span>
+        </div>
+      </div>
 
-          <div class="form-grid-3">
-            <div class="form-group">
-              <label class="form-label">Brand *</label>
-              <input class="form-control" type="text" id="cBrand" placeholder="e.g. Toyota" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Model *</label>
-              <input class="form-control" type="text" id="cModel" placeholder="e.g. Corolla" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Year *</label>
-              <input class="form-control" type="number" id="cYear" placeholder="e.g. 2021" min="1990" max="2026" />
-            </div>
-          </div>
+      <form class="listing-form card" id="addCarForm" novalidate onsubmit="event.preventDefault(); addCar();">
+        <div class="card-body listing-form-body">
 
-          <div class="form-grid-3">
-            <div class="form-group">
-              <label class="form-label">Car Type *</label>
-              <select class="form-control" id="cType">
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="luxury">Luxury</option>
-                <option value="hatchback">Hatchback</option>
-                <option value="truck">Truck</option>
-                <option value="van">Van</option>
-              </select>
+          <section class="form-section" aria-labelledby="addSectionVehicle">
+            <div class="form-section-head">
+              <h2 class="form-section-title" id="addSectionVehicle">Vehicle details</h2>
+              <p class="form-section-desc">Basic information customers see first.</p>
             </div>
-            <div class="form-group">
-              <label class="form-label">Price per Day ($) *</label>
-              <input class="form-control" type="number" id="cPrice" placeholder="e.g. 45" min="1" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Location *</label>
-              <input class="form-control" type="text" id="cLocation" placeholder="e.g. Lahore, Pakistan" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea class="form-control" id="cDesc" rows="3"
-              placeholder="Describe your car — condition, features, fuel policy...">
-            </textarea>
-          </div>
-
-          <!-- Image upload -->
-          <div class="form-group">
-            <label class="form-label">Car Images</label>
-            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('cImages').click()">
-              <div style="font-size:28px;margin-bottom:6px">&#x1F4F7;</div>
-              <div style="font-size:13px;font-weight:500">
-                Click to upload car photos
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label class="form-label" for="cBrand">Brand <span class="req">*</span></label>
+                <input class="form-control" type="text" id="cBrand" required autocomplete="organization"
+                  placeholder="e.g. Toyota" />
               </div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:4px">
-                JPG or PNG — you can select multiple
+              <div class="form-group">
+                <label class="form-label" for="cModel">Model <span class="req">*</span></label>
+                <input class="form-control" type="text" id="cModel" required placeholder="e.g. Corolla" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cYear">Year <span class="req">*</span></label>
+                <input class="form-control" type="number" id="cYear" required placeholder="e.g. 2021"
+                  min="1990" max="2030" />
               </div>
             </div>
-            <input type="file" id="cImages" multiple accept="image/*" style="display:none"
-              onchange="previewImgs(this)" />
-            <div class="preview-grid" id="imgPreview"></div>
-          </div>
+            <div class="form-grid-2 form-grid-2--narrow">
+              <div class="form-group">
+                <label class="form-label" for="cType">Car type <span class="req">*</span></label>
+                <select class="form-control" id="cType" required>
+                  <option value="sedan">Sedan</option>
+                  <option value="suv">SUV</option>
+                  <option value="luxury">Luxury</option>
+                  <option value="hatchback">Hatchback</option>
+                  <option value="truck">Truck</option>
+                  <option value="van">Van</option>
+                </select>
+              </div>
+            </div>
+          </section>
 
-          <div class="err-box" id="addCarErr"></div>
+          <section class="form-section" aria-labelledby="addSectionPricing">
+            <div class="form-section-head">
+              <h2 class="form-section-title" id="addSectionPricing">Pricing &amp; location</h2>
+              <p class="form-section-desc">Set your daily rate and where the car is based.</p>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="cPrice">Price per day <span class="req">*</span></label>
+                <div class="input-prefix-wrap">
+                  <span class="input-prefix" aria-hidden="true">$</span>
+                  <input class="form-control input-with-prefix" type="number" id="cPrice" required
+                    placeholder="45.00" min="1" step="0.01" inputmode="decimal" />
+                </div>
+                <p class="form-hint">What renters pay per 24 hours.</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cLocation">Pickup location <span class="req">*</span></label>
+                <div class="input-icon-wrap">
+                  <span class="input-icon" aria-hidden="true">
+                    <svg class="icon icon-sm"><use href="#icon-pin"/></svg>
+                  </span>
+                  <input class="form-control input-with-icon" type="text" id="cLocation" required
+                    placeholder="e.g. Lahore, Pakistan" autocomplete="address-level2" />
+                </div>
+                <p class="form-hint">City or area shown on the listing.</p>
+              </div>
+            </div>
+          </section>
 
-          <div style="display:flex;gap:10px">
-            <button class="btn btn-primary" id="addCarBtn" onclick="addCar()">
-              Submit
+          <section class="form-section" aria-labelledby="addSectionDesc">
+            <div class="form-section-head">
+              <h2 class="form-section-title" id="addSectionDesc">Description</h2>
+              <p class="form-section-desc">Optional — helps renters choose your car.</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cDesc">About this car</label>
+              <textarea class="form-control" id="cDesc" rows="4" maxlength="2000"
+                placeholder="Condition, features, fuel policy, mileage limits…"></textarea>
+              <p class="form-hint form-hint--end"><span id="cDescCount">0</span> / 2000</p>
+            </div>
+          </section>
+
+          <section class="form-section form-section--last" aria-labelledby="addSectionPhotos">
+            <div class="form-section-head">
+              <h2 class="form-section-title" id="addSectionPhotos">Photos</h2>
+              <p class="form-section-desc">Listings with photos get more bookings. Add at least one if you can.</p>
+            </div>
+            <div class="form-group">
+              <div class="upload-zone" id="uploadZone" tabindex="0" role="button"
+                aria-label="Upload car photos. Drop files here or press Enter to browse.">
+                <div class="upload-zone-inner">
+                  <div class="upload-zone-icon" aria-hidden="true">
+                    <svg class="icon"><use href="#icon-camera"/></svg>
+                  </div>
+                  <p class="upload-zone-title">Drop photos here or <span class="upload-zone-link">browse</span></p>
+                  <p class="upload-zone-hint">JPG or PNG · up to 10 MB each · multiple files OK</p>
+                </div>
+              </div>
+              <input type="file" id="cImages" multiple accept="image/jpeg,image/png,image/webp"
+                class="visually-hidden" aria-hidden="true" />
+              <p class="upload-meta" id="uploadMeta" hidden></p>
+              <div class="preview-grid" id="imgPreview"></div>
+            </div>
+          </section>
+
+          <div class="err-box" id="addCarErr" role="alert"></div>
+
+          <div class="listing-form-actions">
+            <button type="submit" class="btn btn-primary btn-lg" id="addCarBtn">
+              Publish listing
             </button>
-            <button class="btn btn-ghost" onclick="showTab('mycars', document.getElementById('btn-mycars'))">
+            <button type="button" class="btn btn-ghost"
+              onclick="showTab('mycars', document.getElementById('btn-mycars'))">
               Cancel
             </button>
           </div>
 
         </div>
-      </div>
+      </form>
     </div>
 
     <!-- ══ BOOKING REQUESTS TAB ══ -->
@@ -367,10 +432,8 @@
 <div class="modal-bg" id="editCarModal">
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
-      <h3>&#x270F; Edit Car</h3>
-      <button class="btn-close-modal" onclick="closeModal('editCarModal')">
-        &#x2715;
-      </button>
+      <h3>Edit Car</h3>
+      <button class="btn-close-modal" onclick="closeModal('editCarModal')" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editCarId" />
@@ -501,10 +564,10 @@
 
       /* stat cards */
       document.getElementById('oStats').innerHTML =
-        statCard('&#x1F697;', cars.length, 'My Cars', '#dbeafe', '#1d4ed8') +
-        statCard('&#x23F3;', pending, 'Pending Requests', '#fef3c7', '#92400e') +
-        statCard('&#x2705;', active, 'Active Rentals', '#dcfce7', '#15803d') +
-        statCard('&#x1F4B0;', '$' + earnings, 'Total Earnings', '#dcfce7', '#15803d');
+        UI.statCard('cars', cars.length, 'My Cars') +
+        UI.statCard('pending', pending, 'Pending Requests') +
+        UI.statCard('active', active, 'Active Rentals') +
+        UI.statCard('earnings', '$' + earnings, 'Total Earnings');
 
       /* cars preview table */
       if (!cars.length) {
@@ -522,12 +585,11 @@
               + '<td><span class="badge badge-blue">' + c.car_type + '</span></td>'
               + '<td style="font-weight:700;color:var(--primary)">$'
               + parseFloat(c.price_per_day).toFixed(2) + '</td>'
-              + '<td style="font-size:12px">&#x1F4CD; ' + c.location + '</td>'
-              + '<td>'
-              + (c.is_approved
-                ? '<span class="badge badge-green">Approved</span>'
-                : '<span class="badge badge-amber">Pending</span>')
-              + '</td>'
+              + '<td style="font-size:12px">' + c.location + '</td>'
+              + '<td>' + (c.is_approved && c.is_available
+                ? '<span class="badge badge-green">Live</span>'
+                : (!c.is_approved ? '<span class="badge badge-red">Removed</span>'
+                  : '<span class="badge badge-gray">Hidden</span>')) + '</td>'
               + '<td>'
               + (c.is_available
                 ? '<span class="badge badge-blue">Available</span>'
@@ -560,15 +622,6 @@
     } catch (err) { toast(err.message, 'error'); }
   }
 
-  function statCard(icon, val, lbl, bg, color) {
-    return '<div class="stat-card">'
-      + '<div class="stat-icon" style="background:' + bg + ';color:' + color + '">'
-      + icon + '</div>'
-      + '<div class="stat-val">' + val + '</div>'
-      + '<div class="stat-lbl">' + lbl + '</div>'
-      + '</div>';
-  }
-
   /* ══ MY CARS ════════════════════════ */
   async function loadMyCars() {
     var grid = document.getElementById('myCarsGrid');
@@ -592,24 +645,14 @@
           ? car.images.find(function (i) { return i.is_primary; }) || car.images[0]
           : null;
 
-        var thumb = img
-          ? '<img src="' + img.image + '" loading="lazy"/>'
-          : '<span style="font-size:36px">&#x1F697;</span>';
+        var thumb = UI.carThumb(img ? img.image : null, window.STATIC_NO_IMAGE);
 
         return '<div class="car-card" style="cursor:default">'
           + '<div class="car-thumb">' + thumb + '</div>'
           + '<div class="car-body">'
           + '<div class="car-title">' + car.brand + ' ' + car.model + ' (' + car.year + ')</div>'
-          + '<div class="car-badges">'
-          + (car.is_approved
-            ? '<span class="badge badge-green">&#x2714; Approved</span>'
-            : '<span class="badge badge-amber">&#x23F3; Pending Approval</span>')
-          + '&nbsp;'
-          + (car.is_available
-            ? '<span class="badge badge-blue">Available</span>'
-            : '<span class="badge badge-gray">Unavailable</span>')
-          + '</div>'
-          + '<div class="car-loc">&#x1F4CD; ' + car.location + '</div>'
+          + '<div class="car-badges">' + carListingBadges(car) + '</div>'
+          + UI.locationLine(car.location, '')
           + '<div class="car-footer">'
           + '<div class="car-price">$'
           + parseFloat(car.price_per_day).toFixed(2)
@@ -617,9 +660,9 @@
           + '</div>'
           + '<div style="display:flex;gap:6px;margin-top:10px">'
           + '<button class="btn btn-outline btn-sm" style="flex:1" '
-          + 'onclick=\'openEditCar(' + JSON.stringify(car) + ')\'>&#x270F; Edit</button>'
-          + '<button class="btn btn-danger btn-sm" '
-          + 'onclick="deleteCar(' + car.id + ')">&#x1F5D1;</button>'
+          + 'onclick=\'openEditCar(' + JSON.stringify(car) + ')\'>Edit</button>'
+          + '<button class="btn btn-danger btn-sm" aria-label="Delete" '
+          + 'onclick="deleteCar(' + car.id + ')">Delete</button>'
           + '</div>'
           + '</div>'
           + '</div>';
@@ -638,20 +681,49 @@
     });
     document.getElementById('cType').value = 'sedan';
     document.getElementById('imgPreview').innerHTML = '';
+    document.getElementById('cImages').value = '';
     document.getElementById('addCarErr').style.display = 'none';
     selectedFiles = [];
+    updateDescCount();
+    updateUploadUI();
+  }
+
+  function updateDescCount() {
+    var ta = document.getElementById('cDesc');
+    var el = document.getElementById('cDescCount');
+    if (ta && el) el.textContent = (ta.value || '').length;
+  }
+
+  function updateUploadUI() {
+    var zone = document.getElementById('uploadZone');
+    var meta = document.getElementById('uploadMeta');
+    var n = selectedFiles.length;
+    if (!zone) return;
+    zone.classList.toggle('upload-zone--filled', n > 0);
+    if (meta) {
+      if (n > 0) {
+        meta.hidden = false;
+        meta.textContent = n + (n === 1 ? ' photo selected' : ' photos selected') + ' — click zone to add more';
+      } else {
+        meta.hidden = true;
+        meta.textContent = '';
+      }
+    }
   }
 
   function previewImgs(input) {
-    selectedFiles = Array.from(input.files);
+    var files = input && input.files ? Array.from(input.files) : [];
+    selectedFiles = files;
     var grid = document.getElementById('imgPreview');
     grid.innerHTML = selectedFiles.map(function (f, i) {
       var url = URL.createObjectURL(f);
       return '<div class="preview-item">'
-        + '<img src="' + url + '"/>'
-        + '<button class="preview-rm" onclick="removeImg(' + i + ')">&#x2715;</button>'
-        + '</div>';
+        + '<img src="' + url + '" alt="Preview ' + (i + 1) + '"/>'
+        + '<button type="button" class="preview-rm" onclick="removeImg(' + i + ')" aria-label="Remove photo">'
+        + '<svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg>'
+        + '</button></div>';
     }).join('');
+    updateUploadUI();
   }
 
   function removeImg(i) {
@@ -660,6 +732,68 @@
     selectedFiles.forEach(function (f) { dt.items.add(f); });
     document.getElementById('cImages').files = dt.files;
     previewImgs({ files: dt.files });
+  }
+
+  function initListingForm() {
+    var zone = document.getElementById('uploadZone');
+    var input = document.getElementById('cImages');
+    var desc = document.getElementById('cDesc');
+    if (!zone || !input) return;
+
+    zone.addEventListener('click', function (e) {
+      if (e.target.closest('.preview-rm')) return;
+      input.click();
+    });
+    zone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        input.click();
+      }
+    });
+    input.addEventListener('change', function () {
+      var added = Array.from(input.files);
+      var merged = selectedFiles.slice();
+      added.forEach(function (f) {
+        var dup = merged.some(function (x) {
+          return x.name === f.name && x.size === f.size && x.lastModified === f.lastModified;
+        });
+        if (!dup) merged.push(f);
+      });
+      var dt = new DataTransfer();
+      merged.forEach(function (f) { dt.items.add(f); });
+      input.files = dt.files;
+      previewImgs(input);
+    });
+
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add('upload-zone--drag');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('upload-zone--drag');
+      });
+    });
+    zone.addEventListener('drop', function (e) {
+      var dropped = Array.from(e.dataTransfer.files || []).filter(function (f) {
+        return f.type && f.type.indexOf('image/') === 0;
+      });
+      if (!dropped.length) return;
+      var dt = new DataTransfer();
+      selectedFiles.concat(dropped).forEach(function (f) { dt.items.add(f); });
+      input.files = dt.files;
+      previewImgs(input);
+    });
+
+    if (desc) {
+      desc.addEventListener('input', updateDescCount);
+      updateDescCount();
+    }
   }
 
   async function addCar() {
@@ -678,6 +812,9 @@
     if (!brand || !model || !year || !price || !location) {
       errBox.textContent = 'Please fill all required fields marked with *.';
       errBox.style.display = 'block';
+      var first = !brand ? 'cBrand' : !model ? 'cModel' : !year ? 'cYear' : !price ? 'cPrice' : 'cLocation';
+      var el = document.getElementById(first);
+      if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       return;
     }
 
@@ -703,7 +840,7 @@
         await API.upload('/api/cars/' + carId + '/images/', fd);
       }
 
-      toast('Car submitted for admin approval!', 'success');
+      toast('Listing is live on Browse Cars.', 'success');
       resetAddForm();
       showTab('mycars', document.getElementById('btn-mycars'));
 
@@ -712,7 +849,7 @@
       errBox.style.display = 'block';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Submit for Approval';
+      btn.textContent = 'Publish listing';
     }
   }
 
@@ -757,7 +894,7 @@
       }
 
       closeModal('editCarModal');
-      toast('Car updated. Re-submitted for admin approval.', 'success');
+      toast('Listing updated.', 'success');
       loadMyCars();
       loadOverview();
 
@@ -817,9 +954,9 @@
         actions =
           '<div style="display:flex;gap:5px">'
           + '<button class="btn btn-success btn-sm" '
-          + 'onclick="respondBooking(' + b.id + ',\'approved\')">&#x2714; Approve</button>'
-          + '<button class="btn btn-danger btn-sm" '
-          + 'onclick="respondBooking(' + b.id + ',\'rejected\')">&#x2718; Reject</button>'
+          + 'onclick="respondBooking(' + b.id + ',\'approved\')">Approve</button>'
+          + '<button class="btn btn-outline btn-sm" '
+          + 'onclick="respondBooking(' + b.id + ',\'rejected\')">Reject</button>'
           + '</div>';
       } else if (b.status === 'approved') {
         actions =
@@ -956,6 +1093,7 @@
   }
 
   /* ── Boot ───────────────────────────── */
+  initListingForm();
   loadOverview();
 </script>
 {% endblock %}

@@ -42,6 +42,20 @@ class CarListSerializer(serializers.ModelSerializer):
         return None
 
 
+class AdminCarListSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Car
+        fields = [
+            'id', 'brand', 'model', 'year', 'car_type', 'price_per_day',
+            'location', 'is_available', 'is_approved', 'owner',
+        ]
+
+    def get_owner(self, obj):
+        return {'username': obj.owner.username}
+
+
 class CarDetailSerializer(serializers.ModelSerializer):
     images = CarImageSerializer(many=True, read_only=True)
     owner  = UserSerializer(read_only=True)
@@ -71,6 +85,7 @@ class CarCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get('request')
         validated_data['owner'] = request.user
+        validated_data.setdefault('is_approved', True)
         return super().create(validated_data)
 
 
