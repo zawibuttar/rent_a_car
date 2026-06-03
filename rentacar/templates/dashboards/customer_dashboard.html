@@ -48,7 +48,24 @@
           <h1>Overview</h1>
           <p id="welcomeMsg"></p>
         </div>
-        <!-- <a href="/cars/" class="btn btn-primary">+ Book a Car</a> -->
+        <a href="/cars/" class="btn btn-primary">+ Book a Car</a>
+      </div>
+
+      <div class="dash-quick-actions" role="group" aria-label="Quick actions">
+        <a href="/cars/" class="dash-action-chip dash-action-chip--primary dash-action-chip--wide">
+          <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          Browse cars
+        </a>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
+          My bookings
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('profile', document.getElementById('btn-profile'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
+          Profile
+        </button>
       </div>
 
       <!-- Stats -->
@@ -60,11 +77,12 @@
       <div class="card">
         <div class="card-head">
           <h2>Recent Bookings</h2>
-          <button class="btn btn-ghost btn-sm" onclick="showTab('bookings', document.getElementById('btn-bookings'))">
-            View All &#8594;
+          <button type="button" class="btn btn-ghost btn-sm"
+            onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+            View all
           </button>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
@@ -105,16 +123,16 @@
       </div>
 
       <div class="card">
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
                 <th>#</th>
                 <th>Car</th>
                 <th class="col-hide-sm">Location</th>
-                <th>Start</th>
-                <th>End</th>
-                <th class="col-hide-sm">Days</th>
+                <th>Period</th>
+                <th class="col-hide-sm">Duration</th>
+                <th class="col-hide-sm">Type</th>
                 <th>Total</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -153,7 +171,7 @@
             <div class="profile-av" id="profileAv" style="background:var(--primary-light);color:var(--primary)"></div>
             <div class="profile-name" id="profileName"></div>
             <div class="profile-email" id="profileEmail"></div>
-            <div style="margin-top:6px">
+            <div class="profile-badge-row">
               <span class="badge badge-blue">Customer</span>
             </div>
             <div class="profile-stats">
@@ -230,7 +248,7 @@
         </div>
       </div>
 
-      <div class="card" style="max-width:440px">
+      <div class="card form-panel-narrow">
         <div class="card-body">
 
           <div class="form-group">
@@ -265,7 +283,9 @@
   <div class="modal">
     <div class="modal-head">
       <h3>Leave a Review</h3>
-      <button class="btn-close-modal" onclick="closeModal('reviewModal')" aria-label="Close">&times;</button>
+      <button type="button" class="btn-icon btn-close-modal" onclick="closeModal('reviewModal')" aria-label="Close">
+        <svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -351,28 +371,39 @@
 
       /* stats cards */
       document.getElementById('statsRow').innerHTML =
-        UI.statCard('bookings', total, 'Total Bookings') +
-        UI.statCard('active', active, 'Active Rentals') +
-        UI.statCard('pending', pending, 'Pending Approval') +
-        UI.statCard('bookings', completed, 'Completed');
+        UI.statCardButton('bookings', total, 'Total Bookings',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('active', active, 'Active Rentals',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('pending', pending, 'Pending Approval',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('bookings', completed, 'Completed',
+          "showTab('bookings', document.getElementById('btn-bookings'))");
 
       /* recent bookings — last 5 */
       const recent = bookings.slice(0, 5);
       if (!recent.length) {
         document.getElementById('recentTable').innerHTML =
-          '<tr><td colspan="4"><div class="empty"><h3>No bookings yet</h3>'
-          + '<p><a href="/cars/">Browse cars to make your first booking</a></p></div></td></tr>';
+          '<tr><td colspan="4">'
+          + UI.emptyState(
+            'No bookings yet',
+            'Browse available cars and send your first booking request.',
+            '<a href="/cars/" class="btn btn-primary">Browse cars</a>'
+          )
+          + '</td></tr>';
+        UI.refreshTableScrollHints();
         return;
       }
       document.getElementById('recentTable').innerHTML = recent.map(function (b) {
         return '<tr>'
           + '<td><a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
           + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a></td>'
-          + '<td class="td-meta">' + UI.escHtml(b.start_date) + ' &#8594; ' + UI.escHtml(b.end_date) + '</td>'
+          + '<td class="td-meta">' + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
           + '<td class="td-money">$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
           + '<td>' + statusBadge(b.status) + '</td>'
           + '</tr>';
       }).join('');
+      UI.refreshTableScrollHints();
 
     } catch (err) {
       toast(err.message, 'error');
@@ -421,23 +452,29 @@
         ? 'No ' + UI.bookingStatusLabel(bookingsStatusFilter).toLowerCase() + ' bookings.'
         : 'No bookings found.';
       tbody.innerHTML = '<tr><td colspan="9">'
-        + '<div class="empty"><h3>' + UI.escHtml(emptyMsg) + '</h3>'
-        + '<p>Try a different filter or <a href="/cars/">book a car</a></p></div>'
+        + UI.emptyState(
+          emptyMsg,
+          'Try a different filter or book a new car.',
+          '<a href="/cars/" class="btn btn-primary">Book a car</a>'
+        )
         + '</td></tr>';
       UI.mountPagination('bookingsPagination', meta, function () {}, { label: 'bookings' });
       return;
     }
 
     tbody.innerHTML = meta.items.map(function (b) {
-      var days = Math.round((new Date(b.end_date) - new Date(b.start_date)) / 86400000);
       var actions = '';
 
       if (b.status === 'pending' || b.status === 'approved') {
-        actions = '<button class="btn btn-danger btn-sm" '
-          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>';
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-danger btn-sm" '
+          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>'
+          + '</div>';
       } else if (b.status === 'completed') {
-        actions = '<button class="btn btn-outline btn-sm" '
-          + 'onclick="openReview(' + b.id + ')">Review</button>';
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-outline btn-sm" '
+          + 'onclick="openReview(' + b.id + ')">Review</button>'
+          + '</div>';
       } else {
         actions = UI.tableEmpty();
       }
@@ -452,9 +489,10 @@
         + '</div>'
         + '</td>'
         + '<td class="td-meta col-hide-sm">' + UI.escHtml(b.car.location) + '</td>'
-        + '<td class="td-meta">' + UI.escHtml(b.start_date) + '</td>'
-        + '<td class="td-meta">' + UI.escHtml(b.end_date) + '</td>'
-        + '<td class="td-meta col-hide-sm">' + days + 'd</td>'
+        + '<td class="td-meta">' + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+        + '<td class="td-meta col-hide-sm">' + UI.escHtml(UI.bookingDurationLabel(b)) + '</td>'
+        + '<td class="col-hide-sm"><span class="badge badge-blue">'
+        + UI.escHtml(UI.rentalTypeLabel(b.rental_type)) + '</span></td>'
         + '<td class="td-money">'
         + '$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
         + '<td>' + statusBadge(b.status) + '</td>'
@@ -467,6 +505,7 @@
       renderBookings(bookingsViewList);
       UI.scrollToEl('bookingsTable');
     }, { label: 'bookings' });
+    UI.refreshTableScrollHints();
   }
 
   async function cancelBooking(id) {
@@ -493,8 +532,7 @@
       /* show profile pic if exists */
       if (p.profile_picture) {
         document.getElementById('profileAv').innerHTML =
-          '<img src="' + UI.escHtml(p.profile_picture) + '" '
-          + 'style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
+          '<img src="' + UI.escHtml(p.profile_picture) + '" alt=""/>';
       }
     } catch (err) {
       toast(err.message, 'error');

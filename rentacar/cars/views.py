@@ -38,10 +38,9 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
         queryset = Car.objects.filter(
             is_approved=True,
             is_available=True,
-        ).select_related('owner').prefetch_related('images').only(
-            'id', 'brand', 'model', 'year', 'car_type', 'price_per_day', 'location', 'is_available',
-            'owner__username'
-        ).annotate(primary_image=Subquery(primary_image_subquery))
+        ).select_related('owner').prefetch_related('images').annotate(
+            primary_image=Subquery(primary_image_subquery)
+        )
 
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')

@@ -101,7 +101,7 @@ const Catalog = {
     if (!grid) return;
 
     grid.innerHTML =
-      '<div class="loading" style="grid-column:1/-1">'
+      '<div class="loading grid-span-full">'
       + '<span class="spinner spinner-lg"></span> Loading cars...</div>';
 
     try {
@@ -122,11 +122,16 @@ const Catalog = {
         const hint = f.search || f.type || f.min || f.max
           ? 'Try different search terms or reset filters.'
           : 'Check back later for new listings.';
-        grid.innerHTML =
-          '<div class="empty" style="grid-column:1/-1">'
-          + '<h3>No cars found</h3>'
-          + '<p>' + UI.escHtml(hint) + '</p>'
+        const hasFilters = f.search || f.type || f.min || f.max
+          || (f.sort && f.sort !== '-created_at');
+        const actions = hasFilters
+          ? '<button type="button" class="btn btn-primary" id="catalogEmptyReset">Clear filters</button>'
+          : '';
+        grid.innerHTML = '<div class="grid-span-full">'
+          + UI.emptyState('No cars found', hint, actions)
           + '</div>';
+        const emptyReset = document.getElementById('catalogEmptyReset');
+        if (emptyReset) emptyReset.addEventListener('click', Catalog.resetFilters);
         UI.mountPagination('carsPagination', {
           count: 0,
           totalPages: 1,
@@ -146,10 +151,9 @@ const Catalog = {
       }, { label: 'cars' });
 
     } catch (err) {
-      grid.innerHTML =
-        '<div class="empty" style="grid-column:1/-1">'
-        + '<h3>Failed to load cars</h3>'
-        + '<p>' + UI.escHtml(err.message) + '</p>'
+      grid.innerHTML = '<div class="grid-span-full">'
+        + UI.emptyState('Failed to load cars', err.message,
+          '<button type="button" class="btn btn-outline" onclick="Catalog.loadCars(1)">Try again</button>')
         + '</div>';
       const pag = document.getElementById('carsPagination');
       if (pag) pag.hidden = true;

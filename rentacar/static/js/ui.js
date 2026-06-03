@@ -114,13 +114,164 @@ const UI = {
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
   },
 
+  rentalTypeLabel(type) {
+    const labels = {
+      hourly: 'Hourly',
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+    };
+    return labels[type] || type || '—';
+  },
+
+  primaryRateDisplay(car) {
+    if (!car) return { value: '0.00', unit: 'day', label: 'per day' };
+    const types = [
+      { on: car.rent_daily, price: car.price_per_day, unit: 'day', label: 'per day' },
+      { on: car.rent_hourly, price: car.price_per_hour, unit: 'hour', label: 'per hour' },
+      { on: car.rent_weekly, price: car.price_per_week, unit: 'week', label: 'per week' },
+      { on: car.rent_monthly, price: car.price_per_month, unit: 'month', label: 'per month' },
+    ];
+    for (let i = 0; i < types.length; i++) {
+      const t = types[i];
+      if (!t.on) continue;
+      const n = parseFloat(t.price);
+      if (!isNaN(n) && n > 0) {
+        return { value: n.toFixed(2), unit: t.unit, label: t.label };
+      }
+    }
+    return { value: '0.00', unit: 'day', label: 'per day' };
+  },
+
+  formatHourlyDuration(ms) {
+    const totalMins = Math.max(0, Math.round(ms / 60000));
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    if (h && m) return h + 'h ' + m + 'm';
+    if (h) return h + 'h';
+    return m + 'm';
+  },
+
+  inclusiveDays(start, end) {
+    const s = new Date(start);
+    const e = new Date(end);
+    // Use UTC calendar dates so end-of-day (23:59:59Z) stays on the same rental day.
+    const utcS = Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate());
+    const utcE = Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), e.getUTCDate());
+    return Math.floor((utcE - utcS) / 86400000) + 1;
+  },
+
+  computeRentalTotal(car, rentalType, startAt, endAt) {
+    if (!car || !startAt || !endAt) return { error: 'Select dates and times.' };
+    const start = new Date(startAt);
+    const end = new Date(endAt);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return { error: 'Invalid date or time.' };
+    }
+
+    if (rentalType === 'hourly') {
+      if (!car.rent_hourly || !car.price_per_hour) {
+        return { error: 'Hourly rental is not available for this car.' };
+      }
+      if (end <= start) return { error: 'Return must be after pick-up.' };
+      const exactHours = (end - start) / 3600000;
+      if (exactHours < 1) return { error: 'Minimum rental is 1 hour.' };
+      const rate = parseFloat(car.price_per_hour);
+      return {
+        total: (exactHours * rate).toFixed(2),
+        duration: UI.formatHourlyDuration(end - start),
+        unitLabel: UI.formatHourlyDuration(end - start),
+      };
+    }
+
+    if (end < start) return { error: 'Return cannot be before pick-up.' };
+    const startDay = start.toISOString().slice(0, 10);
+    const todayDay = new Date().toISOString().slice(0, 10);
+    if (startDay < todayDay) {
+      return { error: 'Pick-up cannot be in the past.' };
+    }
+    const days = Math.max(1, UI.inclusiveDays(start, end));
+
+    if (rentalType === 'daily') {
+      if (!car.rent_daily || !car.price_per_day) {
+        return { error: 'Daily rental is not available for this car.' };
+      }
+      return {
+        total: (days * parseFloat(car.price_per_day)).toFixed(2),
+        duration: days + ' day' + (days !== 1 ? 's' : ''),
+        unitLabel: days + 'd',
+      };
+    }
+    if (rentalType === 'weekly') {
+      if (!car.rent_weekly || !car.price_per_week) {
+        return { error: 'Weekly rental is not available for this car.' };
+      }
+      if (days < 7) return { error: 'Minimum weekly rental is 7 days.' };
+      const weeks = Math.ceil(days / 7);
+      return {
+        total: (weeks * parseFloat(car.price_per_week)).toFixed(2),
+        duration: weeks + ' week' + (weeks !== 1 ? 's' : ''),
+        unitLabel: weeks + 'w',
+      };
+    }
+    if (rentalType === 'monthly') {
+      if (!car.rent_monthly || !car.price_per_month) {
+        return { error: 'Monthly rental is not available for this car.' };
+      }
+      if (days < 30) return { error: 'Minimum monthly rental is 30 days.' };
+      const months = Math.ceil(days / 30);
+      return {
+        total: (months * parseFloat(car.price_per_month)).toFixed(2),
+        duration: months + ' month' + (months !== 1 ? 's' : ''),
+        unitLabel: months + 'mo',
+      };
+    }
+    return { error: 'Invalid rental type.' };
+  },
+
+  formatBookingPeriod(booking) {
+    if (!booking) return '—';
+    if (booking.period_display) return booking.period_display;
+    const type = booking.rental_type || 'daily';
+    const start = booking.start_at;
+    const end = booking.end_at;
+    if (!start || !end) return '—';
+    if (type === 'hourly') {
+      const fmt = function (iso) {
+        const d = new Date(iso);
+        return d.toLocaleString(undefined, {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        });
+      };
+      return fmt(start) + ' → ' + fmt(end);
+    }
+    const sd = String(start).slice(0, 10);
+    const ed = String(end).slice(0, 10);
+    return sd + ' → ' + ed;
+  },
+
+  bookingDurationLabel(booking) {
+    if (booking && booking.duration_label) return booking.duration_label;
+    if (!booking || !booking.start_at || !booking.end_at) return '—';
+    const r = UI.computeRentalTotal(
+      booking.car || {},
+      booking.rental_type,
+      booking.start_at,
+      booking.end_at
+    );
+    return r.unitLabel || '—';
+  },
+
   listingCard(car, opts) {
     opts = opts || {};
     const ctaLabel = opts.ctaLabel || 'View details';
     const title = ((car.brand || '') + ' ' + (car.model || '')).trim();
     const year = car.year ? String(car.year) : '';
     const type = UI.formatCarType(car.car_type);
-    const price = parseFloat(car.price_per_day || 0).toFixed(2);
+    const rate = UI.primaryRateDisplay(car);
+    const price = rate.value;
+    const priceUnit = rate.label;
     const avail = car.is_available;
     const statusClass = avail ? 'badge-green' : 'badge-gray';
     const statusText = avail ? 'Available' : 'Unavailable';
@@ -150,7 +301,7 @@ const UI = {
       + '<div class="listing-card-foot">'
       + '<div class="listing-card-price">'
       + '<span class="listing-card-price-val">$' + price + '</span>'
-      + '<span class="listing-card-price-unit">per day</span>'
+      + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
       + '</div>'
       + '<span class="listing-card-cta">'
       + ctaLabel

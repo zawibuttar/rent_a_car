@@ -35,11 +35,12 @@
 
 <!-- Booking Modal -->
 <div class="modal-bg" id="bookModal">
-  <div class="modal modal--book">
+  <div class="modal modal--book" role="dialog" aria-labelledby="bookModalTitle" aria-modal="true">
     <div class="modal-head">
       <div>
-        <h3>Request a booking</h3>
-        <p class="book-modal-car" id="bookModalCar"></p>
+        <p class="book-modal-eyebrow">Booking request</p>
+        <h3 id="bookModalTitle">Request a booking</h3>
+        <p class="book-modal-meta" id="bookModalMeta"></p>
       </div>
       <button type="button" class="btn-icon btn-close-modal" onclick="closeModal('bookModal')" aria-label="Close">
         <svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg>
@@ -47,55 +48,70 @@
     </div>
     <div class="modal-body">
 
-      <div class="book-modal-summary" id="bookModalSummary" hidden>
-        <div>
-          <div class="text-strong" id="bookSummaryTitle"></div>
-          <div class="text-small" id="bookSummaryLoc"></div>
-        </div>
-        <div class="detail-price" id="bookSummaryPrice"></div>
-      </div>
+      <section class="book-section" aria-labelledby="bookTypeHeading">
+        <h4 class="book-section-title" id="bookTypeHeading">
+          <span class="book-section-num">1</span> Rental type
+        </h4>
+        <div class="rental-type-pills" id="bookRentalTypes" role="group" aria-label="Rental type"></div>
+      </section>
 
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label class="form-label" for="startDate">Pick-up date</label>
-          <input class="form-control" type="date" id="startDate" onchange="calcCost()" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="endDate">Return date</label>
-          <input class="form-control" type="date" id="endDate" onchange="calcCost()" required />
-        </div>
-      </div>
-      <p class="form-hint" style="margin-top:-6px;margin-bottom:12px">Minimum rental is 1 day. End date must be after pick-up.</p>
+      <section class="book-section" aria-labelledby="bookDatesHeading">
+        <h4 class="book-section-title" id="bookDatesHeading">
+          <span class="book-section-num">2</span> Schedule
+        </h4>
+        <div id="bookScheduleFields"></div>
+        <p class="form-hint form-hint--compact" id="bookScheduleHint"></p>
+        <p class="book-date-hint" id="bookDateHint" hidden role="status"></p>
+      </section>
 
-      <div class="form-group">
-        <label class="form-label" for="bookNote">Message for owner <span class="text-caption">(optional)</span></label>
-        <textarea class="form-control" id="bookNote" rows="3" maxlength="500"
-          placeholder="Pickup time, driver details, or special requests…"></textarea>
-      </div>
+      <section class="book-section" aria-labelledby="bookEstimateHeading">
+        <h4 class="book-section-title" id="bookEstimateHeading">
+          <span class="book-section-num">3</span> Price estimate
+        </h4>
+        <div class="cost-box cost-box--idle" id="costBox" role="status" aria-live="polite">
+          <p class="cost-box-placeholder" id="costPlaceholder">Select dates to see your estimated total.</p>
+          <div class="cost-box-details" id="costDetails" hidden>
+            <div class="cost-row">
+              <span>Duration</span>
+              <span id="costDays"></span>
+            </div>
+            <div class="cost-row">
+              <span id="costRateLabel">Rate</span>
+              <span id="costPpd"></span>
+            </div>
+            <div class="cost-total">
+              <span>Estimated total</span>
+              <span id="costTotal"></span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div class="cost-box" id="costBox" style="display:none" role="status" aria-live="polite">
-        <div class="cost-row">
-          <span>Duration</span>
-          <span id="costDays"></span>
+      <section class="book-section" aria-labelledby="bookMessageHeading">
+        <h4 class="book-section-title" id="bookMessageHeading">
+          <span class="book-section-num">4</span> Message <span class="text-caption">(optional)</span>
+        </h4>
+        <div class="form-group book-section-field">
+          <label class="visually-hidden" for="bookNote">Message for owner</label>
+          <textarea class="form-control" id="bookNote" rows="3" maxlength="500"
+            placeholder="Pickup time, driver details, or special requests…"></textarea>
         </div>
-        <div class="cost-row">
-          <span>Price per day</span>
-          <span id="costPpd"></span>
-        </div>
-        <div class="cost-total">
-          <span>Estimated total</span>
-          <span id="costTotal"></span>
-        </div>
-      </div>
+      </section>
 
       <div class="err-box" id="bookErr" role="alert"></div>
 
     </div>
-    <div class="modal-foot">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('bookModal')">Cancel</button>
-      <button type="button" class="btn btn-primary" id="confirmBtn" onclick="confirmBooking()">
-        Send booking request
-      </button>
+    <div class="modal-foot book-modal-foot">
+      <div class="book-foot-summary" id="bookFootSummary" aria-live="polite">
+        <span class="book-foot-summary__lbl">Estimated total</span>
+        <span class="book-foot-summary__val" id="bookFootTotal">—</span>
+      </div>
+      <div class="book-foot-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('bookModal')">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmBtn" onclick="confirmBooking()">
+          Send request
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -106,6 +122,7 @@
 <script>
 const CAR_ID = {{ car_id }};
 let carData = null;
+let selectedRentalType = 'daily';
 
 function formatCarType(t) {
   if (!t) return '';
@@ -202,20 +219,23 @@ function renderCar(car) {
   const availBadge = car.is_available
     ? '<span class="badge badge-green">Available now</span>'
     : '<span class="badge badge-red">Unavailable</span>';
-  const desc = car.description
-    ? '<p class="detail-about-text">' + UI.escHtml(car.description) + '</p>'
-    : '<p class="detail-about-text detail-about-empty">The owner has not added a description yet.</p>';
+  const aboutBlock = car.description
+    ? '<div class="card detail-about">'
+      + '<div class="card-head"><h2>About this car</h2></div>'
+      + '<div class="card-body"><p class="detail-about-text">'
+      + UI.escHtml(car.description) + '</p></div></div>'
+    : '<div class="detail-about-empty">'
+      + '<svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg>'
+      + '<p><strong>No description yet</strong></p>'
+      + '<span>The owner can add more details about this vehicle later.</span>'
+      + '</div>';
 
   document.getElementById('carDetail').innerHTML =
     '<article class="detail-layout">'
 
     + '<div class="detail-main">'
     + buildGallery(images, car)
-
-    + '<div class="card detail-about">'
-    + '<div class="card-head"><h2>About this car</h2></div>'
-    + '<div class="card-body">' + desc + '</div>'
-    + '</div>'
+    + aboutBlock
 
     + '<div class="card">'
     + '<div class="card-head"><h2>Specifications</h2></div>'
@@ -241,12 +261,20 @@ function renderCar(car) {
     + '<span>' + UI.escHtml(typeLabel) + '</span>'
     + '</p>'
     + '<div class="detail-badges">' + availBadge + '</div>'
-    + '<div class="detail-price-block">'
-    + '<div class="detail-price">$' + parseFloat(car.price_per_day).toFixed(2)
-    + '<span> / day</span></div>'
-    + '<p class="detail-price-hint">Final total depends on your rental dates.</p>'
-    + '</div>'
+    + (function () {
+      var rate = UI.primaryRateDisplay(car);
+      var chips = (car.enabled_rental_types || []).map(function (t) {
+        return '<span class="badge badge-blue">' + UI.escHtml(UI.rentalTypeLabel(t)) + '</span>';
+      }).join(' ');
+      return '<div class="detail-price-block">'
+        + '<div class="detail-rental-chips">' + chips + '</div>'
+        + '<div class="detail-price">$' + rate.value
+        + '<span> / ' + rate.unit + '</span></div>'
+        + '<p class="detail-price-hint">Final total depends on rental type and schedule.</p>'
+        + '</div>';
+    })()
     + '<div class="detail-cta">' + buildBookingCta(car) + '</div>'
+    + '<p class="detail-trust">No payment until the owner approves your request.</p>'
     + buildInfoRows(car)
     + '</div>'
     + '</div>'
@@ -264,11 +292,6 @@ function renderCar(car) {
     + '</aside>'
     + '</article>';
 
-  const today = new Date().toISOString().split('T')[0];
-  const sd = document.getElementById('startDate');
-  const ed = document.getElementById('endDate');
-  if (sd) sd.min = today;
-  if (ed) ed.min = today;
   updateMobileBookBar(car);
 }
 
@@ -281,8 +304,8 @@ function updateMobileBookBar(car) {
 
   const role = API.role();
   const loggedIn = API.loggedIn();
-  const ppd = parseFloat(car.price_per_day || 0).toFixed(2);
-  priceEl.innerHTML = '$' + ppd + '<span>per day</span>';
+  const rate = UI.primaryRateDisplay(car);
+  priceEl.innerHTML = '$' + rate.value + '<span>' + rate.label + '</span>';
 
   if (loggedIn && role === 'customer' && car.is_available) {
     bar.classList.add('is-visible');
@@ -322,22 +345,195 @@ function switchMain(btn) {
   btn.setAttribute('aria-current', 'true');
 }
 
+function addDaysISO(isoDate, days) {
+  const d = new Date(isoDate + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function todayISO() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+
+function nowLocalDatetimeValue() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+function addHoursLocalDatetimeValue(hours) {
+  const d = new Date();
+  d.setHours(d.getHours() + hours);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+function enabledRentalTypes(car) {
+  const types = car.enabled_rental_types || [];
+  if (types.length) return types;
+  if (car.rent_hourly) types.push('hourly');
+  if (car.rent_daily !== false) types.push('daily');
+  if (car.rent_weekly) types.push('weekly');
+  if (car.rent_monthly) types.push('monthly');
+  return types.length ? types : ['daily'];
+}
+
+function scheduleHintForType(type) {
+  if (type === 'hourly') return 'Minimum 1 hour. Cost is pro-rated by actual time (e.g. 1h 20m × hourly rate).';
+  if (type === 'daily') return 'Same-day return is allowed (counts as 1 day).';
+  if (type === 'weekly') return 'Minimum 7 days (inclusive).';
+  if (type === 'monthly') return 'Minimum 30 days (inclusive).';
+  return '';
+}
+
+function renderRentalTypePills() {
+  const wrap = document.getElementById('bookRentalTypes');
+  if (!wrap || !carData) return;
+  const types = enabledRentalTypes(carData);
+  selectedRentalType = types[0] || 'daily';
+  wrap.innerHTML = types.map(function (t) {
+    const active = t === selectedRentalType ? ' active' : '';
+    return '<button type="button" class="rental-type-pill' + active + '" data-type="' + t + '" '
+      + 'onclick="selectRentalType(\'' + t + '\', this)">' + UI.escHtml(UI.rentalTypeLabel(t)) + '</button>';
+  }).join('');
+}
+
+function selectRentalType(type, btn) {
+  selectedRentalType = type;
+  document.querySelectorAll('.rental-type-pill').forEach(function (p) {
+    p.classList.toggle('active', p.getAttribute('data-type') === type);
+  });
+  buildScheduleFields();
+  calcCost();
+}
+
+function buildScheduleFields() {
+  const wrap = document.getElementById('bookScheduleFields');
+  const hintEl = document.getElementById('bookScheduleHint');
+  if (!wrap) return;
+  const today = todayISO();
+  if (hintEl) hintEl.textContent = scheduleHintForType(selectedRentalType);
+
+  if (selectedRentalType === 'hourly') {
+    wrap.innerHTML =
+      '<div class="book-dates book-dates--stack">'
+      + '<div class="form-group"><label class="form-label" for="startAt">Pick-up</label>'
+      + '<input class="form-control" type="datetime-local" id="startAt" onchange="calcCost()" required /></div>'
+      + '<div class="form-group"><label class="form-label" for="endAt">Return</label>'
+      + '<input class="form-control" type="datetime-local" id="endAt" onchange="calcCost()" required /></div>'
+      + '</div>';
+    const start = document.getElementById('startAt');
+    const end = document.getElementById('endAt');
+    if (start) start.value = nowLocalDatetimeValue();
+    if (end) end.value = addHoursLocalDatetimeValue(2);
+    return;
+  }
+
+  wrap.innerHTML =
+    '<div class="book-dates">'
+    + '<div class="form-group"><label class="form-label" for="startDate">Pick-up</label>'
+    + '<input class="form-control" type="date" id="startDate" onchange="onScheduleDateChange()" required /></div>'
+    + '<div class="book-dates-arrow" aria-hidden="true">→</div>'
+    + '<div class="form-group"><label class="form-label" for="endDate">Return</label>'
+    + '<input class="form-control" type="date" id="endDate" onchange="calcCost()" required /></div>'
+    + '</div>';
+  const sd = document.getElementById('startDate');
+  const ed = document.getElementById('endDate');
+  if (sd) {
+    sd.min = today;
+    sd.value = today;
+  }
+  if (ed) {
+    ed.min = today;
+    ed.value = selectedRentalType === 'weekly' ? addDaysISO(today, 6)
+      : selectedRentalType === 'monthly' ? addDaysISO(today, 29) : today;
+  }
+}
+
+function onScheduleDateChange() {
+  const sd = document.getElementById('startDate');
+  const ed = document.getElementById('endDate');
+  if (!sd || !ed || !sd.value) return;
+  ed.min = sd.value;
+  if (!ed.value || ed.value < sd.value) {
+    if (selectedRentalType === 'weekly') ed.value = addDaysISO(sd.value, 6);
+    else if (selectedRentalType === 'monthly') ed.value = addDaysISO(sd.value, 29);
+    else ed.value = sd.value;
+  }
+  calcCost();
+}
+
+function dateInputToISO(dateStr, endOfDay) {
+  // Calendar dates are stored in UTC (matches Django TIME_ZONE) to avoid local-midnight shift.
+  return endOfDay ? dateStr + 'T23:59:59.000Z' : dateStr + 'T00:00:00.000Z';
+}
+
+function getBookingPayload() {
+  if (selectedRentalType === 'hourly') {
+    const startVal = document.getElementById('startAt').value;
+    const endVal = document.getElementById('endAt').value;
+    if (!startVal || !endVal) return { error: 'Select pick-up and return times.' };
+    return {
+      rental_type: 'hourly',
+      start_at: new Date(startVal).toISOString(),
+      end_at: new Date(endVal).toISOString(),
+    };
+  }
+  const sd = document.getElementById('startDate').value;
+  const ed = document.getElementById('endDate').value;
+  if (!sd || !ed) return { error: 'Select pick-up and return dates.' };
+  return {
+    rental_type: selectedRentalType,
+    start_at: dateInputToISO(sd, false),
+    end_at: dateInputToISO(ed, true),
+  };
+}
+
 function openBookingModal() {
   if (!carData) return;
   const title = carData.brand + ' ' + carData.model;
-  document.getElementById('bookModalCar').textContent = title + ' · $'
-    + parseFloat(carData.price_per_day).toFixed(2) + '/day';
-  document.getElementById('bookSummaryTitle').textContent = title;
-  document.getElementById('bookSummaryLoc').textContent = carData.location || '';
-  document.getElementById('bookSummaryPrice').innerHTML =
-    '$' + parseFloat(carData.price_per_day).toFixed(2) + '<span> /day</span>';
-  document.getElementById('bookModalSummary').hidden = false;
+  const typeLabel = formatCarType(carData.car_type);
+  const rate = UI.primaryRateDisplay(carData);
+  const meta = document.getElementById('bookModalMeta');
+  const titleEl = document.getElementById('bookModalTitle');
+  if (titleEl) titleEl.textContent = title;
+  if (meta) {
+    meta.textContent = [
+      carData.year || '',
+      typeLabel,
+      carData.location || '',
+    ].filter(Boolean).join(' · ')
+      + ' · from $' + rate.value + '/' + rate.unit;
+  }
   document.getElementById('bookErr').style.display = 'none';
-  document.getElementById('costBox').style.display = 'none';
-  document.getElementById('startDate').value = '';
-  document.getElementById('endDate').value = '';
+  const hint = document.getElementById('bookDateHint');
+  if (hint) hint.hidden = true;
+
+  renderRentalTypePills();
+  buildScheduleFields();
   document.getElementById('bookNote').value = '';
+  resetCostDisplay();
+  calcCost();
   openModal('bookModal');
+}
+
+function resetCostDisplay() {
+  const box = document.getElementById('costBox');
+  const placeholder = document.getElementById('costPlaceholder');
+  const details = document.getElementById('costDetails');
+  const footTotal = document.getElementById('bookFootTotal');
+  const footSummary = document.getElementById('bookFootSummary');
+  if (box) {
+    box.classList.add('cost-box--idle');
+    box.classList.remove('cost-box--ready');
+  }
+  if (placeholder) placeholder.hidden = false;
+  if (details) details.hidden = true;
+  if (footTotal) footTotal.textContent = '—';
+  if (footSummary) footSummary.classList.remove('is-active');
 }
 
 async function loadCar() {
@@ -347,54 +543,99 @@ async function loadCar() {
   } catch (err) {
     document.getElementById('carDetail').innerHTML =
       UI.emptyState('Could not load this car', err.message,
-        '<a href="/cars/" class="btn btn-primary" style="margin-top:12px">Back to browse</a>');
+        '<a href="/cars/" class="btn btn-primary">Back to browse</a>');
     const bc = document.getElementById('bcTitle');
     if (bc) bc.textContent = 'Not found';
   }
 }
 
 function calcCost() {
-  const sd = document.getElementById('startDate').value;
-  const ed = document.getElementById('endDate').value;
   const box = document.getElementById('costBox');
+  const hint = document.getElementById('bookDateHint');
+  const placeholder = document.getElementById('costPlaceholder');
+  const details = document.getElementById('costDetails');
+  const footTotal = document.getElementById('bookFootTotal');
+  const footSummary = document.getElementById('bookFootSummary');
+  const rateLabel = document.getElementById('costRateLabel');
 
-  if (!sd || !ed || !carData) {
-    box.style.display = 'none';
+  if (!carData) {
+    resetCostDisplay();
     return;
   }
 
-  const days = Math.round((new Date(ed) - new Date(sd)) / 86400000);
-  if (days < 1) {
-    box.style.display = 'none';
+  const win = getBookingPayload();
+  if (win.error) {
+    if (hint) {
+      hint.hidden = false;
+      hint.textContent = win.error;
+      hint.classList.add('book-date-hint--error');
+    }
+    resetCostDisplay();
     return;
   }
 
-  const ppd = parseFloat(carData.price_per_day);
-  const total = days * ppd;
+  const result = UI.computeRentalTotal(carData, win.rental_type, win.start_at, win.end_at);
+  if (result.error) {
+    if (hint) {
+      hint.hidden = false;
+      hint.textContent = result.error;
+      hint.classList.add('book-date-hint--error');
+    }
+    resetCostDisplay();
+    return;
+  }
 
-  document.getElementById('costDays').textContent = days + ' day' + (days !== 1 ? 's' : '');
-  document.getElementById('costPpd').textContent = '$' + ppd.toFixed(2);
-  document.getElementById('costTotal').textContent = '$' + total.toFixed(2);
-  box.style.display = 'block';
-  document.getElementById('endDate').min = sd;
+  if (hint) {
+    hint.hidden = true;
+    hint.classList.remove('book-date-hint--error');
+  }
+
+  const totalStr = '$' + result.total;
+  const rateNames = {
+    hourly: 'Price per hour',
+    daily: 'Price per day',
+    weekly: 'Price per week',
+    monthly: 'Price per month',
+  };
+  const ratePrices = {
+    hourly: carData.price_per_hour,
+    daily: carData.price_per_day,
+    weekly: carData.price_per_week,
+    monthly: carData.price_per_month,
+  };
+
+  document.getElementById('costDays').textContent = result.duration;
+  if (rateLabel) rateLabel.textContent = rateNames[win.rental_type] || 'Rate';
+  document.getElementById('costPpd').textContent = '$' + parseFloat(ratePrices[win.rental_type] || 0).toFixed(2);
+  document.getElementById('costTotal').textContent = totalStr;
+
+  if (box) {
+    box.classList.remove('cost-box--idle');
+    box.classList.add('cost-box--ready');
+  }
+  if (placeholder) placeholder.hidden = true;
+  if (details) details.hidden = false;
+  if (footTotal) footTotal.textContent = totalStr;
+  if (footSummary) footSummary.classList.add('is-active');
 }
 
 async function confirmBooking() {
-  const startDate = document.getElementById('startDate').value;
-  const endDate = document.getElementById('endDate').value;
   const note = document.getElementById('bookNote').value;
   const errBox = document.getElementById('bookErr');
   const btn = document.getElementById('confirmBtn');
 
   errBox.style.display = 'none';
 
-  if (!startDate || !endDate) {
-    errBox.textContent = 'Please select pick-up and return dates.';
+  const win = getBookingPayload();
+  if (win.error) {
+    errBox.textContent = win.error;
     errBox.style.display = 'block';
     return;
   }
-  if (new Date(endDate) <= new Date(startDate)) {
-    errBox.textContent = 'Return date must be after pick-up date.';
+
+  const estimate = UI.computeRentalTotal(carData, win.rental_type, win.start_at, win.end_at);
+  if (estimate.error) {
+    errBox.textContent = estimate.error;
     errBox.style.display = 'block';
     return;
   }
@@ -405,8 +646,9 @@ async function confirmBooking() {
   try {
     await API.post('/api/bookings/create/', {
       car: CAR_ID,
-      start_date: startDate,
-      end_date: endDate,
+      rental_type: win.rental_type,
+      start_at: win.start_at,
+      end_at: win.end_at,
       note: note
     });
 
@@ -420,7 +662,7 @@ async function confirmBooking() {
     errBox.textContent = err.message;
     errBox.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Send booking request';
+    btn.textContent = 'Send request';
   }
 }
 

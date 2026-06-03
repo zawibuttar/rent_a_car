@@ -164,10 +164,18 @@ pending ──(owner approve)──► approved ──(owner complete)──► 
 
 - Reviews are allowed only for **completed** bookings (one review per booking).
 
-### Pricing
+### Pricing & rental types
 
-- `total_cost = number_of_days × car.price_per_day`
-- Days = difference between `start_date` and `end_date` (must be ≥ 1).
+Each listing can offer one or more of **hourly**, **daily**, **weekly**, and **monthly** rentals, with separate owner-set prices (`price_per_hour`, `price_per_day`, `price_per_week`, `price_per_month`). Bookings store `rental_type`, `start_at`, and `end_at` (ISO datetimes). The API recomputes `total_cost` server-side (`bookings/pricing.py`).
+
+| Type | Rules | Billing |
+|------|--------|---------|
+| **Hourly** | Return after pick-up; minimum 1 hour; cost pro-rated by actual elapsed time | `elapsed_hours × price_per_hour` |
+| **Daily** | Same calendar day allowed; return on or after pick-up | **Inclusive** days: `(end date − start date) + 1`, minimum 1 × `price_per_day` |
+| **Weekly** | Minimum 7 inclusive calendar days | `ceil(days / 7) × price_per_week` |
+| **Monthly** | Minimum 30 inclusive calendar days | `ceil(days / 30) × price_per_month` |
+
+**Overlap:** Pending and approved bookings block overlapping datetime intervals. Daily (and weekly/monthly) bookings normalize to full calendar days in the listing timezone, so a daily rental blocks entire days. Hourly bookings use exact times; enabling both hourly and daily on one car can allow conflicts unless daily bookings already cover those days—owners should enable both only when they understand this.
 
 ---
 

@@ -87,3 +87,55 @@ class AdminCarApprovalTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.car.refresh_from_db()
         self.assertFalse(self.car.is_approved)
+
+
+class OwnerCarRentalOptionsTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='owner3',
+            email='owner3@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key
+        )
+
+    def test_create_listing_with_multiple_rental_prices(self):
+        url = reverse('car-create')
+        response = self.client.post(url, {
+            'brand': 'BMW',
+            'model': 'X3',
+            'year': 2023,
+            'car_type': 'suv',
+            'description': 'Premium',
+            'location': 'Seattle',
+            'rent_hourly': True,
+            'rent_daily': True,
+            'rent_weekly': False,
+            'rent_monthly': False,
+            'price_per_hour': '25.00',
+            'price_per_day': '120.00',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        car = Car.objects.get(pk=response.data['car']['id'])
+        self.assertTrue(car.rent_hourly)
+        self.assertTrue(car.rent_daily)
+        self.assertEqual(float(car.price_per_hour), 25.0)
+        self.assertEqual(float(car.price_per_day), 120.0)
+
+    def test_create_requires_price_for_enabled_type(self):
+        url = reverse('car-create')
+        response = self.client.post(url, {
+            'brand': 'No',
+            'model': 'Price',
+            'year': 2022,
+            'car_type': 'sedan',
+            'description': '',
+            'location': 'Denver',
+            'rent_hourly': True,
+            'rent_daily': False,
+            'rent_weekly': False,
+            'rent_monthly': False,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

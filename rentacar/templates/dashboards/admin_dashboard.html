@@ -23,7 +23,9 @@
         <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
       </button>
       <button class="s-item" id="btn-owners" onclick="showTab('owners', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg> Owner Verifications
+        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+        <span>Owner Verifications</span>
+        <span class="s-badge" id="pendingOwnersBadge" hidden></span>
       </button>
       <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
@@ -48,6 +50,25 @@
         </div>
       </div>
 
+      <div class="dash-quick-actions" role="group" aria-label="Quick actions">
+        <button type="button" class="dash-action-chip dash-action-chip--primary dash-action-chip--wide"
+          id="adminQuickOwners"
+          onclick="showTab('owners', document.getElementById('btn-owners'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+          Owner verifications
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('cars', document.getElementById('btn-cars'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg>
+          All cars
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
+          All bookings
+        </button>
+      </div>
+
       <!-- Stats -->
       <div class="stats-row" id="aStats">
         <div class="loading"><span class="spinner"></span></div>
@@ -57,9 +78,9 @@
       <div class="card">
         <div class="card-head">
           <h2>Recent Bookings</h2>
-          <button class="btn btn-ghost btn-sm"
+          <button type="button" class="btn btn-ghost btn-sm"
             onclick="showTab('bookings', document.getElementById('btn-bookings'))">
-            View All &#8594;
+            View all
           </button>
         </div>
         <div class="table-wrap table-wrap--scroll-hint">
@@ -99,12 +120,12 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Car</th><th>Owner</th><th>Type</th>
-                <th>Price/day</th><th>Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
+                <th>#</th><th>Car</th><th>Owner</th><th class="col-hide-sm">Type</th>
+                <th>Price/day</th><th class="col-hide-sm">Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="allCarsTable">
-              <tr><td colspan="7">
+              <tr><td colspan="9">
                 <div class="loading"><span class="spinner"></span></div>
               </td></tr>
             </tbody>
@@ -133,12 +154,13 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Customer</th><th>Car</th><th>Owner</th>
-                <th>Dates</th><th>Days</th><th>Cost</th><th>Status</th>
+                <th>#</th><th>Customer</th><th>Car</th><th class="col-hide-sm">Owner</th>
+                <th>Period</th><th class="col-hide-sm">Duration</th>
+                <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th>
               </tr>
             </thead>
             <tbody id="allBookingsTable">
-              <tr><td colspan="8">
+              <tr><td colspan="9">
                 <div class="loading"><span class="spinner"></span></div>
               </td></tr>
             </tbody>
@@ -167,7 +189,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Owner</th><th>Email</th><th>Phone</th><th>Status</th><th>Action</th>
+                <th>#</th><th>Owner</th><th class="col-hide-sm">Email</th><th class="col-hide-sm">Phone</th><th>Status</th><th>Action</th>
               </tr>
             </thead>
             <tbody id="allOwnersTable">
@@ -227,6 +249,38 @@ function showTab(name, btn) {
   });
 }
 
+function updatePendingOwnersBadge(count) {
+  var badge = document.getElementById('pendingOwnersBadge');
+  var quick = document.getElementById('adminQuickOwners');
+  if (badge) {
+    if (count > 0) {
+      badge.hidden = false;
+      badge.textContent = count > 99 ? '99+' : String(count);
+      badge.setAttribute('aria-label', count + ' pending verifications');
+    } else {
+      badge.hidden = true;
+      badge.textContent = '';
+      badge.removeAttribute('aria-label');
+    }
+  }
+  if (quick) {
+    var label = 'Owner verifications';
+    if (count > 0) label += ' (' + count + ' pending)';
+    quick.setAttribute('aria-label', label);
+    var chipCount = quick.querySelector('.dash-action-chip__count');
+    if (count > 0) {
+      if (!chipCount) {
+        chipCount = document.createElement('span');
+        chipCount.className = 'dash-action-chip__count';
+        quick.appendChild(chipCount);
+      }
+      chipCount.textContent = count > 99 ? '99+' : String(count);
+    } else if (chipCount) {
+      chipCount.remove();
+    }
+  }
+}
+
 /* ══ OVERVIEW ═══════════════════════ */
 async function loadOverview() {
   try {
@@ -250,22 +304,31 @@ async function loadOverview() {
       .filter(function(b){ return b.status === 'completed'; })
       .reduce(function(sum, b){ return sum + parseFloat(b.total_cost); }, 0);
 
+    updatePendingOwnersBadge(pendingOwners);
+
     /* stat cards */
     document.getElementById('aStats').innerHTML =
-      UI.statCard('cars', totalCars, 'Total Cars') +
-      UI.statCard('active', available, 'Available Cars') +
-      UI.statCard('owners', allAdminOwners.length, 'Owner Profiles') +
-      UI.statCard('verified', verifiedOwners, 'Verified Owners') +
-      UI.statCard('pending', pendingOwners, 'Pending Verification') +
-      UI.statCard('bookings', totalBooks, 'Total Bookings') +
-      UI.statCard('active', activeBooks, 'Active Rentals') +
+      UI.statCardButton('cars', totalCars, 'Total Cars',
+        "showTab('cars', document.getElementById('btn-cars'))") +
+      UI.statCardButton('active', available, 'Available Cars',
+        "showTab('cars', document.getElementById('btn-cars'))") +
+      UI.statCardButton('owners', allAdminOwners.length, 'Owner Profiles',
+        "showTab('owners', document.getElementById('btn-owners'))") +
+      UI.statCardButton('verified', verifiedOwners, 'Verified Owners',
+        "showTab('owners', document.getElementById('btn-owners'))") +
+      UI.statCardButton('pending', pendingOwners, 'Pending Verification',
+        "showTab('owners', document.getElementById('btn-owners'))") +
+      UI.statCardButton('bookings', totalBooks, 'Total Bookings',
+        "showTab('bookings', document.getElementById('btn-bookings'))") +
+      UI.statCardButton('active', activeBooks, 'Active Rentals',
+        "showTab('bookings', document.getElementById('btn-bookings'))") +
       UI.statCard('revenue', '$' + revenue.toFixed(0), 'Platform Revenue');
 
     /* bookings preview */
     if (!allAdminBookings.length) {
       document.getElementById('aBookingsPreview').innerHTML =
         '<tr><td colspan="6">'
-        + '<div class="empty"><h3>No bookings yet</h3></div>'
+        + UI.emptyState('No bookings yet', 'Bookings will appear here as customers rent cars.')
         + '</td></tr>';
     } else {
       document.getElementById('aBookingsPreview').innerHTML =
@@ -275,13 +338,14 @@ async function loadOverview() {
             + '<td>' + UI.escHtml(b.customer.username) + '</td>'
             + '<td>' + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</td>'
             + '<td class="td-meta">'
-            + UI.escHtml(b.start_date) + ' &#8594; ' + UI.escHtml(b.end_date) + '</td>'
+            + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
             + '<td class="td-money">$'
             + parseFloat(b.total_cost).toFixed(2) + '</td>'
             + '<td>' + statusBadge(b.status) + '</td>'
             + '</tr>';
         }).join('');
     }
+    UI.refreshTableScrollHints();
 
   } catch(err) { toast(err.message, 'error'); }
 }
@@ -340,21 +404,23 @@ function renderCarsTable(list) {
     var vis = c.is_approved
       ? '<span class="badge badge-green">On marketplace</span>'
       : '<span class="badge badge-red">Hidden</span>';
-    var actions = c.is_approved
-      ? '<button class="btn btn-sm btn-danger" onclick="setCarVisibility(' + c.id + ', false)">Hide</button>'
-      : '<button class="btn btn-sm btn-primary" onclick="setCarVisibility(' + c.id + ', true)">Restore</button>';
+    var actions = '<div class="table-actions">'
+      + (c.is_approved
+        ? '<button type="button" class="btn btn-sm btn-danger" onclick="setCarVisibility(' + c.id + ', false)">Hide</button>'
+        : '<button type="button" class="btn btn-sm btn-primary" onclick="setCarVisibility(' + c.id + ', true)">Restore</button>')
+      + '</div>';
     return '<tr>'
       + '<td class="td-id">#' + c.id + '</td>'
       + '<td>'
-      + '<a href="/cars/' + encodeURIComponent(c.id) + '/" target="_blank" class="text-strong">'
+      + '<a href="/cars/' + encodeURIComponent(c.id) + '/" target="_blank" rel="noopener" class="text-strong">'
       + UI.escHtml(c.brand + ' ' + c.model) + '</a>'
       + '<div class="text-subline">' + UI.escHtml(c.year) + '</div>'
       + '</td>'
       + '<td class="text-small">' + UI.escHtml(c.owner.username) + '</td>'
-      + '<td><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
+      + '<td class="col-hide-sm"><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
       + '<td class="td-money">$'
       + parseFloat(c.price_per_day).toFixed(2) + '</td>'
-      + '<td class="td-meta">' + UI.escHtml(c.location) + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(c.location) + '</td>'
       + '<td>' + vis + '</td>'
       + '<td>'
       + (c.is_available
@@ -370,6 +436,7 @@ function renderCarsTable(list) {
     renderCarsTable(adminCarsViewList);
     UI.scrollToEl('allCarsTable');
   }, { label: 'cars' });
+  UI.refreshTableScrollHints();
 }
 
 /* ══ ALL BOOKINGS ═══════════════════ */
@@ -409,7 +476,7 @@ function renderBookingsTable(list) {
       ? 'No ' + UI.bookingStatusLabel(adminBookingsStatusFilter).toLowerCase() + ' bookings.'
       : 'No bookings found';
     tbody.innerHTML =
-      '<tr><td colspan="8">'
+      '<tr><td colspan="9">'
       + '<div class="empty"><h3>' + UI.escHtml(bookEmpty) + '</h3></div>'
       + '</td></tr>';
     UI.mountPagination('adminBookingsPagination', meta, function () {}, { label: 'bookings' });
@@ -417,10 +484,6 @@ function renderBookingsTable(list) {
   }
 
   tbody.innerHTML = meta.items.map(function(b) {
-    var days = Math.round(
-      (new Date(b.end_date) - new Date(b.start_date)) / 86400000
-    );
-
     return '<tr>'
       + '<td class="td-id">#' + b.id + '</td>'
       + '<td>'
@@ -432,11 +495,13 @@ function renderBookingsTable(list) {
       + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" target="_blank">'
       + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
       + '</td>'
-      + '<td class="td-meta">'
+      + '<td class="td-meta col-hide-sm">'
       + UI.escHtml(b.car.owner ? b.car.owner.username : '—') + '</td>'
       + '<td class="td-meta">'
-      + UI.escHtml(b.start_date) + '<br/>&#8594; ' + UI.escHtml(b.end_date) + '</td>'
-      + '<td class="td-meta">' + days + 'd</td>'
+      + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(UI.bookingDurationLabel(b)) + '</td>'
+      + '<td class="col-hide-sm"><span class="badge badge-blue">'
+      + UI.escHtml(UI.rentalTypeLabel(b.rental_type)) + '</span></td>'
       + '<td class="td-money">$'
       + parseFloat(b.total_cost).toFixed(2) + '</td>'
       + '<td>' + statusBadge(b.status) + '</td>'
@@ -448,12 +513,15 @@ function renderBookingsTable(list) {
     renderBookingsTable(adminBookingsViewList);
     UI.scrollToEl('allBookingsTable');
   }, { label: 'bookings' });
+  UI.refreshTableScrollHints();
 }
 
 async function loadAllOwners() {
   try {
     allAdminOwners = await API.fetchAllPages('/api/accounts/admin/owners/');
     adminOwnersPage = 1;
+    var pending = allAdminOwners.filter(function (o) { return !o.is_verified; }).length;
+    updatePendingOwnersBadge(pending);
     applyAdminOwnersFilter(adminOwnersFilter);
   } catch(err) { toast(err.message, 'error'); }
 }
@@ -500,18 +568,18 @@ function renderOwnersTable(list) {
   }
 
   tbody.innerHTML = meta.items.map(function(o) {
-    var actionButtons = o.is_verified
-        ? '<button class="btn btn-sm btn-danger" onclick="updateOwnerStatus(' + o.id + ', false)">Revoke</button>'
-        : (
-          '<button class="btn btn-sm btn-primary" onclick="updateOwnerStatus(' + o.id + ', true)">Approve</button>'
-          + '<button class="btn btn-sm btn-secondary" onclick="updateOwnerStatus(' + o.id + ', false)">Reject</button>'
-        );
+    var actionButtons = '<div class="table-actions">'
+      + (o.is_verified
+        ? '<button type="button" class="btn btn-sm btn-danger" onclick="updateOwnerStatus(' + o.id + ', false)">Revoke</button>'
+        : '<button type="button" class="btn btn-sm btn-primary" onclick="updateOwnerStatus(' + o.id + ', true)">Approve</button>'
+          + '<button type="button" class="btn btn-sm btn-outline" onclick="updateOwnerStatus(' + o.id + ', false)">Reject</button>')
+      + '</div>';
 
     return '<tr>'
       + '<td class="td-id">#' + o.id + '</td>'
       + '<td>' + UI.escHtml(o.user.username || '') + '</td>'
-      + '<td class="td-meta">' + UI.escHtml(o.user.email || '—') + '</td>'
-      + '<td class="td-meta">' + UI.escHtml(o.phone_number || '—') + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(o.user.email || '—') + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(o.phone_number || '—') + '</td>'
       + '<td>' + (o.is_verified
           ? '<span class="badge badge-green">Verified</span>'
           : '<span class="badge badge-amber">Pending</span>') + '</td>'
@@ -524,6 +592,7 @@ function renderOwnersTable(list) {
     renderOwnersTable(adminOwnersViewList);
     UI.scrollToEl('allOwnersTable');
   }, { label: 'owners' });
+  UI.refreshTableScrollHints();
 }
 
 async function updateOwnerStatus(id, isVerified) {

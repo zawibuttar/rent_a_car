@@ -137,13 +137,13 @@ function initNav() {
   const uname = document.getElementById('nav-uname');
   const avEl  = document.getElementById('nav-av');
   if (API.loggedIn() && user) {
-    if (guest) guest.style.display = 'none';
-    if (auth)  auth.style.display  = 'flex';
+    if (guest) guest.classList.add('is-hidden');
+    if (auth)  auth.classList.remove('is-hidden');
     if (uname) uname.textContent   = user.username;
     if (avEl)  avEl.textContent    = initials(user.username);
   } else {
-    if (guest) guest.style.display = 'flex';
-    if (auth)  auth.style.display  = 'none';
+    if (guest) guest.classList.remove('is-hidden');
+    if (auth)  auth.classList.add('is-hidden');
   }
 }
 

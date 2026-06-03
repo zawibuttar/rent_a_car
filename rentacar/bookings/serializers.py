@@ -1,95 +1,130 @@
 from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
-from .models import *
+from .models import Booking, Review
+from .pricing import (
+    compute_total,
+    normalize_booking_window,
+    validate_rental_window,
+    duration_label,
+    format_period,
+)
 from cars.models import Car
 from cars.serializers import CarListSerializer
 from accounts.serializers import UserSerializer
 
 
-def _booking_overlap_queryset(car, start_date, end_date):
+def _booking_overlap_queryset(car, start_at, end_at):
     return Booking.objects.filter(
         car=car,
         status__in=['pending', 'approved'],
     ).exclude(
-        end_date__lte=start_date,
+        end_at__lte=start_at,
     ).exclude(
-        start_date__gte=end_date,
+        start_at__gte=end_at,
     )
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model  = Booking
-        fields = ['id', 'car', 'start_date', 'end_date', 'note']
+        model = Booking
+        fields = ['id', 'car', 'rental_type', 'start_at', 'end_at', 'note']
         read_only_fields = ['id']
 
     def validate(self, data):
-        car        = data.get('car')
-        start_date = data.get('start_date')
-        end_date   = data.get('end_date')
-        today      = timezone.now().date()
+        car = data.get('car')
+        rental_type = data.get('rental_type')
+        start_at = data.get('start_at')
+        end_at = data.get('end_at')
 
-        if start_date < today:
-            raise serializers.ValidationError({"start_date": "Start date cannot be in the past."})
+        if start_at and timezone.is_naive(start_at):
+            start_at = timezone.make_aware(start_at)
+            data['start_at'] = start_at
+        if end_at and timezone.is_naive(end_at):
+            end_at = timezone.make_aware(end_at)
+            data['end_at'] = end_at
 
-        if end_date <= start_date:
-            raise serializers.ValidationError({"end_date": "End date must be after start date."})
-
-        days = (end_date - start_date).days
-        if days < 1:
-            raise serializers.ValidationError("Minimum booking is 1 day.")
+        err = validate_rental_window(car, rental_type, start_at, end_at)
+        if err:
+            raise serializers.ValidationError(err)
 
         if not car.is_available:
-            raise serializers.ValidationError({"car": "This car is not available for rent."})
+            raise serializers.ValidationError({'car': 'This car is not available for rent.'})
 
         if not car.is_approved:
-            raise serializers.ValidationError({"car": "This car is not approved yet."})
+            raise serializers.ValidationError({'car': 'This car is not approved yet.'})
 
-        if _booking_overlap_queryset(car, start_date, end_date).exists():
-            raise serializers.ValidationError({"car": "This car is already booked for the selected dates."})
+        norm_start, norm_end = normalize_booking_window(rental_type, start_at, end_at)
+        data['start_at'] = norm_start
+        data['end_at'] = norm_end
+
+        if _booking_overlap_queryset(car, norm_start, norm_end).exists():
+            raise serializers.ValidationError(
+                {'car': 'This car is already booked for the selected period.'}
+            )
         return data
 
     def create(self, validated_data):
         request = self.context.get('request')
-        start_date = validated_data['start_date']
-        end_date = validated_data['end_date']
-        car_pk = validated_data['car'].pk
+        car = validated_data['car']
+        rental_type = validated_data['rental_type']
+        start_at = validated_data['start_at']
+        end_at = validated_data['end_at']
 
         with transaction.atomic():
-            car = Car.objects.select_for_update().get(pk=car_pk)
+            car = Car.objects.select_for_update().get(pk=car.pk)
             if not car.is_available:
-                raise serializers.ValidationError({"car": "This car is not available for rent."})
+                raise serializers.ValidationError({'car': 'This car is not available for rent.'})
             if not car.is_approved:
-                raise serializers.ValidationError({"car": "This car is not approved yet."})
-            if _booking_overlap_queryset(car, start_date, end_date).exists():
+                raise serializers.ValidationError({'car': 'This car is not approved yet.'})
+
+            err = validate_rental_window(car, rental_type, start_at, end_at)
+            if err:
+                raise serializers.ValidationError(err)
+
+            norm_start, norm_end = normalize_booking_window(rental_type, start_at, end_at)
+            if _booking_overlap_queryset(car, norm_start, norm_end).exists():
                 raise serializers.ValidationError(
-                    {"car": "This car is already booked for the selected dates."}
+                    {'car': 'This car is already booked for the selected period.'}
                 )
-            days = (end_date - start_date).days
+
+            total = compute_total(car, rental_type, norm_start, norm_end)
             return Booking.objects.create(
                 customer=request.user,
                 car=car,
-                start_date=start_date,
-                end_date=end_date,
+                rental_type=rental_type,
+                start_at=norm_start,
+                end_at=norm_end,
                 note=validated_data.get('note', ''),
-                total_cost=days * car.price_per_day,
+                total_cost=total,
             )
 
 
 class BookingDetailSerializer(serializers.ModelSerializer):
-    car      = CarListSerializer(read_only=True)
+    car = CarListSerializer(read_only=True)
     customer = UserSerializer(read_only=True)
+    duration_label = serializers.SerializerMethodField()
+    period_display = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Booking
-        fields = ['id', 'customer', 'car', 'start_date', 'end_date', 'total_cost', 'status', 'note', 'created_at', 'updated_at']
+        model = Booking
+        fields = [
+            'id', 'customer', 'car', 'rental_type', 'start_at', 'end_at',
+            'duration_label', 'period_display', 'total_cost', 'status', 'note',
+            'created_at', 'updated_at',
+        ]
         read_only_fields = fields
+
+    def get_duration_label(self, obj):
+        return duration_label(obj.rental_type, obj.start_at, obj.end_at)
+
+    def get_period_display(self, obj):
+        return format_period(obj.rental_type, obj.start_at, obj.end_at)
 
 
 class BookingStatusSerializer(serializers.ModelSerializer):
     class Meta:
-        model  = Booking
+        model = Booking
         fields = ['id', 'status']
 
     def validate_status(self, value):
@@ -105,7 +140,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     reviewer = UserSerializer(read_only=True)
 
     class Meta:
-        model  = Review
+        model = Review
         fields = ['id', 'booking', 'reviewer', 'rating', 'comment', 'created_at']
         read_only_fields = ['id', 'reviewer', 'created_at']
 
@@ -115,8 +150,8 @@ class ReviewSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        booking  = data.get('booking')
-        request  = self.context.get('request')
+        booking = data.get('booking')
+        request = self.context.get('request')
 
         if booking.customer != request.user:
             raise serializers.ValidationError("You can only review your own bookings.")
@@ -124,7 +159,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         if booking.status != 'completed':
             raise serializers.ValidationError("You can only review completed bookings.")
 
-        # Use exists() instead of filter().exists() to avoid extra query
         if Review.objects.filter(booking=booking).exists():
             raise serializers.ValidationError("You have already reviewed this booking.")
         return data
