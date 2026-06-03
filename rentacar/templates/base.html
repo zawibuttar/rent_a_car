@@ -21,12 +21,20 @@
       <button type="button" class="btn-icon nav-menu-btn" id="sidebarToggle" aria-label="Open menu"></button>
       <a href="/" class="nav-brand">
         <svg class="icon icon-brand" aria-hidden="true"><use href="#icon-logo"/></svg>
-        <span>RentACar</span>
+        <span class="nav-brand-text">RentACar</span>
       </a>
       <a href="/" class="nav-link">Home</a>
       <a href="/cars/" class="nav-link">Browse Cars</a>
 
       <div class="nav-right">
+        <span class="nav-links-compact" aria-label="Quick navigation">
+          <a href="/" class="btn-icon" aria-label="Home">
+            <svg class="icon" aria-hidden="true"><use href="#icon-logo"/></svg>
+          </a>
+          <a href="/cars/" class="btn-icon" aria-label="Browse cars">
+            <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          </a>
+        </span>
         <button type="button" class="btn-icon theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
         <span id="nav-guest" class="nav-auth-group">
           <a href="/login/" class="btn btn-outline">Login</a>
@@ -59,9 +67,21 @@
         else if (role === 'admin') link.href = '/dashboard/admin/';
         else link.href = '/dashboard/customer/';
       }
-      document.querySelectorAll('.nav-link').forEach(function (a) {
-        if (a.href === window.location.href) a.classList.add('active');
-      });
+      function markNavActive(links) {
+        links.forEach(function (a) {
+          const match = a.href === window.location.href
+            || (a.getAttribute('href') === '/cars/' && window.location.pathname.indexOf('/cars') === 0);
+          if (match) {
+            a.classList.add('active');
+            a.setAttribute('aria-current', 'page');
+          } else {
+            a.classList.remove('active');
+            a.removeAttribute('aria-current');
+          }
+        });
+      }
+      markNavActive(document.querySelectorAll('.nav-link'));
+      markNavActive(document.querySelectorAll('.nav-links-compact a'));
       const menuBtn = document.getElementById('sidebarToggle');
       if (menuBtn) {
         menuBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-menu"/></svg>';

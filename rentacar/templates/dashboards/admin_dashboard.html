@@ -62,7 +62,7 @@
             View All &#8594;
           </button>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
@@ -84,20 +84,18 @@
     <!-- ══ ALL CARS TAB ══ -->
     <div class="tab-panel" id="tab-cars">
 
-      <div class="page-head">
-        <div><h1>All Cars</h1><p>Every car on the platform</p></div>
-      </div>
-
-      <div class="filter-tabs">
-        <button class="ftab active" onclick="filterCars('all', this)">All</button>
-        <button class="ftab" onclick="filterCars('live', this)">Live</button>
-        <button class="ftab" onclick="filterCars('hidden', this)">Hidden from browse</button>
-        <button class="ftab" onclick="filterCars('available', this)">Available</button>
-        <button class="ftab" onclick="filterCars('unavailable', this)">Unavailable</button>
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div><h1>All Cars</h1><p>Every car on the platform</p></div>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='admin_cars' tabs_id='adminCarsFilterTabs' tabs_label='Filter cars' %}
+        <div class="results-bar">
+          <span id="adminCarsResultCount" class="results-bar__count text-caption"></span>
+        </div>
       </div>
 
       <div class="card">
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
@@ -113,27 +111,25 @@
           </table>
         </div>
       </div>
+      <div id="adminCarsPagination" class="pagination-wrap" hidden></div>
 
     </div>
 
     <!-- ══ ALL BOOKINGS TAB ══ -->
     <div class="tab-panel" id="tab-bookings">
 
-      <div class="page-head">
-        <div><h1>All Bookings</h1><p>Monitor every booking on the platform</p></div>
-      </div>
-
-      <div class="filter-tabs">
-        <button class="ftab active" onclick="filterBookings('', this)">All</button>
-        <button class="ftab" onclick="filterBookings('pending', this)">Pending</button>
-        <button class="ftab" onclick="filterBookings('approved', this)">Approved</button>
-        <button class="ftab" onclick="filterBookings('completed', this)">Completed</button>
-        <button class="ftab" onclick="filterBookings('cancelled', this)">Cancelled</button>
-        <button class="ftab" onclick="filterBookings('rejected', this)">Rejected</button>
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div><h1>All Bookings</h1><p>Monitor every booking on the platform</p></div>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='adminBookingsFilterTabs' tabs_label='Filter bookings by status' %}
+        <div class="results-bar">
+          <span id="adminBookingsResultCount" class="results-bar__count text-caption"></span>
+        </div>
       </div>
 
       <div class="card">
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
@@ -149,24 +145,25 @@
           </table>
         </div>
       </div>
+      <div id="adminBookingsPagination" class="pagination-wrap" hidden></div>
 
     </div>
 
     <!-- ══ OWNER APPROVALS TAB ══ -->
     <div class="tab-panel" id="tab-owners">
 
-      <div class="page-head">
-        <div><h1>Owner Verifications</h1><p>Approve and review owner profiles.</p></div>
-      </div>
-
-      <div class="filter-tabs">
-        <button class="ftab active" onclick="filterOwners('all', this)">All</button>
-        <button class="ftab" onclick="filterOwners('pending', this)">Pending</button>
-        <button class="ftab" onclick="filterOwners('verified', this)">Verified</button>
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div><h1>Owner Verifications</h1><p>Approve and review owner profiles.</p></div>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='admin_owners' tabs_id='adminOwnersFilterTabs' tabs_label='Filter owners' %}
+        <div class="results-bar">
+          <span id="adminOwnersResultCount" class="results-bar__count text-caption"></span>
+        </div>
       </div>
 
       <div class="card">
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
@@ -181,6 +178,7 @@
           </table>
         </div>
       </div>
+      <div id="adminOwnersPagination" class="pagination-wrap" hidden></div>
 
     </div>
 
@@ -198,6 +196,15 @@ if (!API.loggedIn() || (API.role() !== 'admin' && !(user && user.is_superuser)))
 let allAdminCars     = [];
 let allAdminBookings = [];
 let allAdminOwners   = [];
+let adminCarsViewList = [];
+let adminCarsPage = 1;
+let adminCarsFilter = 'all';
+let adminBookingsViewList = [];
+let adminBookingsPage = 1;
+let adminBookingsStatusFilter = '';
+let adminOwnersViewList = [];
+let adminOwnersPage = 1;
+let adminOwnersFilter = 'all';
 
 /* ── Sidebar init ───────────────────── */
 document.getElementById('sName').textContent   = user ? user.username : '';
@@ -205,33 +212,32 @@ document.getElementById('sAvatar').textContent = initials(user ? user.username :
 
 /* ── Tab switching ──────────────────── */
 function showTab(name, btn) {
-  document.querySelectorAll('.tab-panel').forEach(function(p) {
-    p.classList.remove('active');
+  UI.switchDashLegacy({
+    panelClass: 'tab-panel',
+    navClass: 's-item',
+    panelPrefix: 'tab-',
+    tabId: name,
+    btn: btn,
+    onActivate: function (n) {
+      if (n === 'overview') loadOverview();
+      if (n === 'cars') loadAllCars();
+      if (n === 'owners') loadAllOwners();
+      if (n === 'bookings') loadAllBookings();
+    },
   });
-  document.querySelectorAll('.s-item').forEach(function(b) {
-    b.classList.remove('active');
-  });
-  var panel = document.getElementById('tab-' + name);
-  if (panel) panel.classList.add('active');
-  if (btn)   btn.classList.add('active');
-
-  if (name === 'overview') loadOverview();
-  if (name === 'cars')     loadAllCars();
-  if (name === 'owners')   loadAllOwners();
-  if (name === 'bookings') loadAllBookings();
 }
 
 /* ══ OVERVIEW ═══════════════════════ */
 async function loadOverview() {
   try {
     var results = await Promise.all([
-      API.get('/api/cars/admin/all/'),
-      API.get('/api/bookings/admin/all/'),
-      API.get('/api/accounts/admin/owners/')
+      API.fetchAllPages('/api/cars/admin/all/'),
+      API.fetchAllPages('/api/bookings/admin/all/'),
+      API.fetchAllPages('/api/accounts/admin/owners/'),
     ]);
-    allAdminCars     = results[0];
+    allAdminCars = results[0];
     allAdminBookings = results[1];
-    allAdminOwners   = results[2];
+    allAdminOwners = results[2];
 
     var totalCars      = allAdminCars.length;
     var available      = allAdminCars.filter(function(c){ return c.is_available; }).length;
@@ -265,12 +271,12 @@ async function loadOverview() {
       document.getElementById('aBookingsPreview').innerHTML =
         allAdminBookings.slice(0, 5).map(function(b) {
           return '<tr>'
-            + '<td style="color:var(--text-3);font-size:12px">#' + b.id + '</td>'
-            + '<td>' + b.customer.username + '</td>'
-            + '<td>' + b.car.brand + ' ' + b.car.model + '</td>'
-            + '<td style="font-size:12px">'
-            + b.start_date + ' &#8594; ' + b.end_date + '</td>'
-            + '<td style="font-weight:700;color:var(--primary)">$'
+            + '<td class="td-id">#' + b.id + '</td>'
+            + '<td>' + UI.escHtml(b.customer.username) + '</td>'
+            + '<td>' + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</td>'
+            + '<td class="td-meta">'
+            + UI.escHtml(b.start_date) + ' &#8594; ' + UI.escHtml(b.end_date) + '</td>'
+            + '<td class="td-money">$'
             + parseFloat(b.total_cost).toFixed(2) + '</td>'
             + '<td>' + statusBadge(b.status) + '</td>'
             + '</tr>';
@@ -283,23 +289,17 @@ async function loadOverview() {
 /* ══ ALL CARS ═══════════════════════ */
 async function loadAllCars() {
   try {
-    allAdminCars = await API.get('/api/cars/admin/all/');
-    renderCarsTable(allAdminCars);
+    allAdminCars = await API.fetchAllPages('/api/cars/admin/all/');
+    adminCarsPage = 1;
+    applyAdminCarsFilter(adminCarsFilter);
   } catch(err) { toast(err.message, 'error'); }
 }
 
-function filterCars(filter, btn) {
-  document.querySelectorAll('.ftab').forEach(function(b){
-    b.classList.remove('active');
-  });
-  if (btn) btn.classList.add('active');
-
-  var list = allAdminCars;
-  if (filter === 'live')        list = list.filter(function(c){ return c.is_approved && c.is_available; });
-  if (filter === 'hidden')      list = list.filter(function(c){ return !c.is_approved; });
-  if (filter === 'available')   list = list.filter(function(c){ return c.is_available; });
-  if (filter === 'unavailable') list = list.filter(function(c){ return !c.is_available; });
-  renderCarsTable(list);
+function applyAdminCarsFilter(filter) {
+  adminCarsFilter = filter || 'all';
+  adminCarsPage = 1;
+  renderCarsTable(UI.filterCarList(allAdminCars, adminCarsFilter));
+  UI.scrollToEl('allCarsTable');
 }
 
 async function setCarVisibility(id, isApproved) {
@@ -312,17 +312,31 @@ async function setCarVisibility(id, isApproved) {
 }
 
 function renderCarsTable(list) {
+  adminCarsViewList = list;
+  var meta = UI.paginateSlice(list, adminCarsPage, UI_PAGE.table);
+  adminCarsPage = meta.page;
   var tbody = document.getElementById('allCarsTable');
 
-  if (!list.length) {
+  UI.updateResultsCount('adminCarsResultCount', {
+    filtered: list.length,
+    total: allAdminCars.length,
+    label: allAdminCars.length === 1 ? 'car' : 'cars',
+    filterLabel: UI.carFilterLabel(adminCarsFilter),
+  });
+
+  if (!meta.items.length) {
+    var carEmpty = adminCarsFilter && adminCarsFilter !== 'all'
+      ? 'No cars match this filter.'
+      : 'No cars found';
     tbody.innerHTML =
       '<tr><td colspan="9">'
-      + '<div class="empty"><h3>No cars found</h3></div>'
+      + '<div class="empty"><h3>' + UI.escHtml(carEmpty) + '</h3></div>'
       + '</td></tr>';
+    UI.mountPagination('adminCarsPagination', meta, function () {}, { label: 'cars' });
     return;
   }
 
-  tbody.innerHTML = list.map(function(c) {
+  tbody.innerHTML = meta.items.map(function(c) {
     var vis = c.is_approved
       ? '<span class="badge badge-green">On marketplace</span>'
       : '<span class="badge badge-red">Hidden</span>';
@@ -330,17 +344,17 @@ function renderCarsTable(list) {
       ? '<button class="btn btn-sm btn-danger" onclick="setCarVisibility(' + c.id + ', false)">Hide</button>'
       : '<button class="btn btn-sm btn-primary" onclick="setCarVisibility(' + c.id + ', true)">Restore</button>';
     return '<tr>'
-      + '<td style="color:var(--text-3);font-size:12px">#' + c.id + '</td>'
+      + '<td class="td-id">#' + c.id + '</td>'
       + '<td>'
-      + '<a href="/cars/' + c.id + '/" target="_blank" style="font-weight:600">'
-      + c.brand + ' ' + c.model + '</a>'
-      + '<div style="font-size:11px;color:var(--text-2)">' + c.year + '</div>'
+      + '<a href="/cars/' + encodeURIComponent(c.id) + '/" target="_blank" class="text-strong">'
+      + UI.escHtml(c.brand + ' ' + c.model) + '</a>'
+      + '<div class="text-subline">' + UI.escHtml(c.year) + '</div>'
       + '</td>'
-      + '<td style="font-size:13px">' + c.owner.username + '</td>'
-      + '<td><span class="badge badge-blue">' + c.car_type + '</span></td>'
-      + '<td style="font-weight:700;color:var(--primary)">$'
+      + '<td class="text-small">' + UI.escHtml(c.owner.username) + '</td>'
+      + '<td><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
+      + '<td class="td-money">$'
       + parseFloat(c.price_per_day).toFixed(2) + '</td>'
-      + '<td style="font-size:12px">' + c.location + '</td>'
+      + '<td class="td-meta">' + UI.escHtml(c.location) + '</td>'
       + '<td>' + vis + '</td>'
       + '<td>'
       + (c.is_available
@@ -350,101 +364,142 @@ function renderCarsTable(list) {
       + '<td>' + actions + '</td>'
       + '</tr>';
   }).join('');
+
+  UI.mountPagination('adminCarsPagination', meta, function (p) {
+    adminCarsPage = p;
+    renderCarsTable(adminCarsViewList);
+    UI.scrollToEl('allCarsTable');
+  }, { label: 'cars' });
 }
 
 /* ══ ALL BOOKINGS ═══════════════════ */
 async function loadAllBookings() {
   try {
-    allAdminBookings = await API.get('/api/bookings/admin/all/');
-    renderBookingsTable(allAdminBookings);
+    allAdminBookings = await API.fetchAllPages('/api/bookings/admin/all/');
+    adminBookingsPage = 1;
+    applyAdminBookingsFilter(adminBookingsStatusFilter);
   } catch(err) { toast(err.message, 'error'); }
 }
 
-function filterBookings(status, btn) {
-  document.querySelectorAll('.ftab').forEach(function(b){
-    b.classList.remove('active');
-  });
-  if (btn) btn.classList.add('active');
-
-  var list = status
-    ? allAdminBookings.filter(function(b){ return b.status === status; })
+function applyAdminBookingsFilter(status) {
+  adminBookingsStatusFilter = status || '';
+  adminBookingsPage = 1;
+  var list = adminBookingsStatusFilter
+    ? allAdminBookings.filter(function (b) { return b.status === adminBookingsStatusFilter; })
     : allAdminBookings;
   renderBookingsTable(list);
+  UI.scrollToEl('allBookingsTable');
 }
 
 function renderBookingsTable(list) {
+  adminBookingsViewList = list;
+  var meta = UI.paginateSlice(list, adminBookingsPage, UI_PAGE.table);
+  adminBookingsPage = meta.page;
   var tbody = document.getElementById('allBookingsTable');
 
-  if (!list.length) {
+  UI.updateResultsCount('adminBookingsResultCount', {
+    filtered: list.length,
+    total: allAdminBookings.length,
+    label: allAdminBookings.length === 1 ? 'booking' : 'bookings',
+    filterLabel: UI.bookingStatusLabel(adminBookingsStatusFilter),
+  });
+
+  if (!meta.items.length) {
+    var bookEmpty = adminBookingsStatusFilter
+      ? 'No ' + UI.bookingStatusLabel(adminBookingsStatusFilter).toLowerCase() + ' bookings.'
+      : 'No bookings found';
     tbody.innerHTML =
       '<tr><td colspan="8">'
-      + '<div class="empty"><h3>No bookings found</h3></div>'
+      + '<div class="empty"><h3>' + UI.escHtml(bookEmpty) + '</h3></div>'
       + '</td></tr>';
+    UI.mountPagination('adminBookingsPagination', meta, function () {}, { label: 'bookings' });
     return;
   }
 
-  tbody.innerHTML = list.map(function(b) {
+  tbody.innerHTML = meta.items.map(function(b) {
     var days = Math.round(
       (new Date(b.end_date) - new Date(b.start_date)) / 86400000
     );
 
     return '<tr>'
-      + '<td style="color:var(--text-3);font-size:12px">#' + b.id + '</td>'
+      + '<td class="td-id">#' + b.id + '</td>'
       + '<td>'
-      + '<strong>' + b.customer.username + '</strong>'
-      + '<div style="font-size:11px;color:var(--text-2)">'
-      + (b.customer.email || '') + '</div>'
+      + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
+      + '<div class="text-subline">'
+      + UI.escHtml(b.customer.email || '') + '</div>'
       + '</td>'
       + '<td>'
-      + '<a href="/cars/' + b.car.id + '/" target="_blank">'
-      + b.car.brand + ' ' + b.car.model + '</a>'
+      + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" target="_blank">'
+      + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
       + '</td>'
-      + '<td style="font-size:12px;color:var(--text-2)">'
-      + (b.car.owner ? b.car.owner.username : '—') + '</td>'
-      + '<td style="font-size:12px">'
-      + b.start_date + '<br/>&#8594; ' + b.end_date + '</td>'
-      + '<td style="font-size:12px">' + days + 'd</td>'
-      + '<td style="font-weight:700;color:var(--primary)">$'
+      + '<td class="td-meta">'
+      + UI.escHtml(b.car.owner ? b.car.owner.username : '—') + '</td>'
+      + '<td class="td-meta">'
+      + UI.escHtml(b.start_date) + '<br/>&#8594; ' + UI.escHtml(b.end_date) + '</td>'
+      + '<td class="td-meta">' + days + 'd</td>'
+      + '<td class="td-money">$'
       + parseFloat(b.total_cost).toFixed(2) + '</td>'
       + '<td>' + statusBadge(b.status) + '</td>'
       + '</tr>';
   }).join('');
+
+  UI.mountPagination('adminBookingsPagination', meta, function (p) {
+    adminBookingsPage = p;
+    renderBookingsTable(adminBookingsViewList);
+    UI.scrollToEl('allBookingsTable');
+  }, { label: 'bookings' });
 }
 
 async function loadAllOwners() {
   try {
-    allAdminOwners = await API.get('/api/accounts/admin/owners/');
-    renderOwnersTable(allAdminOwners);
+    allAdminOwners = await API.fetchAllPages('/api/accounts/admin/owners/');
+    adminOwnersPage = 1;
+    applyAdminOwnersFilter(adminOwnersFilter);
   } catch(err) { toast(err.message, 'error'); }
 }
 
-function filterOwners(status, btn) {
-  document.querySelectorAll('.ftab').forEach(function(b){
-    b.classList.remove('active');
-  });
-  if (btn) btn.classList.add('active');
-
-  var list = status === 'pending'
-    ? allAdminOwners.filter(function(o){ return !o.is_verified; })
-    : status === 'verified'
-    ? allAdminOwners.filter(function(o){ return o.is_verified; })
-    : allAdminOwners;
-
+function applyAdminOwnersFilter(filter) {
+  adminOwnersFilter = filter || 'all';
+  adminOwnersPage = 1;
+  var list = allAdminOwners;
+  if (adminOwnersFilter === 'pending') {
+    list = list.filter(function (o) { return !o.is_verified; });
+  } else if (adminOwnersFilter === 'verified') {
+    list = list.filter(function (o) { return o.is_verified; });
+  }
   renderOwnersTable(list);
+  UI.scrollToEl('allOwnersTable');
 }
 
 function renderOwnersTable(list) {
+  adminOwnersViewList = list;
+  var meta = UI.paginateSlice(list, adminOwnersPage, UI_PAGE.table);
+  adminOwnersPage = meta.page;
   var tbody = document.getElementById('allOwnersTable');
 
-  if (!list.length) {
+  var ownerFilterLabel = adminOwnersFilter === 'pending' ? 'Pending verification'
+    : adminOwnersFilter === 'verified' ? 'Verified' : '';
+
+  UI.updateResultsCount('adminOwnersResultCount', {
+    filtered: list.length,
+    total: allAdminOwners.length,
+    label: allAdminOwners.length === 1 ? 'owner' : 'owners',
+    filterLabel: ownerFilterLabel,
+  });
+
+  if (!meta.items.length) {
+    var ownerEmpty = ownerFilterLabel
+      ? 'No ' + ownerFilterLabel.toLowerCase() + ' owners.'
+      : 'No owners found';
     tbody.innerHTML =
       '<tr><td colspan="6">'
-      + '<div class="empty"><h3>No owners found</h3></div>'
+      + '<div class="empty"><h3>' + UI.escHtml(ownerEmpty) + '</h3></div>'
       + '</td></tr>';
+    UI.mountPagination('adminOwnersPagination', meta, function () {}, { label: 'owners' });
     return;
   }
 
-  tbody.innerHTML = list.map(function(o) {
+  tbody.innerHTML = meta.items.map(function(o) {
     var actionButtons = o.is_verified
         ? '<button class="btn btn-sm btn-danger" onclick="updateOwnerStatus(' + o.id + ', false)">Revoke</button>'
         : (
@@ -453,16 +508,22 @@ function renderOwnersTable(list) {
         );
 
     return '<tr>'
-      + '<td style="color:var(--text-3);font-size:12px">#' + o.id + '</td>'
-      + '<td>' + (o.user.username || '') + '</td>'
-      + '<td style="font-size:12px;color:var(--text-2)">' + (o.user.email || '—') + '</td>'
-      + '<td style="font-size:12px">' + (o.phone_number || '—') + '</td>'
+      + '<td class="td-id">#' + o.id + '</td>'
+      + '<td>' + UI.escHtml(o.user.username || '') + '</td>'
+      + '<td class="td-meta">' + UI.escHtml(o.user.email || '—') + '</td>'
+      + '<td class="td-meta">' + UI.escHtml(o.phone_number || '—') + '</td>'
       + '<td>' + (o.is_verified
           ? '<span class="badge badge-green">Verified</span>'
           : '<span class="badge badge-amber">Pending</span>') + '</td>'
       + '<td>' + actionButtons + '</td>'
       + '</tr>';
   }).join('');
+
+  UI.mountPagination('adminOwnersPagination', meta, function (p) {
+    adminOwnersPage = p;
+    renderOwnersTable(adminOwnersViewList);
+    UI.scrollToEl('allOwnersTable');
+  }, { label: 'owners' });
 }
 
 async function updateOwnerStatus(id, isVerified) {
@@ -477,6 +538,9 @@ async function updateOwnerStatus(id, isVerified) {
 }
 
 /* ── Boot ───────────────────────────── */
+UI.initFilterTabs('adminCarsFilterTabs', applyAdminCarsFilter);
+UI.initFilterTabs('adminBookingsFilterTabs', applyAdminBookingsFilter);
+UI.initFilterTabs('adminOwnersFilterTabs', applyAdminOwnersFilter);
 loadOverview();
 </script>
 {% endblock %}

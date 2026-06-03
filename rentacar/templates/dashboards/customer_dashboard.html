@@ -90,22 +90,18 @@
     <!-- BOOKINGS TAB -->
     <div class="tab-panel" id="tab-bookings">
 
-      <div class="page-head">
-        <div>
-          <h1>My Bookings</h1>
-          <p>All your rental history</p>
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div>
+            <h1>My Bookings</h1>
+            <p>All your rental history</p>
+          </div>
+          <a href="/cars/" class="btn btn-primary">+ New Booking</a>
         </div>
-        <a href="/cars/" class="btn btn-primary">+ New Booking</a>
-      </div>
-
-      <!-- Status filter tabs -->
-      <div class="filter-tabs">
-        <button class="ftab active" onclick="filterBookings('', this)">All</button>
-        <button class="ftab" onclick="filterBookings('pending', this)">Pending</button>
-        <button class="ftab" onclick="filterBookings('approved', this)">Approved</button>
-        <button class="ftab" onclick="filterBookings('completed', this)">Completed</button>
-        <button class="ftab" onclick="filterBookings('cancelled', this)">Cancelled</button>
-        <button class="ftab" onclick="filterBookings('rejected', this)">Rejected</button>
+        {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='bookingsFilterTabs' tabs_label='Filter bookings by status' %}
+        <div class="results-bar">
+          <span id="bookingsResultCount" class="results-bar__count text-caption"></span>
+        </div>
       </div>
 
       <div class="card">
@@ -115,10 +111,10 @@
               <tr>
                 <th>#</th>
                 <th>Car</th>
-                <th>Location</th>
+                <th class="col-hide-sm">Location</th>
                 <th>Start</th>
                 <th>End</th>
-                <th>Days</th>
+                <th class="col-hide-sm">Days</th>
                 <th>Total</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -134,6 +130,7 @@
           </table>
         </div>
       </div>
+      <div id="bookingsPagination" class="pagination-wrap" hidden></div>
 
     </div>
 
@@ -147,7 +144,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start">
+      <div class="profile-layout">
 
         <!-- Profile card -->
         <div class="profile-card">
@@ -264,7 +261,7 @@
 </div>
 
 <!-- Review Modal -->
-<div class="modal-bg" id="reviewModal">
+<div class="modal-bg" id="reviewModal" hidden aria-hidden="true">
   <div class="modal">
     <div class="modal-head">
       <h3>Leave a Review</h3>
@@ -322,31 +319,24 @@
 
   /* ── Tab switching ──────────────────── */
   function showTab(name, btn) {
-    /* hide all panels */
-    document.querySelectorAll('.tab-panel').forEach(function (p) {
-      p.classList.remove('active');
+    UI.switchDashLegacy({
+      panelClass: 'tab-panel',
+      navClass: 's-item',
+      panelPrefix: 'tab-',
+      tabId: name,
+      btn: btn,
+      onActivate: function (n) {
+        if (n === 'overview') loadOverview();
+        if (n === 'bookings') loadBookings();
+        if (n === 'profile') loadProfile();
+      },
     });
-    /* deactivate all sidebar buttons */
-    document.querySelectorAll('.s-item').forEach(function (b) {
-      b.classList.remove('active');
-    });
-    /* show selected panel */
-    var panel = document.getElementById('tab-' + name);
-    if (panel) panel.classList.add('active');
-    /* activate sidebar button */
-    if (btn) btn.classList.add('active');
-
-    /* load data for each tab */
-    if (name === 'overview') loadOverview();
-    if (name === 'bookings') loadBookings();
-    if (name === 'profile') loadProfile();
   }
 
   /* ── OVERVIEW ───────────────────────── */
   async function loadOverview() {
     try {
-      const res = await API.get('/api/bookings/my-bookings/');
-      const bookings = res.results || res;
+      const bookings = await API.fetchAllPages('/api/bookings/my-bookings/');
       allBookings = bookings;
 
       const total = bookings.length;
@@ -376,10 +366,10 @@
       }
       document.getElementById('recentTable').innerHTML = recent.map(function (b) {
         return '<tr>'
-          + '<td><a href="/cars/' + b.car.id + '/" style="font-weight:600">'
-          + b.car.brand + ' ' + b.car.model + '</a></td>'
-          + '<td style="font-size:12px">' + b.start_date + ' &#8594; ' + b.end_date + '</td>'
-          + '<td style="font-weight:700;color:var(--primary)">$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
+          + '<td><a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
+          + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a></td>'
+          + '<td class="td-meta">' + UI.escHtml(b.start_date) + ' &#8594; ' + UI.escHtml(b.end_date) + '</td>'
+          + '<td class="td-money">$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
           + '<td>' + statusBadge(b.status) + '</td>'
           + '</tr>';
       }).join('');
@@ -392,39 +382,53 @@
   /* ── BOOKINGS ───────────────────────── */
   async function loadBookings() {
     try {
-      var res = await API.get('/api/bookings/my-bookings/');
-      allBookings = res.results || res;
-      renderBookings(allBookings);
+      allBookings = await API.fetchAllPages('/api/bookings/my-bookings/');
+      applyBookingsFilter(bookingsStatusFilter);
     } catch (err) {
       toast(err.message, 'error');
     }
   }
 
-  function filterBookings(status, btn) {
-    /* update active tab button */
-    document.querySelectorAll('.ftab').forEach(function (b) {
-      b.classList.remove('active');
-    });
-    if (btn) btn.classList.add('active');
+  let bookingsViewList = [];
+  let bookingsPage = 1;
+  let bookingsStatusFilter = '';
 
-    var filtered = status
-      ? allBookings.filter(function (b) { return b.status === status; })
+  function applyBookingsFilter(status) {
+    bookingsStatusFilter = status || '';
+    bookingsPage = 1;
+    var filtered = bookingsStatusFilter
+      ? allBookings.filter(function (b) { return b.status === bookingsStatusFilter; })
       : allBookings;
     renderBookings(filtered);
+    UI.scrollToEl('bookingsTable');
   }
 
   function renderBookings(list) {
+    bookingsViewList = list;
+    var meta = UI.paginateSlice(list, bookingsPage, UI_PAGE.table);
+    bookingsPage = meta.page;
     var tbody = document.getElementById('bookingsTable');
 
-    if (!list.length) {
+    UI.updateResultsCount('bookingsResultCount', {
+      filtered: list.length,
+      total: allBookings.length,
+      label: allBookings.length === 1 ? 'booking' : 'bookings',
+      filterLabel: UI.bookingStatusLabel(bookingsStatusFilter),
+    });
+
+    if (!meta.items.length) {
+      var emptyMsg = bookingsStatusFilter
+        ? 'No ' + UI.bookingStatusLabel(bookingsStatusFilter).toLowerCase() + ' bookings.'
+        : 'No bookings found.';
       tbody.innerHTML = '<tr><td colspan="9">'
-        + '<div class="empty"><h3>No bookings found</h3>'
+        + '<div class="empty"><h3>' + UI.escHtml(emptyMsg) + '</h3>'
         + '<p>Try a different filter or <a href="/cars/">book a car</a></p></div>'
         + '</td></tr>';
+      UI.mountPagination('bookingsPagination', meta, function () {}, { label: 'bookings' });
       return;
     }
 
-    tbody.innerHTML = list.map(function (b) {
+    tbody.innerHTML = meta.items.map(function (b) {
       var days = Math.round((new Date(b.end_date) - new Date(b.start_date)) / 86400000);
       var actions = '';
 
@@ -435,28 +439,34 @@
         actions = '<button class="btn btn-outline btn-sm" '
           + 'onclick="openReview(' + b.id + ')">Review</button>';
       } else {
-        actions = '<span style="color:var(--text-3);font-size:12px">—</span>';
+        actions = UI.tableEmpty();
       }
 
       return '<tr>'
-        + '<td style="color:var(--text-3);font-size:12px">#' + b.id + '</td>'
+        + '<td class="td-id">#' + b.id + '</td>'
         + '<td>'
-        + '<a href="/cars/' + b.car.id + '/" style="font-weight:600">'
-        + b.car.brand + ' ' + b.car.model + '</a>'
-        + '<div style="font-size:11px;color:var(--text-2)">'
-        + (b.car.year || '') + ' &middot; ' + b.car.car_type
+        + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
+        + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
+        + '<div class="text-subline">'
+        + UI.escHtml((b.car.year || '') + ' · ' + (b.car.car_type || ''))
         + '</div>'
         + '</td>'
-        + '<td style="font-size:12px">' + b.car.location + '</td>'
-        + '<td style="font-size:12px">' + b.start_date + '</td>'
-        + '<td style="font-size:12px">' + b.end_date + '</td>'
-        + '<td style="font-size:12px">' + days + 'd</td>'
-        + '<td style="font-weight:700;color:var(--primary)">'
+        + '<td class="td-meta col-hide-sm">' + UI.escHtml(b.car.location) + '</td>'
+        + '<td class="td-meta">' + UI.escHtml(b.start_date) + '</td>'
+        + '<td class="td-meta">' + UI.escHtml(b.end_date) + '</td>'
+        + '<td class="td-meta col-hide-sm">' + days + 'd</td>'
+        + '<td class="td-money">'
         + '$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
         + '<td>' + statusBadge(b.status) + '</td>'
         + '<td>' + actions + '</td>'
         + '</tr>';
     }).join('');
+
+    UI.mountPagination('bookingsPagination', meta, function (p) {
+      bookingsPage = p;
+      renderBookings(bookingsViewList);
+      UI.scrollToEl('bookingsTable');
+    }, { label: 'bookings' });
   }
 
   async function cancelBooking(id) {
@@ -483,7 +493,7 @@
       /* show profile pic if exists */
       if (p.profile_picture) {
         document.getElementById('profileAv').innerHTML =
-          '<img src="' + p.profile_picture + '" '
+          '<img src="' + UI.escHtml(p.profile_picture) + '" '
           + 'style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
       }
     } catch (err) {
@@ -588,6 +598,7 @@
   }
 
   /* ── Boot ───────────────────────────── */
+  UI.initFilterTabs('bookingsFilterTabs', applyBookingsFilter);
   loadOverview();
 </script>
 {% endblock %}

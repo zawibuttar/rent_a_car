@@ -1,0 +1,29 @@
+{# Status filter pills — variant: bookings | admin_cars | admin_owners | owner_cars #}
+<div class="filter-tabs-wrap">
+  <div class="filter-tabs" id="{{ tabs_id }}" role="tablist" aria-label="{{ tabs_label|default:'Filter by status' }}">
+    {% if variant == 'bookings' %}
+    <button type="button" class="ftab active" data-filter="" aria-selected="true">All</button>
+    <button type="button" class="ftab" data-filter="pending" aria-selected="false">Pending</button>
+    <button type="button" class="ftab" data-filter="approved" aria-selected="false">Approved</button>
+    <button type="button" class="ftab" data-filter="completed" aria-selected="false">Completed</button>
+    <button type="button" class="ftab" data-filter="cancelled" aria-selected="false">Cancelled</button>
+    <button type="button" class="ftab" data-filter="rejected" aria-selected="false">Rejected</button>
+    {% elif variant == 'admin_cars' %}
+    <button type="button" class="ftab active" data-filter="all" aria-selected="true">All</button>
+    <button type="button" class="ftab" data-filter="live" aria-selected="false">Live</button>
+    <button type="button" class="ftab" data-filter="hidden" aria-selected="false">Hidden from browse</button>
+    <button type="button" class="ftab" data-filter="available" aria-selected="false">Available</button>
+    <button type="button" class="ftab" data-filter="unavailable" aria-selected="false">Unavailable</button>
+    {% elif variant == 'admin_owners' %}
+    <button type="button" class="ftab active" data-filter="all" aria-selected="true">All</button>
+    <button type="button" class="ftab" data-filter="pending" aria-selected="false">Pending</button>
+    <button type="button" class="ftab" data-filter="verified" aria-selected="false">Verified</button>
+    {% elif variant == 'owner_cars' %}
+    <button type="button" class="ftab active" data-filter="all" aria-selected="true">All</button>
+    <button type="button" class="ftab" data-filter="live" aria-selected="false">Live</button>
+    <button type="button" class="ftab" data-filter="hidden" aria-selected="false">Hidden</button>
+    <button type="button" class="ftab" data-filter="available" aria-selected="false">Available</button>
+    <button type="button" class="ftab" data-filter="unavailable" aria-selected="false">Unavailable</button>
+    {% endif %}
+  </div>
+</div>

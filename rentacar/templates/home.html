@@ -1,146 +1,42 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}RentACar — Find Your Perfect Ride{% endblock %}
 
 {% block content %}
 <div class="page-wrap">
 
-  <!-- Hero -->
   <div class="hero">
     <h1>Find Your Perfect Rental Car</h1>
     <p>Browse verified cars from trusted owners. Instant booking, transparent pricing.</p>
     <div class="hero-search">
-      <input type="text" id="heroInput" placeholder="Search by brand, model or city..."/>
-      <button class="btn btn-primary" onclick="doSearch()">Search</button>
+      <input type="search" class="search-input" id="heroInput"
+        placeholder="Search by brand, model or city..."
+        autocomplete="off"
+        aria-label="Search cars"/>
+      <button type="button" class="btn btn-primary" id="heroSearchBtn">Search</button>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="filters-bar">
-    <div class="filter-field">
-      <label>Car Type</label>
-      <select id="fType" onchange="loadCars()">
-        <option value="">All Types</option>
-        <option value="sedan">Sedan</option>
-        <option value="suv">SUV</option>
-        <option value="luxury">Luxury</option>
-        <option value="hatchback">Hatchback</option>
-        <option value="truck">Truck</option>
-        <option value="van">Van</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label>Min $/day</label>
-      <input type="number" id="fMin" placeholder="0" min="0" style="width:100px" onchange="loadCars()"/>
-    </div>
-    <div class="filter-field">
-      <label>Max $/day</label>
-      <input type="number" id="fMax" placeholder="Any" min="0" style="width:100px" onchange="loadCars()"/>
-    </div>
-    <div class="filter-field">
-      <label>Sort By</label>
-      <select id="fSort" onchange="loadCars()">
-        <option value="-created_at">Newest First</option>
-        <option value="price_per_day">Price: Low to High</option>
-        <option value="-price_per_day">Price: High to Low</option>
-        <option value="-year">Newest Year</option>
-      </select>
-    </div>
-    <button class="btn btn-ghost btn-sm" onclick="resetFilters()" style="margin-top:18px">Reset</button>
+  <div class="list-toolbar__filters">
+    {% include 'includes/catalog_filters.html' %}
+    <div class="active-filters" id="activeFilters" hidden></div>
   </div>
 
-  <!-- Results header -->
-  <div class="sec-head">
+  <div class="results-bar">
     <h2>Available Cars</h2>
-    <span id="carCount" style="font-size:12px;color:var(--text-3)"></span>
+    <span id="carCount" class="results-bar__count text-caption"></span>
   </div>
 
-  <!-- Cars grid -->
   <div id="carsGrid" class="cars-grid">
     <div class="loading" style="grid-column:1/-1">
       <span class="spinner spinner-lg"></span> Loading cars...
     </div>
   </div>
+  <div id="carsPagination" class="pagination-wrap" hidden></div>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-let currentSearch = '';
-let searchTimer;
-
-async function loadCars() {
-  const type = document.getElementById('fType').value;
-  const min  = document.getElementById('fMin').value;
-  const max  = document.getElementById('fMax').value;
-  const sort = document.getElementById('fSort').value;
-
-  let url = '/api/cars/?ordering=' + sort;
-  if (currentSearch) url += '&search=' + encodeURIComponent(currentSearch);
-  if (type) url += '&car_type=' + type;
-  if (min)  url += '&min_price=' + min;
-  if (max)  url += '&max_price=' + max;
-
-  const grid = document.getElementById('carsGrid');
-  grid.innerHTML = '<div class="loading" style="grid-column:1/-1"><span class="spinner"></span> Loading...</div>';
-
-  try {
-    const data = await API.get(url);
-    const cars = Array.isArray(data) ? data : (data.results || []);
-
-    document.getElementById('carCount').textContent = cars.length + ' car(s) found';
-
-    if (!cars.length) {
-      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>No cars found</h3><p>Try adjusting your search or filters.</p></div>';
-      return;
-    }
-
-    grid.innerHTML = cars.map(function(car) {
-      const img = UI.carThumb(car.primary_image, window.STATIC_NO_IMAGE);
-      const avail = car.is_available
-        ? '<span class="badge badge-green">Available</span>'
-        : '<span class="badge badge-gray">Unavailable</span>';
-      return '<div class="car-card" onclick="window.location=\'/cars/' + car.id + '/\'">'
-        + '<div class="car-thumb">' + img + '</div>'
-        + '<div class="car-body">'
-        + '<div class="car-title">' + car.brand + ' ' + car.model + ' ' + (car.year || '') + '</div>'
-        + '<div class="car-badges">'
-        + '<span class="badge badge-blue">' + car.car_type.toUpperCase() + '</span>'
-        + avail
-        + '</div>'
-        + UI.locationLine(car.location, car.owner_name)
-        + '<div class="car-footer">'
-        + '<div class="car-price">$' + parseFloat(car.price_per_day).toFixed(2) + '<span>/day</span></div>'
-        + '<button class="btn btn-primary btn-sm">View</button>'
-        + '</div>'
-        + '</div>'
-        + '</div>';
-    }).join('');
-
-  } catch(err) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>Failed to load cars</h3><p>' + err.message + '</p></div>';
-  }
-}
-
-function doSearch() {
-  currentSearch = document.getElementById('heroInput').value.trim();
-  loadCars();
-}
-
-function resetFilters() {
-  document.getElementById('fType').value = '';
-  document.getElementById('fMin').value  = '';
-  document.getElementById('fMax').value  = '';
-  document.getElementById('fSort').value = '-created_at';
-  document.getElementById('heroInput').value = '';
-  currentSearch = '';
-  loadCars();
-}
-
-document.getElementById('heroInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doSearch();
-});
-
-loadCars();
-</script>
+<script src="{% static 'js/catalog.js' %}"></script>
 {% endblock %}

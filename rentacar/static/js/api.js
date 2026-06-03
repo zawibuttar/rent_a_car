@@ -40,6 +40,20 @@ const API = {
     return json;
   },
 
+  async fetchAllPages(url) {
+    let nextUrl = url;
+    const all = [];
+    while (nextUrl) {
+      const data = await this.get(nextUrl);
+      if (Array.isArray(data)) return data;
+      const page = data.results || [];
+      all.push.apply(all, page);
+      if (!data.next) break;
+      nextUrl = data.next.startsWith('http') ? data.next : (window.location.origin + data.next);
+    }
+    return all;
+  },
+
   get(url)            { return this.req('GET',    url); },
   post(url, data)     { return this.req('POST',   url, data); },
   patch(url, data)    { return this.req('PATCH',  url, data); },
@@ -87,8 +101,25 @@ function initials(name) {
 }
 
 /* ── Modal ──────────────────────── */
-function openModal(id)  { document.getElementById(id).classList.add('open');    }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (typeof UI !== 'undefined' && UI.initModal) UI.initModal(el);
+  el.hidden = false;
+  el.classList.add('open');
+  el.setAttribute('aria-hidden', 'false');
+  const focusable = el.querySelector(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  if (focusable) focusable.focus();
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  el.hidden = true;
+  el.setAttribute('aria-hidden', 'true');
+}
 
 /* ── Tabs ───────────────────────── */
 function switchTab(tabId) {

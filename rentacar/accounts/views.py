@@ -14,12 +14,14 @@ from rentacar.caching import (
     admin_owners_key,
     invalidate_admin_lists,
 )
+from rentacar.throttling import AuthRateThrottle
 
 # Create your views here.
 
 class RegisterView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
@@ -40,6 +42,7 @@ class RegisterView(APIView):
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -136,7 +139,6 @@ class AdminOwnerListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     serializer_class = OwnerProfileSerializer
     queryset = OwnerProfile.objects.all().select_related('user')
-    pagination_class = None
     redis_cache_key = admin_owners_key()
 
 

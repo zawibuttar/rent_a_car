@@ -2,22 +2,24 @@
 {% block title %}Register — RentACar{% endblock %}
 
 {% block content %}
-<div class="auth-page">
-  <div class="auth-box" style="max-width:500px">
+<div class="auth-page auth-page--register">
+  <div class="auth-box auth-box--register">
 
     <h1>Create your account</h1>
     <p class="sub">Join as a customer or list your car as an owner</p>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
-      <div id="roleCustomer" class="auth-role-card active" onclick="selectRole('customer')">
+    <div class="auth-role-grid">
+      <div id="roleCustomer" class="auth-role-card active" role="button" tabindex="0"
+        aria-pressed="true" onclick="selectRole('customer')" onkeydown="roleKeySelect(event, 'customer')">
         <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
-        <div style="font-weight:600;font-size:13px">Customer</div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:2px">I want to rent cars</div>
+        <div class="auth-role-title">Customer</div>
+        <div class="auth-role-desc text-small">I want to rent cars</div>
       </div>
-      <div id="roleOwner" class="auth-role-card" onclick="selectRole('owner')">
+      <div id="roleOwner" class="auth-role-card" role="button" tabindex="0"
+        aria-pressed="false" onclick="selectRole('owner')" onkeydown="roleKeySelect(event, 'owner')">
         <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg>
-        <div style="font-weight:600;font-size:13px">Car Owner</div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:2px">I want to list my car</div>
+        <div class="auth-role-title">Car Owner</div>
+        <div class="auth-role-desc text-small">I want to list my car</div>
       </div>
     </div>
 
@@ -67,6 +69,15 @@ function selectRole(role) {
   document.getElementById('roleOwner').classList.toggle('active', role === 'owner');
   document.getElementById('roleCustomer').classList.toggle('selected', role === 'customer');
   document.getElementById('roleOwner').classList.toggle('selected', role === 'owner');
+  document.getElementById('roleCustomer').setAttribute('aria-pressed', role === 'customer' ? 'true' : 'false');
+  document.getElementById('roleOwner').setAttribute('aria-pressed', role === 'owner' ? 'true' : 'false');
+}
+
+function roleKeySelect(e, role) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    selectRole(role);
+  }
 }
 
 async function doRegister() {

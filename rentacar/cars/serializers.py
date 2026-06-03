@@ -1,7 +1,9 @@
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import serializers
 from .models import *
 from accounts.serializers import UserSerializer
+from rentacar.image_validation import validate_car_image_file
 
 class CarImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -73,8 +75,11 @@ class CarCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate_year(self, value):
-        if value < 1990 or value > 2026:
-            raise serializers.ValidationError("Year must be between 1990 and 2026.")
+        max_year = timezone.now().year + 1
+        if value < 1990 or value > max_year:
+            raise serializers.ValidationError(
+                f"Year must be between 1990 and {max_year}."
+            )
         return value
 
     def validate_price_per_day(self, value):
@@ -94,3 +99,9 @@ class CarImageUploadSerializer(serializers.ModelSerializer):
         model  = CarImage
         fields = ['id', 'image', 'is_primary']
         read_only_fields = ['id']
+
+    def validate_image(self, value):
+        err = validate_car_image_file(value)
+        if err:
+            raise serializers.ValidationError(err)
+        return value

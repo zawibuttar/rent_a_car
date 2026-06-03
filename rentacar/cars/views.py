@@ -3,6 +3,7 @@ from rest_framework import status, generics, permissions, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
@@ -14,6 +15,8 @@ from rentacar.caching import (
     admin_cars_key,
     invalidate_car_caches,
 )
+from rentacar.utils import parse_bool
+from rentacar.image_validation import validate_car_image_file
 
 # Create your views here.
 
@@ -81,7 +84,6 @@ class CarCreateView(generics.CreateAPIView):
 class MyCarListView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
-    pagination_class   = None
 
     def get_queryset(self):
         return Car.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('images')
@@ -130,8 +132,18 @@ class CarImageUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        existing_count = car.images.count()
+        if existing_count + len(images) > settings.CAR_IMAGE_MAX_COUNT:
+            return Response(
+                {"error": f"Maximum {settings.CAR_IMAGE_MAX_COUNT} images per car."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         uploaded = []
         for index, image_file in enumerate(images):
+            err = validate_car_image_file(image_file)
+            if err:
+                return Response({"error": err}, status=status.HTTP_400_BAD_REQUEST)
             is_primary = (index == 0) and not car.images.exists()
             img = CarImage.objects.create(car=car, image=image_file, is_primary=is_primary)
             uploaded.append(CarImageUploadSerializer(img).data)
@@ -163,7 +175,6 @@ class AdminCarListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     serializer_class   = AdminCarListSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     queryset           = Car.objects.all().select_related('owner')
-    pagination_class = None
     redis_cache_key = admin_cars_key()
 
 
@@ -172,12 +183,13 @@ class AdminCarApprovalView(APIView):
 
     def patch(self, request, pk):
         car        = get_object_or_404(Car, pk=pk)
-        is_approved = request.data.get('is_approved')
-        if is_approved is None:
+        raw = request.data.get('is_approved')
+        if raw is None:
             return Response(
                 {"error": "Please provide 'is_approved': true or false."},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        is_approved = parse_bool(raw)
         car.is_approved = is_approved
         car.save()
         invalidate_car_caches()

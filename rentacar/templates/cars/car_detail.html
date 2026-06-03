@@ -2,7 +2,7 @@
 {% block title %}Car Details — RentACar{% endblock %}
 
 {% block content %}
-<div class="page-wrap page-wrap--detail">
+<div class="page-wrap page-wrap--detail" id="detailPageWrap">
 
   <nav class="detail-breadcrumb" aria-label="Breadcrumb">
     <a href="/cars/" class="detail-back">
@@ -28,6 +28,11 @@
 
 </div>
 
+<div class="detail-book-bar" id="detailBookBar" aria-hidden="true">
+  <div class="detail-book-bar__price" id="detailBookBarPrice"></div>
+  <button type="button" class="btn btn-primary" id="detailBookBarBtn">Book now</button>
+</div>
+
 <!-- Booking Modal -->
 <div class="modal-bg" id="bookModal">
   <div class="modal modal--book">
@@ -44,8 +49,8 @@
 
       <div class="book-modal-summary" id="bookModalSummary" hidden>
         <div>
-          <div style="font-weight:600" id="bookSummaryTitle"></div>
-          <div style="font-size:12px;color:var(--text-2)" id="bookSummaryLoc"></div>
+          <div class="text-strong" id="bookSummaryTitle"></div>
+          <div class="text-small" id="bookSummaryLoc"></div>
         </div>
         <div class="detail-price" id="bookSummaryPrice"></div>
       </div>
@@ -63,7 +68,7 @@
       <p class="form-hint" style="margin-top:-6px;margin-bottom:12px">Minimum rental is 1 day. End date must be after pick-up.</p>
 
       <div class="form-group">
-        <label class="form-label" for="bookNote">Message for owner <span style="font-weight:400;color:var(--text-3)">(optional)</span></label>
+        <label class="form-label" for="bookNote">Message for owner <span class="text-caption">(optional)</span></label>
         <textarea class="form-control" id="bookNote" rows="3" maxlength="500"
           placeholder="Pickup time, driver details, or special requests…"></textarea>
       </div>
@@ -107,27 +112,18 @@ function formatCarType(t) {
   return t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ');
 }
 
-function escHtml(s) {
-  if (!s) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function buildGallery(images, car) {
   const noImg = window.STATIC_NO_IMAGE;
   const list = images.length ? images : [];
   const main = list.find(function (i) { return i.is_primary; }) || list[0];
   const mainSrc = main ? main.image : noImg;
-  const title = escHtml(car.brand + ' ' + car.model);
+  const title = UI.escHtml(car.brand + ' ' + car.model);
   const count = list.length;
 
   let mainHtml =
     '<div class="detail-gallery-main" id="galleryMain">'
     + (count > 1 ? '<span class="detail-gallery-badge" id="galleryBadge">1 / ' + count + '</span>' : '')
-    + '<img id="mainImg" src="' + mainSrc + '" alt="' + title + '"'
+    + '<img id="mainImg" src="' + UI.escHtml(mainSrc) + '" alt="' + title + '"'
     + (count ? '' : ' class="thumb-placeholder"')
     + '/>'
     + '</div>';
@@ -139,9 +135,9 @@ function buildGallery(images, car) {
       + list.map(function (img, idx) {
         const active = img.image === mainSrc ? ' is-active' : '';
         return '<button type="button" class="detail-thumb' + active + '" role="listitem" '
-          + 'data-src="' + escHtml(img.image) + '" data-idx="' + idx + '" '
+          + 'data-src="' + UI.escHtml(img.image) + '" data-idx="' + idx + '" '
           + 'onclick="switchMain(this)" aria-label="Photo ' + (idx + 1) + ' of ' + count + '">'
-          + '<img src="' + img.image + '" alt="" loading="lazy"/>'
+          + '<img src="' + UI.escHtml(img.image) + '" alt="" loading="lazy"/>'
           + '</button>';
       }).join('')
       + '</div>';
@@ -177,12 +173,12 @@ function buildInfoRows(car) {
     + '<div class="detail-info-row">'
     + '<span class="detail-info-icon">' + UI.icon('pin', 'icon') + '</span>'
     + '<div class="detail-info-body"><div class="detail-info-lbl">Location</div>'
-    + '<div class="detail-info-val">' + escHtml(car.location) + '</div></div>'
+    + '<div class="detail-info-val">' + UI.escHtml(car.location) + '</div></div>'
     + '</div>'
     + '<div class="detail-info-row">'
     + '<span class="detail-info-icon">' + UI.icon('user', 'icon') + '</span>'
     + '<div class="detail-info-body"><div class="detail-info-lbl">Listed by</div>'
-    + '<div class="detail-info-val">' + escHtml(car.owner.username) + '</div></div>'
+    + '<div class="detail-info-val">' + UI.escHtml(car.owner.username) + '</div></div>'
     + '</div>'
     + '<div class="detail-info-row">'
     + '<span class="detail-info-icon">' + UI.icon('calendar', 'icon') + '</span>'
@@ -207,7 +203,7 @@ function renderCar(car) {
     ? '<span class="badge badge-green">Available now</span>'
     : '<span class="badge badge-red">Unavailable</span>';
   const desc = car.description
-    ? '<p class="detail-about-text">' + escHtml(car.description) + '</p>'
+    ? '<p class="detail-about-text">' + UI.escHtml(car.description) + '</p>'
     : '<p class="detail-about-text detail-about-empty">The owner has not added a description yet.</p>';
 
   document.getElementById('carDetail').innerHTML =
@@ -226,8 +222,8 @@ function renderCar(car) {
     + '<div class="card-body">'
     + '<div class="detail-specs-grid">'
     + '<div class="detail-spec"><div class="detail-spec-val">' + (car.year || '—') + '</div><div class="detail-spec-lbl">Year</div></div>'
-    + '<div class="detail-spec"><div class="detail-spec-val">' + escHtml(typeLabel) + '</div><div class="detail-spec-lbl">Type</div></div>'
-    + '<div class="detail-spec"><div class="detail-spec-val">' + escHtml(car.location || '—') + '</div><div class="detail-spec-lbl">Location</div></div>'
+    + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(typeLabel) + '</div><div class="detail-spec-lbl">Type</div></div>'
+    + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(car.location || '—') + '</div><div class="detail-spec-lbl">Location</div></div>'
     + '</div>'
     + '</div>'
     + '</div>'
@@ -238,11 +234,11 @@ function renderCar(car) {
 
     + '<div class="card detail-booking">'
     + '<div class="card-body">'
-    + '<h1 class="detail-title">' + escHtml(title) + '</h1>'
+    + '<h1 class="detail-title">' + UI.escHtml(title) + '</h1>'
     + '<p class="detail-subtitle">'
     + '<span>' + (car.year || '') + '</span>'
     + '<span class="dot">·</span>'
-    + '<span>' + escHtml(typeLabel) + '</span>'
+    + '<span>' + UI.escHtml(typeLabel) + '</span>'
     + '</p>'
     + '<div class="detail-badges">' + availBadge + '</div>'
     + '<div class="detail-price-block">'
@@ -259,7 +255,7 @@ function renderCar(car) {
     + '<div class="card-body detail-owner">'
     + '<div class="detail-owner-av" aria-hidden="true">' + initials(car.owner.username) + '</div>'
     + '<div>'
-    + '<div class="detail-owner-name">' + escHtml(car.owner.username) + '</div>'
+    + '<div class="detail-owner-name">' + UI.escHtml(car.owner.username) + '</div>'
     + '<div class="detail-owner-role">Verified car owner</div>'
     + '</div>'
     + '</div>'
@@ -273,6 +269,42 @@ function renderCar(car) {
   const ed = document.getElementById('endDate');
   if (sd) sd.min = today;
   if (ed) ed.min = today;
+  updateMobileBookBar(car);
+}
+
+function updateMobileBookBar(car) {
+  const bar = document.getElementById('detailBookBar');
+  const wrap = document.getElementById('detailPageWrap');
+  const btn = document.getElementById('detailBookBarBtn');
+  const priceEl = document.getElementById('detailBookBarPrice');
+  if (!bar || !btn || !priceEl) return;
+
+  const role = API.role();
+  const loggedIn = API.loggedIn();
+  const ppd = parseFloat(car.price_per_day || 0).toFixed(2);
+  priceEl.innerHTML = '$' + ppd + '<span>per day</span>';
+
+  if (loggedIn && role === 'customer' && car.is_available) {
+    bar.classList.add('is-visible');
+    bar.setAttribute('aria-hidden', 'false');
+    btn.textContent = 'Book now';
+    btn.onclick = openBookingModal;
+    if (wrap) wrap.classList.add('has-book-bar');
+    return;
+  }
+  if (!loggedIn && car.is_available) {
+    bar.classList.add('is-visible');
+    bar.setAttribute('aria-hidden', 'false');
+    btn.textContent = 'Sign in to book';
+    btn.onclick = function () {
+      window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+    };
+    if (wrap) wrap.classList.add('has-book-bar');
+    return;
+  }
+  bar.classList.remove('is-visible');
+  bar.setAttribute('aria-hidden', 'true');
+  if (wrap) wrap.classList.remove('has-book-bar');
 }
 
 function switchMain(btn) {
