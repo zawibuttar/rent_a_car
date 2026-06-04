@@ -46,6 +46,7 @@ const Catalog = {
       min: minEl ? minEl.value : '',
       max: maxEl ? maxEl.value : '',
       sort: sortEl ? sortEl.value : '-created_at',
+      location: typeof LocationState !== 'undefined' && LocationState.getQuery ? LocationState.getQuery() : '',
     };
   },
 
@@ -56,6 +57,7 @@ const Catalog = {
     if (f.type) url += '&car_type=' + encodeURIComponent(f.type);
     if (f.min) url += '&min_price=' + encodeURIComponent(f.min);
     if (f.max) url += '&max_price=' + encodeURIComponent(f.max);
+    if (f.location) url += '&location=' + encodeURIComponent(f.location);
     return url;
   },
 
@@ -70,6 +72,7 @@ const Catalog = {
     if (f.min && f.max) chips.push('$' + f.min + '–$' + f.max + '/day');
     else if (f.min) chips.push('Min $' + f.min + '/day');
     else if (f.max) chips.push('Max $' + f.max + '/day');
+    if (f.location) chips.push('City: ' + f.location);
     if (f.sort && f.sort !== '-created_at') {
       chips.push(Catalog.sortLabels[f.sort] || f.sort);
     }
@@ -86,7 +89,7 @@ const Catalog = {
       + chips.map(function (c) {
         return '<span class="filter-chip">' + UI.escHtml(c) + '</span>';
       }).join('')
-      + '<button type="button" class="filter-chip-clear" id="clearFilterChips">Clear all</button>';
+      + '<button type="button" class="filter-chip-clear" id="clearFilterChips">Reset listing filters</button>';
 
     const clearBtn = document.getElementById('clearFilterChips');
     if (clearBtn) clearBtn.addEventListener('click', Catalog.resetFilters);
@@ -119,17 +122,27 @@ const Catalog = {
 
       if (!meta.items.length) {
         const f = Catalog.getFilterState();
-        const hint = f.search || f.type || f.min || f.max
-          ? 'Try different search terms or reset filters.'
+        const hint = f.search || f.type || f.min || f.max || f.location
+          ? 'Try another city or adjust the listing filters.'
           : 'Check back later for new listings.';
-        const hasFilters = f.search || f.type || f.min || f.max
+        const hasFilters = f.search || f.type || f.min || f.max || f.location
           || (f.sort && f.sort !== '-created_at');
-        const actions = hasFilters
-          ? '<button type="button" class="btn btn-primary" id="catalogEmptyReset">Clear filters</button>'
-          : '';
+        const actions = [];
+        if (f.location) {
+          actions.push('<button type="button" class="btn btn-outline" id="catalogEmptyCity">Change city</button>');
+        }
+        if (hasFilters) {
+          actions.push('<button type="button" class="btn btn-primary" id="catalogEmptyReset">Reset listing filters</button>');
+        }
         grid.innerHTML = '<div class="grid-span-full">'
-          + UI.emptyState('No cars found', hint, actions)
+          + UI.emptyState('No cars found', hint, actions.join(''))
           + '</div>';
+        const emptyCity = document.getElementById('catalogEmptyCity');
+        if (emptyCity && typeof LocationState !== 'undefined' && LocationState.open) {
+          emptyCity.addEventListener('click', function () {
+            LocationState.open();
+          });
+        }
         const emptyReset = document.getElementById('catalogEmptyReset');
         if (emptyReset) emptyReset.addEventListener('click', Catalog.resetFilters);
         UI.mountPagination('carsPagination', {
@@ -226,9 +239,16 @@ const Catalog = {
     const heroBtn = document.getElementById('heroSearchBtn');
     if (heroBtn) heroBtn.addEventListener('click', Catalog.heroSearch);
 
+    document.addEventListener('location:changed', function () {
+      Catalog.page = 1;
+      Catalog.loadCars(1);
+    });
+
     Catalog.loadCars(1);
   },
 };
+
+window.Catalog = Catalog;
 
 document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('carsGrid')) {

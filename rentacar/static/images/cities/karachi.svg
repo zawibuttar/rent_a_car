@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#f1f5f9"/>
+  <g transform="translate(22,10)" fill="#94a3b8">
+    <ellipse cx="48" cy="34" rx="28" ry="14"/>
+    <rect x="36" y="8" width="6" height="28" rx="2"/>
+    <rect x="54" y="8" width="6" height="28" rx="2"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Karachi</text>
+</svg>

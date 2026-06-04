@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#eef2ff"/>
+  <g transform="translate(22,12)" fill="#2563eb">
+    <rect x="18" y="18" width="28" height="20" rx="4"/>
+    <rect x="50" y="10" width="8" height="36" rx="2"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Quetta</text>
+</svg>

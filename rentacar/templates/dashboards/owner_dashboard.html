@@ -192,6 +192,29 @@
       <form class="listing-form card" id="addCarForm" novalidate onsubmit="event.preventDefault(); addCar();">
         <div class="card-body listing-form-body">
 
+          <section class="form-section form-section--featured" aria-labelledby="addSectionLocation">
+            <div class="form-section-head">
+              <h2 class="form-section-title" id="addSectionLocation">Pickup location</h2>
+              <p class="form-section-desc">Choose a city or enter a more specific pickup area for this car.</p>
+            </div>
+            <div class="form-group form-group--featured-location">
+              <label class="form-label" for="cLocation">Pickup location <span class="req">*</span></label>
+              <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
+                <div class="input-icon-wrap">
+                  <span class="input-icon" aria-hidden="true">
+                    <svg class="icon icon-sm"><use href="#icon-pin"/></svg>
+                  </span>
+                  <input class="form-control input-with-icon" type="text" id="cLocation"
+                    data-location-autocomplete required
+                    placeholder="Start typing any city in Pakistan" autocomplete="off"
+                    aria-autocomplete="list" aria-expanded="false" />
+                </div>
+                <div class="location-suggestions" id="cLocationSuggestions" data-location-suggestions hidden></div>
+              </div>
+              <p class="form-hint">This will be saved with the listing and used to filter browse results.</p>
+            </div>
+          </section>
+
           <section class="form-section" aria-labelledby="addSectionVehicle">
             <div class="form-section-head">
               <h2 class="form-section-title" id="addSectionVehicle">Vehicle details</h2>
@@ -268,16 +291,6 @@
               <div class="form-group rental-price-field" id="cPriceMonthWrap" hidden>
                 <label class="form-label" for="cPriceMonth">Price per month ($)</label>
                 <input class="form-control" type="number" id="cPriceMonth" min="1" step="0.01" placeholder="900.00" />
-              </div>
-            </div>
-            <div class="form-group" style="margin-top:12px">
-              <label class="form-label" for="cLocation">Pickup location <span class="req">*</span></label>
-              <div class="input-icon-wrap">
-                <span class="input-icon" aria-hidden="true">
-                  <svg class="icon icon-sm"><use href="#icon-pin"/></svg>
-                </span>
-                <input class="form-control input-with-icon" type="text" id="cLocation" required
-                  placeholder="e.g. Lahore, Pakistan" autocomplete="address-level2" />
               </div>
             </div>
           </section>
@@ -562,7 +575,12 @@
         </div>
         <div class="form-group">
           <label class="form-label">Location</label>
-          <input class="form-control" type="text" id="eLocation" />
+          <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
+            <input class="form-control" type="text" id="eLocation" data-location-autocomplete
+              placeholder="Start typing any city in Pakistan" autocomplete="off"
+              aria-autocomplete="list" aria-expanded="false" />
+            <div class="location-suggestions" id="eLocationSuggestions" data-location-suggestions hidden></div>
+          </div>
         </div>
       </div>
 
@@ -610,6 +628,7 @@
   let requestsViewList = [];
   let requestsPage = 1;
   let requestsStatusFilter = '';
+  let locationAutocompleteTimers = {};
 
   /* ── Sidebar init ───────────────────── */
   document.getElementById('sName').textContent = user ? user.username : '';
@@ -919,6 +938,7 @@
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
+    clearLocationSuggestionPanels();
     document.getElementById('cRentDaily').checked = true;
     document.getElementById('cRentHourly').checked = false;
     document.getElementById('cRentWeekly').checked = false;
@@ -954,6 +974,139 @@
         meta.textContent = '';
       }
     }
+  }
+
+  function clearLocationSuggestionPanels() {
+    document.querySelectorAll('[data-location-suggestions]').forEach(function (panel) {
+      panel.hidden = true;
+      panel.innerHTML = '';
+    });
+    document.querySelectorAll('[data-location-autocomplete]').forEach(function (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.dataset.locationSelected = '';
+    });
+  }
+
+  function initLocationAutocomplete() {
+    var inputs = document.querySelectorAll('[data-location-autocomplete]');
+    if (!inputs.length) return;
+
+    inputs.forEach(function (input) {
+      if (input.dataset.locationAutocompleteInit) return;
+      input.dataset.locationAutocompleteInit = '1';
+
+      var wrap = input.closest('[data-location-autocomplete-wrap]');
+      var panel = wrap ? wrap.querySelector('[data-location-suggestions]') : null;
+      if (!panel) return;
+
+      function closePanel() {
+        panel.hidden = true;
+        panel.innerHTML = '';
+        input.setAttribute('aria-expanded', 'false');
+      }
+
+      function chooseSuggestion(item) {
+        var value = item.label || item.query || '';
+        input.value = value;
+        input.dataset.locationSelected = value;
+        closePanel();
+      }
+
+      function renderSuggestions(items, message) {
+        if (!items.length) {
+          panel.innerHTML = '<div class="location-suggestions__empty">'
+            + UI.escHtml(message || 'No matching cities found in Pakistan.')
+            + '</div>';
+          panel.hidden = false;
+          input.setAttribute('aria-expanded', 'true');
+          return;
+        }
+
+        panel.innerHTML = items.slice(0, 6).map(function (item) {
+          var label = item.label || item.query || '';
+          var meta = item.displayName || 'OpenStreetMap result';
+          return '<button type="button" class="location-suggestion" data-location-choice="1">'
+            + '<span class="location-suggestion__title">' + UI.escHtml(label) + '</span>'
+            + '<span class="location-suggestion__meta">' + UI.escHtml(meta) + '</span>'
+            + '</button>';
+        }).join('');
+
+        panel.querySelectorAll('[data-location-choice]').forEach(function (btn, index) {
+          btn.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+            chooseSuggestion(items[index]);
+          });
+        });
+
+        panel.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+      }
+
+      function performSearch(query) {
+        if (!query || query.length < 2) {
+          closePanel();
+          return;
+        }
+        if (typeof LocationState === 'undefined' || !LocationState.geocode) {
+          renderSuggestions([], 'Location search is not available right now.');
+          return;
+        }
+
+        var currentToken = Date.now();
+        input.dataset.locationRequestToken = String(currentToken);
+
+        LocationState.geocode(query).then(function (results) {
+          if (input.dataset.locationRequestToken !== String(currentToken)) return;
+          var seen = {};
+          var filtered = [];
+          results.forEach(function (item) {
+            var label = (item.label || item.query || '').trim();
+            var key = label.toLowerCase();
+            if (!label || seen[key]) return;
+            seen[key] = true;
+            filtered.push(item);
+          });
+          renderSuggestions(filtered, 'No matching cities found in Pakistan.');
+        }).catch(function () {
+          renderSuggestions([], 'Location search is not available right now.');
+        });
+      }
+
+      input.addEventListener('input', function () {
+        input.dataset.locationSelected = '';
+        clearTimeout(locationAutocompleteTimers[input.id]);
+        var query = input.value.trim();
+        if (query.length < 2) {
+          closePanel();
+          return;
+        }
+        locationAutocompleteTimers[input.id] = setTimeout(function () {
+          performSearch(query);
+        }, 250);
+      });
+
+      input.addEventListener('focus', function () {
+        var query = input.value.trim();
+        if (query.length >= 2 && panel.hidden) {
+          performSearch(query);
+        }
+      });
+
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          closePanel();
+        }
+        if (event.key === 'Enter' && !panel.hidden) {
+          event.preventDefault();
+          var firstChoice = panel.querySelector('[data-location-choice]');
+          if (firstChoice) firstChoice.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        }
+      });
+
+      input.addEventListener('blur', function () {
+        setTimeout(closePanel, 160);
+      });
+    });
   }
 
   function previewImgs(input) {
@@ -1380,6 +1533,7 @@
   UI.initFilterTabs('ownerCarsFilterTabs', applyOwnerCarsFilter);
   UI.initFilterTabs('ownerRequestsFilterTabs', applyOwnerRequestsFilter);
   initListingForm();
+  initLocationAutocomplete();
   toggleRentalPriceFields('c');
   loadOverview();
 </script>

@@ -50,6 +50,14 @@ class PublicCarListTests(APITestCase):
         self.assertIn('Toyota', brands)
         self.assertNotIn('Hidden', brands)
 
+    def test_public_list_filters_by_location(self):
+        url = reverse('car-list')
+        response = self.client.get(url, {'location': 'NYC'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        brands = [c['brand'] for c in response.data['results']]
+        self.assertIn('Toyota', brands)
+        self.assertNotIn('Hidden', brands)
+
 
 class AdminCarApprovalTests(APITestCase):
     def setUp(self):

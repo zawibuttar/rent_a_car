@@ -44,11 +44,14 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
 
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
+        location = self.request.query_params.get('location') or self.request.query_params.get('city')
 
         if min_price:
             queryset = queryset.filter(price_per_day__gte=min_price)
         if max_price:
             queryset = queryset.filter(price_per_day__lte=max_price)
+        if location:
+            queryset = queryset.filter(location__icontains=location)
         return queryset
 
 

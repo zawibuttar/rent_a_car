@@ -35,6 +35,7 @@
             <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
           </a>
         </span>
+        <button type="button" class="btn btn-outline btn-sm location-toggle" data-location-toggle aria-label="Choose your city">Choose city</button>
         <button type="button" class="btn-icon theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
         <span id="nav-guest" class="nav-auth-group">
           <a href="/login/" class="btn btn-outline">Login</a>
@@ -49,12 +50,15 @@
     </div>
   </nav>
 
+  {% include 'includes/location_picker.html' %}
+
   {% block content %}{% endblock %}
 
   <div class="footer">© <span id="footerYear"></span> RentACar. All rights reserved.</div>
 
   <script src="{% static 'js/api.js' %}"></script>
   <script src="{% static 'js/ui.js' %}"></script>
+  <script src="{% static 'js/location.js' %}"></script>
   <script>
     window.STATIC_NO_IMAGE = "{% static 'images/no-image.svg' %}";
     document.addEventListener('DOMContentLoaded', function () {

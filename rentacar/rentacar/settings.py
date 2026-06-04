@@ -133,20 +133,26 @@ WSGI_APPLICATION = 'rentacar.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')
+
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'ENGINE': DB_ENGINE,
         'NAME': os.getenv('DB_NAME', os.path.join(BASE_DIR, 'db.sqlite3')),
         'USER': os.getenv('DB_USER', ''),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', ''),
         'CONN_MAX_AGE': 600,  # Connection pooling: reuse connections for 10 minutes
-        'OPTIONS': {
-            'connect_timeout': 10,
-        }
     }
 }
+
+# Only set DB driver specific OPTIONS when not using sqlite (sqlite3 doesn't accept
+# options like connect_timeout).
+if DB_ENGINE != 'django.db.backends.sqlite3':
+    DATABASES['default']['OPTIONS'] = {
+        'connect_timeout': 10,
+    }
 
 
 # Password validation
