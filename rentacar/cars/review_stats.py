@@ -1,13 +1,25 @@
 """Aggregate customer reviews per car (via completed bookings)."""
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, FloatField, IntegerField, OuterRef, Subquery
 
 from bookings.models import Review
 
 
 def annotate_car_review_stats(queryset):
+    """Subqueries avoid joining bookings on the car queryset (keeps booking prefetch)."""
+    reviews = Review.objects.filter(booking__car_id=OuterRef('pk'))
+    review_count_sq = (
+        reviews.values('booking__car_id')
+        .annotate(cnt=Count('pk'))
+        .values('cnt')[:1]
+    )
+    average_rating_sq = (
+        reviews.values('booking__car_id')
+        .annotate(avg=Avg('rating'))
+        .values('avg')[:1]
+    )
     return queryset.annotate(
-        review_count=Count('bookings__review', distinct=True),
-        average_rating=Avg('bookings__review__rating'),
+        review_count=Subquery(review_count_sq, output_field=IntegerField()),
+        average_rating=Subquery(average_rating_sq, output_field=FloatField()),
     )
 
 

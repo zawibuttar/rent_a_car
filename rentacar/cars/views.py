@@ -48,8 +48,6 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
         ).select_related('owner').prefetch_related('images').annotate(
             primary_image=Subquery(primary_image_subquery)
         )
-        queryset = annotate_car_review_stats(queryset)
-
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
         location = self.request.query_params.get('location') or self.request.query_params.get('city')
@@ -60,7 +58,8 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
             queryset = queryset.filter(price_per_day__lte=max_price)
         if location:
             queryset = queryset.filter(location__icontains=location)
-        return prefetch_active_bookings(queryset)
+        queryset = prefetch_active_bookings(queryset)
+        return annotate_car_review_stats(queryset)
 
 
 class CarDetailView(NoCacheMixin, generics.RetrieveAPIView):
@@ -69,8 +68,8 @@ class CarDetailView(NoCacheMixin, generics.RetrieveAPIView):
 
     def get_queryset(self):
         qs = Car.objects.filter(is_approved=True).prefetch_related('images').select_related('owner')
-        qs = annotate_car_review_stats(qs)
-        return prefetch_active_bookings(qs)
+        qs = prefetch_active_bookings(qs)
+        return annotate_car_review_stats(qs)
 
 
 # Owner sides
