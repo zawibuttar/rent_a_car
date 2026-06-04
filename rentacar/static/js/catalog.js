@@ -108,9 +108,10 @@ const Catalog = {
     const countEl = document.getElementById('carCount');
     if (!grid) return;
 
-    grid.innerHTML =
-      '<div class="loading grid-span-full">'
-      + '<span class="spinner spinner-lg"></span> Loading cars...</div>';
+    grid.classList.remove('cars-grid--reveal');
+    grid.innerHTML = UI.listingSkeletonCards(
+      Math.min(UI_PAGE.catalog, 6)
+    );
 
     try {
       const data = await API.get(Catalog.buildApiUrl(page));
@@ -121,6 +122,7 @@ const Catalog = {
           total: meta.count,
           label: meta.count === 1 ? 'car' : 'cars',
         });
+        UI.animateResultsCount(countEl);
       }
 
       Catalog.renderActiveFilterChips();
@@ -162,6 +164,8 @@ const Catalog = {
       grid.innerHTML = meta.items.map(function (car) {
         return UI.listingCard(car, { ctaLabel: 'View details' });
       }).join('');
+
+      UI.animateListingGrid(grid);
 
       UI.mountPagination('carsPagination', meta, function (p) {
         Catalog.loadCars(p);

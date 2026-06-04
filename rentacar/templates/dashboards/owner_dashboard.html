@@ -97,13 +97,12 @@
                 <th class="col-hide-sm">Type</th>
                 <th>Rate</th>
                 <th class="col-hide-sm">Location</th>
-                <th>Status</th>
-                <th class="col-hide-sm">Available</th>
+                <th>Listing status</th>
               </tr>
             </thead>
             <tbody id="oCarsPreview">
               <tr>
-                <td colspan="6">
+                <td colspan="5">
                   <div class="loading"><span class="spinner"></span></div>
                 </td>
               </tr>
@@ -158,6 +157,10 @@
           </button>
         </div>
         {% include 'includes/status_filter_tabs.html' with variant='owner_cars' tabs_id='ownerCarsFilterTabs' tabs_label='Filter your listings' %}
+        <p class="owner-cars-filter-hint text-caption">
+          <strong>Paused by you</strong> — you turned off “open for bookings”.
+          <strong>Removed by admin</strong> — not shown on Browse Cars until restored.
+        </p>
         <div class="results-bar">
           <span id="ownerCarsResultCount" class="results-bar__count text-caption"></span>
         </div>
@@ -592,7 +595,7 @@
       <div class="form-group">
         <label class="form-check-label">
           <input type="checkbox" id="eAvailable" />
-          Mark as Available for Rent
+          Open for bookings (shows on Browse when approved)
         </label>
       </div>
 
@@ -723,7 +726,7 @@
       /* cars preview table */
       if (!cars.length) {
         document.getElementById('oCarsPreview').innerHTML =
-          '<tr><td colspan="6">'
+          '<tr><td colspan="5">'
           + UI.emptyState(
             'No cars listed yet',
             'Publish your first listing to appear on Browse Cars.',
@@ -746,15 +749,7 @@
                   + '<span class="text-caption">/' + UI.escHtml(r.unit) + '</span></td>';
               })()
               + '<td class="td-meta col-hide-sm">' + UI.escHtml(c.location) + '</td>'
-              + '<td>' + (c.is_approved && c.is_available
-                ? '<span class="badge badge-green">Live</span>'
-                : (!c.is_approved ? '<span class="badge badge-red">Removed</span>'
-                  : '<span class="badge badge-gray">Hidden</span>')) + '</td>'
-              + '<td class="col-hide-sm">'
-              + (c.is_available
-                ? '<span class="badge badge-blue">Available</span>'
-                : '<span class="badge badge-gray">Unavailable</span>')
-              + '</td>'
+              + '<td><div class="car-badges">' + carListingBadges(c) + '</div></td>'
               + '</tr>';
           }).join('');
       }
@@ -818,7 +813,7 @@
       filtered: cars.length,
       total: myCarsList.length,
       label: myCarsList.length === 1 ? 'car' : 'cars',
-      filterLabel: UI.carFilterLabel(ownerCarsFilter),
+      filterLabel: UI.carFilterLabel(ownerCarsFilter, 'owner'),
     });
 
     if (!meta.items.length) {
@@ -858,6 +853,9 @@
           + previewLink
           + '<div class="car-title">' + UI.escHtml(car.brand + ' ' + car.model + ' (' + car.year + ')') + '</div>'
           + '<div class="car-badges">' + carListingBadges(car) + '</div>'
+          + (UI.bookedSlotsSummary(car)
+            ? '<div class="owner-car-booked-row">' + UI.bookedSlotsSummary(car) + '</div>'
+            : '')
           + UI.locationLine(car.location, '')
           + '<div class="car-footer">'
           + (function () {

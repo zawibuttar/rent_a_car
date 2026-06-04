@@ -71,10 +71,19 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'is_superuser', 'is_active', 'date_joined']
+        fields = [
+            'id', 'username', 'display_name', 'email', 'role',
+            'is_superuser', 'is_active', 'date_joined',
+        ]
         read_only_fields = ['id', 'is_superuser', 'is_active', 'date_joined']
+
+    def get_display_name(self, obj):
+        from rentacar.utils import format_display_name
+        return format_display_name(obj.username)
 
 
 class CustomerProfileSerializer(serializers.ModelSerializer):

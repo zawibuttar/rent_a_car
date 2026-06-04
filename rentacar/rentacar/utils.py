@@ -1,4 +1,16 @@
 """Shared helpers for API views and serializers."""
+import re
+
+
+def format_display_name(name):
+    """Capitalize username for display (e.g. ahmad -> Ahmad, ahmed_ali -> Ahmed Ali)."""
+    if not name:
+        return ''
+    s = str(name).strip()
+    if not s:
+        return ''
+    words = re.split(r'[\s_\-]+', s)
+    return ' '.join(w[:1].upper() + w[1:].lower() if w else '' for w in words if w)
 
 
 def parse_bool(value):

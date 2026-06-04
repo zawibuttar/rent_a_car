@@ -1,7 +1,7 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from rentacar.caching import invalidate_booking_caches
+from rentacar.caching import invalidate_booking_caches, invalidate_public_car_lists
 
 from .models import Booking
 
@@ -14,3 +14,4 @@ def booking_cache_invalidation(sender, instance, **kwargs):
         user_id=instance.customer_id,
         owner_id=owner_id,
     )
+    invalidate_public_car_lists()

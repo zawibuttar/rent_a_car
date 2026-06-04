@@ -114,6 +114,34 @@ const UI = {
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
   },
 
+  formatDisplayName(name) {
+    if (!name) return '';
+    return String(name).trim()
+      .split(/[\s_\-]+/)
+      .filter(Boolean)
+      .map(function (w) {
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      })
+      .join(' ');
+  },
+
+  ownerDisplayName(carOrOwner) {
+    if (!carOrOwner) return '';
+    if (typeof carOrOwner === 'string') {
+      return UI.formatDisplayName(carOrOwner);
+    }
+    if (carOrOwner.display_name) return carOrOwner.display_name;
+    if (carOrOwner.owner_name) return carOrOwner.owner_name;
+    if (carOrOwner.owner && carOrOwner.owner.display_name) {
+      return carOrOwner.owner.display_name;
+    }
+    const raw = carOrOwner.owner_name
+      || (carOrOwner.owner && carOrOwner.owner.username)
+      || carOrOwner.username
+      || '';
+    return UI.formatDisplayName(raw);
+  },
+
   rentalTypeLabel(type) {
     const labels = {
       hourly: 'Hourly',
@@ -263,48 +291,299 @@ const UI = {
     return r.unitLabel || '—';
   },
 
+  renderStars(rating, opts) {
+    opts = opts || {};
+    const max = 5;
+    const value = Math.max(0, Math.min(max, parseFloat(rating) || 0));
+    const sizeClass = opts.size === 'sm' ? ' stars--sm' : (opts.size === 'lg' ? ' stars--lg' : '');
+    const label = opts.ariaLabel || (value.toFixed(1) + ' out of 5 stars');
+    let html = '<span class="stars' + sizeClass + '" role="img" aria-label="' + UI.escHtml(label) + '">';
+    for (let i = 1; i <= max; i++) {
+      const filled = i <= Math.round(value);
+      html += '<span class="stars__star' + (filled ? ' stars__star--on' : '') + '">'
+        + UI.icon('star', 'icon')
+        + '</span>';
+    }
+    return html + '</span>';
+  },
+
+  formatReviewDate(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric',
+      });
+    } catch (e) {
+      return '';
+    }
+  },
+
+  bookedSlotStatusLabel(status) {
+    if (status === 'pending') return 'Reserved (pending)';
+    if (status === 'approved') return 'Booked';
+    return UI.escHtml(status || 'Booked');
+  },
+
+  bookedSlotPeriod(slot) {
+    if (!slot) return '—';
+    return slot.period_display || UI.formatBookingPeriod(slot);
+  },
+
+  bookedSlotEndShort(slot) {
+    if (!slot || !slot.end_at) return '';
+    try {
+      const d = new Date(slot.end_at);
+      if (slot.rental_type === 'hourly') {
+        return d.toLocaleString(undefined, {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        });
+      }
+      return d.toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric',
+      });
+    } catch (e) {
+      return String(slot.end_at).slice(0, 10);
+    }
+  },
+
+  bookedSlotsSummary(car) {
+    const total = car.booked_slots_total || 0;
+    const slots = car.booked_slots || [];
+    if (!total && !slots.length) return '';
+
+    if (car.is_currently_booked) {
+      const endSlot = slots.find(function (s) { return s.is_active; }) || slots[0];
+      const until = UI.bookedSlotEndShort(endSlot);
+      let html = '<span class="booked-slots-summary booked-slots-summary--active">'
+        + UI.icon('calendar', 'icon icon-inline')
+        + '<span>Until <strong>' + UI.escHtml(until) + '</strong></span></span>';
+      if (total > 1) {
+        html += '<span class="booked-slots-summary__more">+' + (total - 1) + ' more</span>';
+      }
+      return html;
+    }
+
+    const next = slots[0];
+    if (!next) return '';
+
+    const period = UI.bookedSlotPeriod(next);
+    const prefix = next.status === 'pending' ? 'Reserved' : 'Next booked';
+    let line = '<span class="booked-slots-summary">'
+      + UI.icon('calendar', 'icon icon-inline')
+      + '<span>' + UI.escHtml(prefix) + ': ' + UI.escHtml(period);
+    if (next.status === 'pending') {
+      line += ' <span class="booked-slots-summary__pending">(pending)</span>';
+    }
+    line += '</span></span>';
+    if (total > 1) {
+      line += '<span class="booked-slots-summary__more">+' + (total - 1) + ' more</span>';
+    }
+    return line;
+  },
+
+  bookedSlotsListHtml(car) {
+    const slots = car.booked_slots || [];
+    if (!slots.length) return '';
+
+    const items = slots.map(function (slot) {
+      const badgeClass = slot.is_active
+        ? 'badge-amber'
+        : (slot.status === 'pending' ? 'badge-gray' : 'badge-blue');
+      const badgeText = slot.is_active
+        ? 'In progress'
+        : UI.bookedSlotStatusLabel(slot.status);
+      return '<li class="booked-slots-list__item">'
+        + '<span class="badge ' + badgeClass + '">' + UI.escHtml(badgeText) + '</span>'
+        + '<span class="booked-slots-list__period">' + UI.escHtml(UI.bookedSlotPeriod(slot)) + '</span>'
+        + '</li>';
+    }).join('');
+
+    const more = (car.booked_slots_total || 0) > slots.length
+      ? '<p class="booked-slots-list__more text-caption">'
+        + UI.escHtml(String((car.booked_slots_total - slots.length))) + ' additional booking'
+        + ((car.booked_slots_total - slots.length) !== 1 ? 's' : '') + ' not shown.</p>'
+      : '';
+
+    return '<ul class="booked-slots-list">' + items + '</ul>' + more;
+  },
+
+  reviewSummaryLine(carOrSummary) {
+    const summary = carOrSummary && carOrSummary.review_summary
+      ? carOrSummary.review_summary
+      : {
+        count: carOrSummary.review_count || 0,
+        average_rating: carOrSummary.average_rating,
+      };
+    const count = summary.count || 0;
+    if (!count) {
+      return '<span class="review-summary review-summary--empty">No reviews yet</span>';
+    }
+    const avg = summary.average_rating != null
+      ? Number(summary.average_rating).toFixed(1)
+      : '—';
+    return '<span class="review-summary">'
+      + UI.renderStars(summary.average_rating, { size: 'sm', ariaLabel: avg + ' out of 5 from ' + count + ' reviews' })
+      + '<span class="review-summary__text"><strong>' + UI.escHtml(avg) + '</strong>'
+      + '<span class="review-summary__count">(' + count + ' review' + (count !== 1 ? 's' : '') + ')</span></span>'
+      + '</span>';
+  },
+
+  listingRentalTypes(car) {
+    if (car.enabled_rental_types && car.enabled_rental_types.length) {
+      return car.enabled_rental_types.slice();
+    }
+    const types = [];
+    if (car.rent_hourly) types.push('hourly');
+    if (car.rent_daily) types.push('daily');
+    if (car.rent_weekly) types.push('weekly');
+    if (car.rent_monthly) types.push('monthly');
+    return types;
+  },
+
+  listingRentalChipsHtml(car) {
+    const types = UI.listingRentalTypes(car);
+    if (!types.length) return '';
+    return types.map(function (t) {
+      return '<span class="listing-card-rental">' + UI.escHtml(UI.rentalTypeLabel(t)) + '</span>';
+    }).join('');
+  },
+
+  listingStatusMeta(car) {
+    const rentedNow = car.is_currently_booked;
+    if (rentedNow) {
+      return { modifier: 'rented', statusClass: 'is-rented', label: 'Rented' };
+    }
+    if (!car.is_available) {
+      return { modifier: 'unavailable', statusClass: 'is-unavailable', label: 'Unavailable' };
+    }
+    return { modifier: '', statusClass: 'is-available', label: 'Available' };
+  },
+
+  listingAvailabilityHtml(car) {
+    const summary = UI.bookedSlotsSummary(car);
+    if (!summary) return '';
+    return '<div class="listing-card-availability" role="note">'
+      + summary
+      + '</div>';
+  },
+
+  prefersReducedMotion() {
+    return window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+
+  listingSkeletonCards(count) {
+    count = count || 6;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+      html += '<div class="listing-skeleton" aria-hidden="true">'
+        + '<div class="listing-skeleton__media"></div>'
+        + '<div class="listing-skeleton__body">'
+        + '<div class="listing-skeleton__line listing-skeleton__line--title"></div>'
+        + '<div class="listing-skeleton__line listing-skeleton__line--short"></div>'
+        + '<div class="listing-skeleton__line listing-skeleton__line--meta"></div>'
+        + '<div class="listing-skeleton__foot">'
+        + '<div class="listing-skeleton__line listing-skeleton__line--price"></div>'
+        + '<div class="listing-skeleton__pill"></div>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    }
+    return html;
+  },
+
+  animateListingGrid(gridEl) {
+    if (!gridEl) return;
+    gridEl.classList.remove('cars-grid--reveal');
+    const cards = gridEl.querySelectorAll('.listing-card');
+    if (!cards.length) return;
+
+    const reduced = UI.prefersReducedMotion();
+    cards.forEach(function (card, i) {
+      card.style.animationDelay = reduced ? '0ms' : (Math.min(i * 55, 440) + 'ms');
+    });
+
+    requestAnimationFrame(function () {
+      gridEl.classList.add('cars-grid--reveal');
+    });
+  },
+
+  animateResultsCount(el) {
+    if (!el || UI.prefersReducedMotion()) return;
+    el.classList.remove('results-bar__count--pop');
+    void el.offsetWidth;
+    el.classList.add('results-bar__count--pop');
+  },
+
   listingCard(car, opts) {
     opts = opts || {};
     const ctaLabel = opts.ctaLabel || 'View details';
-    const title = ((car.brand || '') + ' ' + (car.model || '')).trim();
+    const title = ((car.brand || '') + ' ' + (car.model || '')).trim() || 'Car listing';
     const year = car.year ? String(car.year) : '';
     const type = UI.formatCarType(car.car_type);
     const rate = UI.primaryRateDisplay(car);
     const price = rate.value;
     const priceUnit = rate.label;
-    const avail = car.is_available;
-    const statusClass = avail ? 'badge-green' : 'badge-gray';
-    const statusText = avail ? 'Available' : 'Unavailable';
+    const rentalTypes = UI.listingRentalTypes(car);
+    const showFrom = rentalTypes.length > 1;
+    const status = UI.listingStatusMeta(car);
+    const availabilityHtml = UI.listingAvailabilityHtml(car);
+    const rentalChips = UI.listingRentalChipsHtml(car);
     const img = UI.carThumb(car.primary_image, window.STATIC_NO_IMAGE);
     const location = car.location || 'Location not set';
-    const ownerHtml = car.owner_name
-      ? '<span class="listing-card-owner">' + UI.escHtml(car.owner_name) + '</span>'
+    const ownerLabel = UI.ownerDisplayName(car);
+    const ownerHtml = ownerLabel
+      ? '<span class="listing-card-owner" title="Listed by ' + UI.escHtml(ownerLabel) + '">'
+        + UI.escHtml(ownerLabel)
+        + '</span>'
       : '';
 
-    return '<a class="listing-card" href="/cars/' + encodeURIComponent(car.id) + '/">'
+    const ariaParts = [title, year, type, location, 'from $' + price + ' ' + priceUnit];
+    if (status.label) ariaParts.push(status.label);
+
+    const cardClass = 'listing-card'
+      + (status.modifier ? ' listing-card--' + status.modifier : '');
+
+    return '<a class="' + cardClass + '" href="/cars/' + encodeURIComponent(car.id) + '/"'
+      + ' aria-label="' + UI.escHtml(ariaParts.filter(Boolean).join(', ')) + '">'
       + '<div class="listing-card-media">'
       + '<div class="listing-card-thumb">' + img + '</div>'
-      + '<span class="listing-card-chip listing-card-chip--type">' + UI.escHtml(type) + '</span>'
-      + '<span class="listing-card-chip listing-card-chip--status badge ' + statusClass + '">'
-      + UI.escHtml(statusText) + '</span>'
+      + (type
+        ? '<span class="listing-card-badge listing-card-badge--type">' + UI.escHtml(type) + '</span>'
+        : '')
+      + '<span class="listing-card-badge listing-card-badge--status ' + status.statusClass + '">'
+      + '<span class="listing-card-status-dot" aria-hidden="true"></span>'
+      + '<span>' + UI.escHtml(status.label) + '</span>'
+      + '</span>'
       + '</div>'
       + '<div class="listing-card-body">'
       + '<div class="listing-card-head">'
       + '<h3 class="listing-card-title">' + UI.escHtml(title) + '</h3>'
       + (year ? '<span class="listing-card-year">' + UI.escHtml(year) + '</span>' : '')
       + '</div>'
-      + '<p class="listing-card-loc">'
+      + '<p class="listing-card-loc" title="' + UI.escHtml(location) + '">'
       + UI.icon('pin', 'icon icon-inline')
-      + '<span>' + UI.escHtml(location) + '</span>'
+      + '<span class="listing-card-loc-text">' + UI.escHtml(location) + '</span>'
       + ownerHtml
       + '</p>'
+      + '<div class="listing-card-meta">'
+      + '<div class="listing-card-rating">' + UI.reviewSummaryLine(car) + '</div>'
+      + (rentalChips
+        ? '<div class="listing-card-rentals" aria-label="Rental options">' + rentalChips + '</div>'
+        : '')
+      + '</div>'
+      + availabilityHtml
       + '<div class="listing-card-foot">'
       + '<div class="listing-card-price">'
+      + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+      + '<span class="listing-card-price-line">'
       + '<span class="listing-card-price-val">$' + price + '</span>'
       + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
+      + '</span>'
       + '</div>'
       + '<span class="listing-card-cta">'
-      + ctaLabel
+      + '<span class="listing-card-cta-text">' + UI.escHtml(ctaLabel) + '</span>'
       + UI.icon('arrow-left', 'icon icon-cta')
       + '</span>'
       + '</div>'
@@ -317,14 +596,14 @@ const UI = {
       return '<span class="badge badge-red">Removed by admin</span>';
     }
     if (!car.is_available) {
-      return '<span class="badge badge-gray">Hidden</span>';
+      return '<span class="badge badge-amber">Paused by you</span>';
     }
     return '<span class="badge badge-green">Live on marketplace</span>';
   },
 
   locationLine(location, ownerName) {
     let html = '<span class="car-loc">' + UI.icon('pin', 'icon icon-inline') + ' ' + UI.escHtml(location || '');
-    if (ownerName) html += ' · ' + UI.escHtml(ownerName);
+    if (ownerName) html += ' · ' + UI.escHtml(UI.formatDisplayName(ownerName));
     return html + '</span>';
   },
 
@@ -655,13 +934,27 @@ const UI = {
     return status ? (map[status] || status) : '';
   },
 
-  carFilterLabel(filter) {
+  carFilterLabel(filter, context) {
+    context = context || 'admin';
+    if (context === 'owner') {
+      const ownerMap = {
+        all: '',
+        live: 'Live on marketplace',
+        paused: 'Paused by you',
+        admin_removed: 'Removed by admin',
+        unavailable: 'Paused by you',
+        hidden: 'Removed by admin',
+      };
+      return ownerMap[filter] || '';
+    }
     const map = {
       all: '',
       live: 'Live on marketplace',
       hidden: 'Hidden from browse',
       available: 'Available',
       unavailable: 'Unavailable',
+      paused: 'Paused by you',
+      admin_removed: 'Removed by admin',
     };
     return map[filter] || '';
   },
@@ -671,13 +964,13 @@ const UI = {
     if (filter === 'live') {
       return cars.filter(function (c) { return c.is_approved && c.is_available; });
     }
-    if (filter === 'hidden') {
+    if (filter === 'hidden' || filter === 'admin_removed') {
       return cars.filter(function (c) { return !c.is_approved; });
     }
     if (filter === 'available') {
       return cars.filter(function (c) { return c.is_available; });
     }
-    if (filter === 'unavailable') {
+    if (filter === 'unavailable' || filter === 'paused') {
       return cars.filter(function (c) { return !c.is_available; });
     }
     return cars;
@@ -685,11 +978,7 @@ const UI = {
 };
 
 function carListingBadges(car) {
-  let html = UI.listingStatusBadge(car);
-  if (car.is_approved && car.is_available) {
-    html += ' <span class="badge badge-blue">Available</span>';
-  }
-  return html;
+  return UI.listingStatusBadge(car);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
