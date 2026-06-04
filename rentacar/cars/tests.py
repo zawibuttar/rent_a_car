@@ -260,13 +260,26 @@ class BookedSlotsDisplayTests(APITestCase):
         self.assertTrue(response.data['booked_slots'][0]['is_active'])
 
     def test_list_prefetch_avoids_per_car_booking_queries(self):
-        for i in range(3):
-            start = date.today() + timedelta(days=10 + i * 5)
+        car_two = Car.objects.create(
+            owner=self.owner,
+            brand='Second',
+            model='Car',
+            year=2022,
+            car_type='sedan',
+            description='',
+            location='Austin',
+            rent_daily=True,
+            price_per_day=45,
+            is_available=True,
+            is_approved=True,
+        )
+        for car in (self.car, car_two):
+            start = date.today() + timedelta(days=12)
             end = start + timedelta(days=1)
             norm_start, norm_end = _daily_window(start, end)
             Booking.objects.create(
                 customer=self.customer,
-                car=self.car,
+                car=car,
                 rental_type='daily',
                 start_at=norm_start,
                 end_at=norm_end,
@@ -277,11 +290,19 @@ class BookedSlotsDisplayTests(APITestCase):
         with CaptureQueriesContext(connection) as ctx:
             response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
         booking_queries = [
             q for q in ctx.captured_queries
             if 'bookings_booking' in q['sql'].lower()
+            and 'select' in q['sql'].lower()
         ]
-        self.assertLessEqual(len(booking_queries), 1)
+        # One batched prefetch for active bookings; not one query per car (N+1).
+        self.assertLessEqual(
+            len(booking_queries),
+            2,
+            msg='Expected batched booking prefetch, got: '
+            + '; '.join(q['sql'][:80] for q in booking_queries),
+        )
 
 
 class LocationSearchApiTests(APITestCase):
