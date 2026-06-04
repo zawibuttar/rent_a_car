@@ -30,11 +30,13 @@ const API = {
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       const msgs = [];
-      for (const k in json) {
-        const v = json[k];
-        if (Array.isArray(v)) v.forEach(m => msgs.push(k === 'non_field_errors' ? m : k + ': ' + m));
-        else msgs.push(String(v));
-      }
+      const pushValue = (key, val) => {
+        if (Array.isArray(val)) val.forEach(m => msgs.push(key === 'non_field_errors' ? m : key + ': ' + m));
+        else if (val && typeof val === 'object') {
+          for (const k2 in val) pushValue(k2, val[k2]);
+        } else msgs.push(String(val));
+      };
+      for (const k in json) pushValue(k, json[k]);
       throw new Error(msgs.join('\n') || 'Error ' + res.status);
     }
     return json;
