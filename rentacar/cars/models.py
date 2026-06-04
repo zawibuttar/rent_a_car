@@ -20,7 +20,17 @@ class Car(models.Model):
     car_type = models.CharField(max_length=20, choices=CAR_TYPE_CHOICES, db_index=True)
     description = models.TextField(blank=True)
     location = models.CharField(max_length=255)
-    price_per_day = models.DecimalField(max_digits=10, decimal_places=2)
+
+    rent_hourly = models.BooleanField(default=False)
+    rent_daily = models.BooleanField(default=True)
+    rent_weekly = models.BooleanField(default=False)
+    rent_monthly = models.BooleanField(default=False)
+
+    price_per_hour = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_per_day = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_per_week = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_per_month = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     is_available = models.BooleanField(default=True, db_index=True)
     is_approved = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -36,7 +46,19 @@ class Car(models.Model):
 
     def __str__(self):
         return f"{self.brand} {self.model} ({self.year})"
-    
+
+    def enabled_rental_types(self):
+        types = []
+        if self.rent_hourly:
+            types.append('hourly')
+        if self.rent_daily:
+            types.append('daily')
+        if self.rent_weekly:
+            types.append('weekly')
+        if self.rent_monthly:
+            types.append('monthly')
+        return types
+
 
 class CarImage(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='images')

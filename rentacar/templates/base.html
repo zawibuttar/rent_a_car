@@ -5,26 +5,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
   <title>{% block title %}RentACar{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/style.css' %}" />
 </head>
 
 <body>
+  {% include 'includes/icons.html' %}
 
   <nav class="navbar">
     <div class="navbar-inner">
-      <a href="/" class="nav-brand">&#x1F697; RentACar</a>
+      <button type="button" class="btn-icon nav-menu-btn" id="sidebarToggle" aria-label="Open menu"></button>
+      <a href="/" class="nav-brand">
+        <svg class="icon icon-brand" aria-hidden="true"><use href="#icon-logo"/></svg>
+        <span class="nav-brand-text">RentACar</span>
+      </a>
       <a href="/" class="nav-link">Home</a>
       <a href="/cars/" class="nav-link">Browse Cars</a>
 
       <div class="nav-right">
-        <span id="nav-guest" style="display:flex;gap:8px">
+        <span class="nav-links-compact" aria-label="Quick navigation">
+          <a href="/" class="btn-icon" aria-label="Home">
+            <svg class="icon" aria-hidden="true"><use href="#icon-logo"/></svg>
+          </a>
+          <a href="/cars/" class="btn-icon" aria-label="Browse cars">
+            <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          </a>
+        </span>
+        <button type="button" class="btn-icon theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+        <span id="nav-guest" class="nav-auth-group">
           <a href="/login/" class="btn btn-outline">Login</a>
           <a href="/register/" class="btn btn-primary">Register</a>
         </span>
-        <span id="nav-auth" style="display:none;align-items:center;gap:10px">
+        <span id="nav-auth" class="nav-auth-group is-hidden">
           <a href="/dashboard/" class="btn btn-ghost" id="nav-dash-link">Dashboard</a>
-          <span id="nav-uname" style="font-size:13px;color:var(--text-2)"></span>
+          <span id="nav-uname" class="nav-uname"></span>
           <div class="nav-avatar" id="nav-av"></div>
         </span>
       </div>
@@ -33,12 +51,15 @@
 
   {% block content %}{% endblock %}
 
-  <div class="footer">© 2025 RentACar. All rights reserved.</div>
+  <div class="footer">© <span id="footerYear"></span> RentACar. All rights reserved.</div>
 
   <script src="{% static 'js/api.js' %}"></script>
+  <script src="{% static 'js/ui.js' %}"></script>
   <script>
-    // Set dashboard link based on role
+    window.STATIC_NO_IMAGE = "{% static 'images/no-image.svg' %}";
     document.addEventListener('DOMContentLoaded', function () {
+      const y = document.getElementById('footerYear');
+      if (y) y.textContent = new Date().getFullYear();
       const role = API.role();
       const link = document.getElementById('nav-dash-link');
       if (link && role) {
@@ -46,10 +67,25 @@
         else if (role === 'admin') link.href = '/dashboard/admin/';
         else link.href = '/dashboard/customer/';
       }
-      // Highlight active nav link
-      document.querySelectorAll('.nav-link').forEach(a => {
-        if (a.href === window.location.href) a.classList.add('active');
-      });
+      function markNavActive(links) {
+        links.forEach(function (a) {
+          const match = a.href === window.location.href
+            || (a.getAttribute('href') === '/cars/' && window.location.pathname.indexOf('/cars') === 0);
+          if (match) {
+            a.classList.add('active');
+            a.setAttribute('aria-current', 'page');
+          } else {
+            a.classList.remove('active');
+            a.removeAttribute('aria-current');
+          }
+        });
+      }
+      markNavActive(document.querySelectorAll('.nav-link'));
+      markNavActive(document.querySelectorAll('.nav-links-compact a'));
+      const menuBtn = document.getElementById('sidebarToggle');
+      if (menuBtn) {
+        menuBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-menu"/></svg>';
+      }
     });
   </script>
   {% block scripts %}{% endblock %}

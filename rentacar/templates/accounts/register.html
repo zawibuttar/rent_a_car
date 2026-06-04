@@ -2,23 +2,29 @@
 {% block title %}Register — RentACar{% endblock %}
 
 {% block content %}
-<div class="auth-page">
-  <div class="auth-box" style="max-width:500px">
+<div class="auth-page auth-page--register">
+  <div class="auth-box auth-box--register">
+
+    <div class="auth-brand" aria-hidden="true">
+      <svg class="icon icon-brand"><use href="#icon-logo"/></svg>
+      <span>RentACar</span>
+    </div>
 
     <h1>Create your account</h1>
     <p class="sub">Join as a customer or list your car as an owner</p>
 
-    <!-- Role selector -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
-      <div id="roleCustomer" class="role-card active" onclick="selectRole('customer')">
-        <div style="font-size:24px;margin-bottom:6px">&#x1F464;</div>
-        <div style="font-weight:600;font-size:13px">Customer</div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:2px">I want to rent cars</div>
+    <div class="auth-role-grid">
+      <div id="roleCustomer" class="auth-role-card active" role="button" tabindex="0"
+        aria-pressed="true" onclick="selectRole('customer')" onkeydown="roleKeySelect(event, 'customer')">
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
+        <div class="auth-role-title">Customer</div>
+        <div class="auth-role-desc text-small">I want to rent cars</div>
       </div>
-      <div id="roleOwner" class="role-card" onclick="selectRole('owner')">
-        <div style="font-size:24px;margin-bottom:6px">&#x1F697;</div>
-        <div style="font-weight:600;font-size:13px">Car Owner</div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:2px">I want to list my car</div>
+      <div id="roleOwner" class="auth-role-card" role="button" tabindex="0"
+        aria-pressed="false" onclick="selectRole('owner')" onkeydown="roleKeySelect(event, 'owner')">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg>
+        <div class="auth-role-title">Car Owner</div>
+        <div class="auth-role-desc text-small">I want to list my car</div>
       </div>
     </div>
 
@@ -26,23 +32,27 @@
 
     <div class="form-grid-2">
       <div class="form-group">
-        <label class="form-label">Username</label>
-        <input class="form-control" type="text" id="username" placeholder="Choose a username"/>
+        <label class="form-label" for="username">Username</label>
+        <input class="form-control" type="text" id="username" name="username"
+          placeholder="Choose a username" autocomplete="username" required/>
       </div>
       <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-control" type="email" id="email" placeholder="your@email.com"/>
+        <label class="form-label" for="email">Email</label>
+        <input class="form-control" type="email" id="email" name="email"
+          placeholder="your@email.com" autocomplete="email" required/>
       </div>
     </div>
 
     <div class="form-grid-2">
       <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-control" type="password" id="password" placeholder="Min 8 characters"/>
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" type="password" id="password" name="password"
+          placeholder="Min 8 characters" autocomplete="new-password" required/>
       </div>
       <div class="form-group">
-        <label class="form-label">Confirm Password</label>
-        <input class="form-control" type="password" id="password2" placeholder="Repeat password"/>
+        <label class="form-label" for="password2">Confirm Password</label>
+        <input class="form-control" type="password" id="password2" name="password2"
+          placeholder="Repeat password" autocomplete="new-password" required/>
       </div>
     </div>
 
@@ -58,20 +68,6 @@
 
   </div>
 </div>
-
-<style>
-.role-card {
-  border: 2px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .15s;
-  background: var(--white);
-}
-.role-card:hover  { border-color: var(--primary); }
-.role-card.active { border-color: var(--primary); background: var(--primary-light); }
-</style>
 {% endblock %}
 
 {% block scripts %}
@@ -79,7 +75,18 @@
 function selectRole(role) {
   document.getElementById('role').value = role;
   document.getElementById('roleCustomer').classList.toggle('active', role === 'customer');
-  document.getElementById('roleOwner').classList.toggle('active',   role === 'owner');
+  document.getElementById('roleOwner').classList.toggle('active', role === 'owner');
+  document.getElementById('roleCustomer').classList.toggle('selected', role === 'customer');
+  document.getElementById('roleOwner').classList.toggle('selected', role === 'owner');
+  document.getElementById('roleCustomer').setAttribute('aria-pressed', role === 'customer' ? 'true' : 'false');
+  document.getElementById('roleOwner').setAttribute('aria-pressed', role === 'owner' ? 'true' : 'false');
+}
+
+function roleKeySelect(e, role) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    selectRole(role);
+  }
 }
 
 async function doRegister() {
@@ -131,5 +138,9 @@ async function doRegister() {
     btn.textContent = 'Create Account';
   }
 }
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') doRegister();
+});
 </script>
 {% endblock %}

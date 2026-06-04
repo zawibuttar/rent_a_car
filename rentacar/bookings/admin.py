@@ -5,7 +5,7 @@ from .models import *
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display  = ['id', 'customer', 'car', 'start_date', 'end_date', 'total_cost', 'status', 'created_at']
+    list_display  = ['id', 'customer', 'car', 'rental_type', 'start_at', 'end_at', 'total_cost', 'status', 'created_at']
     list_filter   = ['status']
     search_fields = ['customer__username', 'car__brand', 'car__model']
     list_editable = ['status']

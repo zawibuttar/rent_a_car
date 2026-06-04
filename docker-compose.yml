@@ -15,6 +15,15 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   web:
     build:
       context: .
@@ -26,18 +35,24 @@ services:
       - ./rentacar:/app
       - ./rentacar/staticfiles:/app/staticfiles
     ports:
-      - "8000:8000"
+      - "8002:8000"
     environment:
-      SECRET_KEY: "django-insecure-rentacar-secret-key-12345"
+      SECRET_KEY: "django-insecure-rentacar-dev-only-change-me"
       DEBUG: "1"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,.ngrok-free.app,.ngrok-free.dev,.ngrok.io,.ngrok.app"
+      CSRF_TRUSTED_ORIGINS: "https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io,https://*.ngrok.app"
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: rentacar
       DB_USER: rentacar_user
       DB_PASSWORD: rentacar_pass
       DB_HOST: db
       DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/1
+      CACHE_ENABLED: "1"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

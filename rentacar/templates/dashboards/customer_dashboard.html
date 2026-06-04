@@ -2,7 +2,7 @@
 {% block title %}Customer Dashboard — RentACar{% endblock %}
 
 {% block content %}
-<div class="dash-layout">
+<div class="dash-layout role-customer">
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
@@ -16,20 +16,24 @@
 
     <div class="sidebar-menu">
       <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
-        &#x1F4CA; Overview
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
       </button>
       <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
-        &#x1F4C5; My Bookings
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> My Bookings
       </button>
       <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
-        &#x1F464; My Profile
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
       <button class="s-item" id="btn-password" onclick="showTab('password', this)">
-        &#x1F512; Change Password
+        <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
       </button>
       <div class="s-divider"></div>
-      <a href="/cars/" class="s-item">&#x1F50D; Browse Cars</a>
-      <button class="s-item danger" onclick="doLogout()">&#x1F6AA; Logout</button>
+      <a href="/cars/" class="s-item">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg> Browse Cars
+      </a>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
     </div>
   </aside>
 
@@ -44,7 +48,24 @@
           <h1>Overview</h1>
           <p id="welcomeMsg"></p>
         </div>
-        <!-- <a href="/cars/" class="btn btn-primary">+ Book a Car</a> -->
+        <a href="/cars/" class="btn btn-primary">+ Book a Car</a>
+      </div>
+
+      <div class="dash-quick-actions" role="group" aria-label="Quick actions">
+        <a href="/cars/" class="dash-action-chip dash-action-chip--primary dash-action-chip--wide">
+          <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          Browse cars
+        </a>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
+          My bookings
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('profile', document.getElementById('btn-profile'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
+          Profile
+        </button>
       </div>
 
       <!-- Stats -->
@@ -56,11 +77,12 @@
       <div class="card">
         <div class="card-head">
           <h2>Recent Bookings</h2>
-          <button class="btn btn-ghost btn-sm" onclick="showTab('bookings', document.getElementById('btn-bookings'))">
-            View All &#8594;
+          <button type="button" class="btn btn-ghost btn-sm"
+            onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+            View all
           </button>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
@@ -86,35 +108,31 @@
     <!-- BOOKINGS TAB -->
     <div class="tab-panel" id="tab-bookings">
 
-      <div class="page-head">
-        <div>
-          <h1>My Bookings</h1>
-          <p>All your rental history</p>
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div>
+            <h1>My Bookings</h1>
+            <p>All your rental history</p>
+          </div>
+          <a href="/cars/" class="btn btn-primary">+ New Booking</a>
         </div>
-        <a href="/cars/" class="btn btn-primary">+ New Booking</a>
-      </div>
-
-      <!-- Status filter tabs -->
-      <div class="filter-tabs">
-        <button class="ftab active" onclick="filterBookings('', this)">All</button>
-        <button class="ftab" onclick="filterBookings('pending', this)">Pending</button>
-        <button class="ftab" onclick="filterBookings('approved', this)">Approved</button>
-        <button class="ftab" onclick="filterBookings('completed', this)">Completed</button>
-        <button class="ftab" onclick="filterBookings('cancelled', this)">Cancelled</button>
-        <button class="ftab" onclick="filterBookings('rejected', this)">Rejected</button>
+        {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='bookingsFilterTabs' tabs_label='Filter bookings by status' %}
+        <div class="results-bar">
+          <span id="bookingsResultCount" class="results-bar__count text-caption"></span>
+        </div>
       </div>
 
       <div class="card">
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--scroll-hint">
           <table>
             <thead>
               <tr>
                 <th>#</th>
                 <th>Car</th>
-                <th>Location</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Days</th>
+                <th class="col-hide-sm">Location</th>
+                <th>Period</th>
+                <th class="col-hide-sm">Duration</th>
+                <th class="col-hide-sm">Type</th>
                 <th>Total</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -130,6 +148,7 @@
           </table>
         </div>
       </div>
+      <div id="bookingsPagination" class="pagination-wrap" hidden></div>
 
     </div>
 
@@ -143,7 +162,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start">
+      <div class="profile-layout">
 
         <!-- Profile card -->
         <div class="profile-card">
@@ -152,7 +171,7 @@
             <div class="profile-av" id="profileAv" style="background:var(--primary-light);color:var(--primary)"></div>
             <div class="profile-name" id="profileName"></div>
             <div class="profile-email" id="profileEmail"></div>
-            <div style="margin-top:6px">
+            <div class="profile-badge-row">
               <span class="badge badge-blue">Customer</span>
             </div>
             <div class="profile-stats">
@@ -229,7 +248,7 @@
         </div>
       </div>
 
-      <div class="card" style="max-width:440px">
+      <div class="card form-panel-narrow">
         <div class="card-body">
 
           <div class="form-group">
@@ -260,21 +279,23 @@
 </div>
 
 <!-- Review Modal -->
-<div class="modal-bg" id="reviewModal">
+<div class="modal-bg" id="reviewModal" hidden aria-hidden="true">
   <div class="modal">
     <div class="modal-head">
-      <h3>&#x2B50; Leave a Review</h3>
-      <button class="btn-close-modal" onclick="closeModal('reviewModal')">&#x2715;</button>
+      <h3>Leave a Review</h3>
+      <button type="button" class="btn-icon btn-close-modal" onclick="closeModal('reviewModal')" aria-label="Close">
+        <svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Rating</label>
         <select class="form-control" id="reviewRating">
-          <option value="5">&#x2B50;&#x2B50;&#x2B50;&#x2B50;&#x2B50; — Excellent (5)</option>
-          <option value="4">&#x2B50;&#x2B50;&#x2B50;&#x2B50; — Good (4)</option>
-          <option value="3">&#x2B50;&#x2B50;&#x2B50; — Average (3)</option>
-          <option value="2">&#x2B50;&#x2B50; — Poor (2)</option>
-          <option value="1">&#x2B50; — Terrible (1)</option>
+          <option value="5">Excellent (5)</option>
+          <option value="4">Good (4)</option>
+          <option value="3">Average (3)</option>
+          <option value="2">Poor (2)</option>
+          <option value="1">Terrible (1)</option>
         </select>
       </div>
       <div class="form-group">
@@ -318,31 +339,24 @@
 
   /* ── Tab switching ──────────────────── */
   function showTab(name, btn) {
-    /* hide all panels */
-    document.querySelectorAll('.tab-panel').forEach(function (p) {
-      p.classList.remove('active');
+    UI.switchDashLegacy({
+      panelClass: 'tab-panel',
+      navClass: 's-item',
+      panelPrefix: 'tab-',
+      tabId: name,
+      btn: btn,
+      onActivate: function (n) {
+        if (n === 'overview') loadOverview();
+        if (n === 'bookings') loadBookings();
+        if (n === 'profile') loadProfile();
+      },
     });
-    /* deactivate all sidebar buttons */
-    document.querySelectorAll('.s-item').forEach(function (b) {
-      b.classList.remove('active');
-    });
-    /* show selected panel */
-    var panel = document.getElementById('tab-' + name);
-    if (panel) panel.classList.add('active');
-    /* activate sidebar button */
-    if (btn) btn.classList.add('active');
-
-    /* load data for each tab */
-    if (name === 'overview') loadOverview();
-    if (name === 'bookings') loadBookings();
-    if (name === 'profile') loadProfile();
   }
 
   /* ── OVERVIEW ───────────────────────── */
   async function loadOverview() {
     try {
-      const res = await API.get('/api/bookings/my-bookings/');
-      const bookings = res.results || res;
+      const bookings = await API.fetchAllPages('/api/bookings/my-bookings/');
       allBookings = bookings;
 
       const total = bookings.length;
@@ -357,110 +371,141 @@
 
       /* stats cards */
       document.getElementById('statsRow').innerHTML =
-        statCard('&#x1F4C5;', total, 'Total Bookings', '#dbeafe', '#1d4ed8') +
-        statCard('&#x2705;', active, 'Active Rentals', '#dcfce7', '#15803d') +
-        statCard('&#x23F3;', pending, 'Pending Approval', '#fef3c7', '#92400e') +
-        statCard('&#x2B50;', completed, 'Completed', '#dbeafe', '#1d4ed8');
+        UI.statCardButton('bookings', total, 'Total Bookings',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('active', active, 'Active Rentals',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('pending', pending, 'Pending Approval',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('bookings', completed, 'Completed',
+          "showTab('bookings', document.getElementById('btn-bookings'))");
 
       /* recent bookings — last 5 */
       const recent = bookings.slice(0, 5);
       if (!recent.length) {
         document.getElementById('recentTable').innerHTML =
-          '<tr><td colspan="4"><div class="empty"><h3>No bookings yet</h3>'
-          + '<p><a href="/cars/">Browse cars to make your first booking</a></p></div></td></tr>';
+          '<tr><td colspan="4">'
+          + UI.emptyState(
+            'No bookings yet',
+            'Browse available cars and send your first booking request.',
+            '<a href="/cars/" class="btn btn-primary">Browse cars</a>'
+          )
+          + '</td></tr>';
+        UI.refreshTableScrollHints();
         return;
       }
       document.getElementById('recentTable').innerHTML = recent.map(function (b) {
         return '<tr>'
-          + '<td><a href="/cars/' + b.car.id + '/" style="font-weight:600">'
-          + b.car.brand + ' ' + b.car.model + '</a></td>'
-          + '<td style="font-size:12px">' + b.start_date + ' &#8594; ' + b.end_date + '</td>'
-          + '<td style="font-weight:700;color:var(--primary)">$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
+          + '<td><a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
+          + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a></td>'
+          + '<td class="td-meta">' + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+          + '<td class="td-money">$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
           + '<td>' + statusBadge(b.status) + '</td>'
           + '</tr>';
       }).join('');
+      UI.refreshTableScrollHints();
 
     } catch (err) {
       toast(err.message, 'error');
     }
-  }
-
-  function statCard(icon, val, lbl, bg, color) {
-    return '<div class="stat-card">'
-      + '<div class="stat-icon" style="background:' + bg + ';color:' + color + '">' + icon + '</div>'
-      + '<div class="stat-val">' + val + '</div>'
-      + '<div class="stat-lbl">' + lbl + '</div>'
-      + '</div>';
   }
 
   /* ── BOOKINGS ───────────────────────── */
   async function loadBookings() {
     try {
-      var res = await API.get('/api/bookings/my-bookings/');
-      allBookings = res.results || res;
-      renderBookings(allBookings);
+      allBookings = await API.fetchAllPages('/api/bookings/my-bookings/');
+      applyBookingsFilter(bookingsStatusFilter);
     } catch (err) {
       toast(err.message, 'error');
     }
   }
 
-  function filterBookings(status, btn) {
-    /* update active tab button */
-    document.querySelectorAll('.ftab').forEach(function (b) {
-      b.classList.remove('active');
-    });
-    if (btn) btn.classList.add('active');
+  let bookingsViewList = [];
+  let bookingsPage = 1;
+  let bookingsStatusFilter = '';
 
-    var filtered = status
-      ? allBookings.filter(function (b) { return b.status === status; })
+  function applyBookingsFilter(status) {
+    bookingsStatusFilter = status || '';
+    bookingsPage = 1;
+    var filtered = bookingsStatusFilter
+      ? allBookings.filter(function (b) { return b.status === bookingsStatusFilter; })
       : allBookings;
     renderBookings(filtered);
+    UI.scrollToEl('bookingsTable');
   }
 
   function renderBookings(list) {
+    bookingsViewList = list;
+    var meta = UI.paginateSlice(list, bookingsPage, UI_PAGE.table);
+    bookingsPage = meta.page;
     var tbody = document.getElementById('bookingsTable');
 
-    if (!list.length) {
+    UI.updateResultsCount('bookingsResultCount', {
+      filtered: list.length,
+      total: allBookings.length,
+      label: allBookings.length === 1 ? 'booking' : 'bookings',
+      filterLabel: UI.bookingStatusLabel(bookingsStatusFilter),
+    });
+
+    if (!meta.items.length) {
+      var emptyMsg = bookingsStatusFilter
+        ? 'No ' + UI.bookingStatusLabel(bookingsStatusFilter).toLowerCase() + ' bookings.'
+        : 'No bookings found.';
       tbody.innerHTML = '<tr><td colspan="9">'
-        + '<div class="empty"><h3>No bookings found</h3>'
-        + '<p>Try a different filter or <a href="/cars/">book a car</a></p></div>'
+        + UI.emptyState(
+          emptyMsg,
+          'Try a different filter or book a new car.',
+          '<a href="/cars/" class="btn btn-primary">Book a car</a>'
+        )
         + '</td></tr>';
+      UI.mountPagination('bookingsPagination', meta, function () {}, { label: 'bookings' });
       return;
     }
 
-    tbody.innerHTML = list.map(function (b) {
-      var days = Math.round((new Date(b.end_date) - new Date(b.start_date)) / 86400000);
+    tbody.innerHTML = meta.items.map(function (b) {
       var actions = '';
 
       if (b.status === 'pending' || b.status === 'approved') {
-        actions = '<button class="btn btn-danger btn-sm" '
-          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>';
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-danger btn-sm" '
+          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>'
+          + '</div>';
       } else if (b.status === 'completed') {
-        actions = '<button class="btn btn-outline btn-sm" '
-          + 'onclick="openReview(' + b.id + ')">&#x2B50; Review</button>';
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-outline btn-sm" '
+          + 'onclick="openReview(' + b.id + ')">Review</button>'
+          + '</div>';
       } else {
-        actions = '<span style="color:var(--text-3);font-size:12px">—</span>';
+        actions = UI.tableEmpty();
       }
 
       return '<tr>'
-        + '<td style="color:var(--text-3);font-size:12px">#' + b.id + '</td>'
+        + '<td class="td-id">#' + b.id + '</td>'
         + '<td>'
-        + '<a href="/cars/' + b.car.id + '/" style="font-weight:600">'
-        + b.car.brand + ' ' + b.car.model + '</a>'
-        + '<div style="font-size:11px;color:var(--text-2)">'
-        + (b.car.year || '') + ' &middot; ' + b.car.car_type
+        + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
+        + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
+        + '<div class="text-subline">'
+        + UI.escHtml((b.car.year || '') + ' · ' + (b.car.car_type || ''))
         + '</div>'
         + '</td>'
-        + '<td style="font-size:12px">&#x1F4CD; ' + b.car.location + '</td>'
-        + '<td style="font-size:12px">' + b.start_date + '</td>'
-        + '<td style="font-size:12px">' + b.end_date + '</td>'
-        + '<td style="font-size:12px">' + days + 'd</td>'
-        + '<td style="font-weight:700;color:var(--primary)">'
+        + '<td class="td-meta col-hide-sm">' + UI.escHtml(b.car.location) + '</td>'
+        + '<td class="td-meta">' + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+        + '<td class="td-meta col-hide-sm">' + UI.escHtml(UI.bookingDurationLabel(b)) + '</td>'
+        + '<td class="col-hide-sm"><span class="badge badge-blue">'
+        + UI.escHtml(UI.rentalTypeLabel(b.rental_type)) + '</span></td>'
+        + '<td class="td-money">'
         + '$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
         + '<td>' + statusBadge(b.status) + '</td>'
         + '<td>' + actions + '</td>'
         + '</tr>';
     }).join('');
+
+    UI.mountPagination('bookingsPagination', meta, function (p) {
+      bookingsPage = p;
+      renderBookings(bookingsViewList);
+      UI.scrollToEl('bookingsTable');
+    }, { label: 'bookings' });
+    UI.refreshTableScrollHints();
   }
 
   async function cancelBooking(id) {
@@ -487,8 +532,7 @@
       /* show profile pic if exists */
       if (p.profile_picture) {
         document.getElementById('profileAv').innerHTML =
-          '<img src="' + p.profile_picture + '" '
-          + 'style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
+          '<img src="' + UI.escHtml(p.profile_picture) + '" alt=""/>';
       }
     } catch (err) {
       toast(err.message, 'error');
@@ -592,6 +636,7 @@
   }
 
   /* ── Boot ───────────────────────────── */
+  UI.initFilterTabs('bookingsFilterTabs', applyBookingsFilter);
   loadOverview();
 </script>
 {% endblock %}

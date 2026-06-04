@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Browse Cars — RentACar{% endblock %}
 
 {% block content %}
@@ -9,174 +10,29 @@
       <h1>Browse Cars</h1>
       <p>Find the perfect car for your trip</p>
     </div>
+    <a href="/" class="btn btn-ghost">Back to home</a>
   </div>
 
-  <!-- Filters -->
-  <div class="filters-bar">
-    <div class="filter-field" style="flex:1;min-width:200px">
-      <label>Search</label>
-      <input type="text" id="fSearch"
-        placeholder="Brand, model or city..."
-        style="width:100%"
-        oninput="handleSearch()"/>
-    </div>
-    <div class="filter-field">
-      <label>Car Type</label>
-      <select id="fType" onchange="loadCars()">
-        <option value="">All Types</option>
-        <option value="sedan">Sedan</option>
-        <option value="suv">SUV</option>
-        <option value="luxury">Luxury</option>
-        <option value="hatchback">Hatchback</option>
-        <option value="truck">Truck</option>
-        <option value="van">Van</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label>Min $/day</label>
-      <input type="number" id="fMin"
-        placeholder="0" min="0"
-        style="width:100px"
-        onchange="loadCars()"/>
-    </div>
-    <div class="filter-field">
-      <label>Max $/day</label>
-      <input type="number" id="fMax"
-        placeholder="Any" min="0"
-        style="width:100px"
-        onchange="loadCars()"/>
-    </div>
-    <div class="filter-field">
-      <label>Sort By</label>
-      <select id="fSort" onchange="loadCars()">
-        <option value="-created_at">Newest First</option>
-        <option value="price_per_day">Price: Low to High</option>
-        <option value="-price_per_day">Price: High to Low</option>
-        <option value="-year">Newest Year</option>
-        <option value="year">Oldest Year</option>
-      </select>
-    </div>
-    <button class="btn btn-ghost btn-sm"
-      onclick="resetFilters()"
-      style="margin-top:18px">
-      &#x21BA; Reset
-    </button>
+  <div class="list-toolbar__filters">
+    {% include 'includes/catalog_filters.html' with show_inline_search=True %}
+    <div class="active-filters" id="activeFilters" hidden></div>
   </div>
 
-  <!-- Results header -->
-  <div class="sec-head">
+  <div class="results-bar">
     <h2>Results</h2>
-    <span id="carCount" style="font-size:12px;color:var(--text-3)"></span>
+    <span id="carCount" class="results-bar__count text-caption"></span>
   </div>
 
-  <!-- Cars grid -->
   <div id="carsGrid" class="cars-grid">
-    <div class="loading" style="grid-column:1/-1">
+    <div class="loading grid-span-full">
       <span class="spinner spinner-lg"></span> Loading cars...
     </div>
   </div>
+  <div id="carsPagination" class="pagination-wrap" hidden></div>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-let searchTimer;
-
-async function loadCars() {
-  const search = document.getElementById('fSearch').value.trim();
-  const type   = document.getElementById('fType').value;
-  const min    = document.getElementById('fMin').value;
-  const max    = document.getElementById('fMax').value;
-  const sort   = document.getElementById('fSort').value;
-
-  let url = '/api/cars/?ordering=' + sort;
-  if (search) url += '&search=' + encodeURIComponent(search);
-  if (type)   url += '&car_type=' + type;
-  if (min)    url += '&min_price=' + min;
-  if (max)    url += '&max_price=' + max;
-
-  const grid = document.getElementById('carsGrid');
-  grid.innerHTML = '<div class="loading" style="grid-column:1/-1">'
-    + '<span class="spinner"></span> Loading...</div>';
-
-  try {
-    const data = await API.get(url);
-    const cars = Array.isArray(data) ? data : (data.results || []);
-
-    document.getElementById('carCount').textContent =
-      cars.length + ' car(s) found';
-
-    if (!cars.length) {
-      grid.innerHTML =
-        '<div class="empty" style="grid-column:1/-1">'
-        + '<h3>No cars found</h3>'
-        + '<p>Try different search terms or reset filters.</p>'
-        + '</div>';
-      return;
-    }
-
-    grid.innerHTML = cars.map(function(car) {
-      const img = car.primary_image
-        ? '<img src="' + car.primary_image + '" alt="'
-          + car.brand + '" loading="lazy"/>'
-        : '<span style="font-size:40px">&#x1F697;</span>';
-
-      const avail = car.is_available
-        ? '<span class="badge badge-green">Available</span>'
-        : '<span class="badge badge-gray">Unavailable</span>';
-
-      return '<div class="car-card" '
-        + 'onclick="window.location=\'/cars/' + car.id + '/\'">'
-        + '<div class="car-thumb">' + img + '</div>'
-        + '<div class="car-body">'
-        + '<div class="car-title">'
-        + car.brand + ' ' + car.model
-        + (car.year ? ' ' + car.year : '')
-        + '</div>'
-        + '<div class="car-badges">'
-        + '<span class="badge badge-blue">'
-        + car.car_type.toUpperCase() + '</span>'
-        + '&nbsp;' + avail
-        + '</div>'
-        + '<div class="car-loc">'
-        + '&#x1F4CD; ' + car.location
-        + ' &middot; ' + (car.owner_name || '')
-        + '</div>'
-        + '<div class="car-footer">'
-        + '<div class="car-price">$'
-        + parseFloat(car.price_per_day).toFixed(2)
-        + '<span>/day</span></div>'
-        + '<button class="btn btn-primary btn-sm">View Details</button>'
-        + '</div>'
-        + '</div>'
-        + '</div>';
-    }).join('');
-
-  } catch(err) {
-    grid.innerHTML =
-      '<div class="empty" style="grid-column:1/-1">'
-      + '<h3>Failed to load cars</h3>'
-      + '<p>' + err.message + '</p>'
-      + '</div>';
-  }
-}
-
-/* debounce search input */
-function handleSearch() {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(loadCars, 400);
-}
-
-function resetFilters() {
-  document.getElementById('fSearch').value = '';
-  document.getElementById('fType').value   = '';
-  document.getElementById('fMin').value    = '';
-  document.getElementById('fMax').value    = '';
-  document.getElementById('fSort').value   = '-created_at';
-  loadCars();
-}
-
-loadCars();
-</script>
+<script src="{% static 'js/catalog.js' %}"></script>
 {% endblock %}

@@ -11,9 +11,21 @@ const API = {
     return h;
   },
 
+  shouldBypassCache(url) {
+    return /\/api\/cars\//.test(url)
+      || /\/admin\//.test(url)
+      || /\/my-cars\//.test(url)
+      || /\/my-bookings\//.test(url)
+      || /\/bookings\/owner\//.test(url)
+      || /\/profile\//.test(url);
+  },
+
   async req(method, url, body, multipart) {
     const opts = { method, headers: this.headers(multipart) };
     if (body) opts.body = multipart ? body : JSON.stringify(body);
+    if (method === 'GET' && this.shouldBypassCache(url)) {
+      opts.cache = 'no-store';
+    }
     const res  = await fetch(url, opts);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -26,6 +38,20 @@ const API = {
       throw new Error(msgs.join('\n') || 'Error ' + res.status);
     }
     return json;
+  },
+
+  async fetchAllPages(url) {
+    let nextUrl = url;
+    const all = [];
+    while (nextUrl) {
+      const data = await this.get(nextUrl);
+      if (Array.isArray(data)) return data;
+      const page = data.results || [];
+      all.push.apply(all, page);
+      if (!data.next) break;
+      nextUrl = data.next.startsWith('http') ? data.next : (window.location.origin + data.next);
+    }
+    return all;
   },
 
   get(url)            { return this.req('GET',    url); },
@@ -75,8 +101,25 @@ function initials(name) {
 }
 
 /* ── Modal ──────────────────────── */
-function openModal(id)  { document.getElementById(id).classList.add('open');    }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (typeof UI !== 'undefined' && UI.initModal) UI.initModal(el);
+  el.hidden = false;
+  el.classList.add('open');
+  el.setAttribute('aria-hidden', 'false');
+  const focusable = el.querySelector(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  if (focusable) focusable.focus();
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  el.hidden = true;
+  el.setAttribute('aria-hidden', 'true');
+}
 
 /* ── Tabs ───────────────────────── */
 function switchTab(tabId) {
@@ -94,13 +137,13 @@ function initNav() {
   const uname = document.getElementById('nav-uname');
   const avEl  = document.getElementById('nav-av');
   if (API.loggedIn() && user) {
-    if (guest) guest.style.display = 'none';
-    if (auth)  auth.style.display  = 'flex';
+    if (guest) guest.classList.add('is-hidden');
+    if (auth)  auth.classList.remove('is-hidden');
     if (uname) uname.textContent   = user.username;
     if (avEl)  avEl.textContent    = initials(user.username);
   } else {
-    if (guest) guest.style.display = 'flex';
-    if (auth)  auth.style.display  = 'none';
+    if (guest) guest.classList.remove('is-hidden');
+    if (auth)  auth.classList.add('is-hidden');
   }
 }
 
