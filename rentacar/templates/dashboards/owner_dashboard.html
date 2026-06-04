@@ -321,10 +321,10 @@
                     <svg class="icon"><use href="#icon-camera"/></svg>
                   </div>
                   <p class="upload-zone-title">Drop photos here or <span class="upload-zone-link">browse</span></p>
-                  <p class="upload-zone-hint">JPG or PNG · up to 10 MB each · multiple files OK</p>
+                  <p class="upload-zone-hint">Any image format · up to 10 MB each · multiple files OK</p>
                 </div>
               </div>
-              <input type="file" id="cImages" multiple accept="image/jpeg,image/png,image/webp"
+              <input type="file" id="cImages" multiple accept="image/*"
                 class="visually-hidden" aria-hidden="true" />
               <p class="upload-meta" id="uploadMeta" hidden></p>
               <div class="preview-grid" id="imgPreview"></div>
@@ -455,7 +455,7 @@
             <div class="form-group">
               <label class="form-label">Profile Picture</label>
               <input class="form-control" type="file" id="oPic" accept="image/*" />
-              <p class="form-hint">JPG or PNG, max 5MB</p>
+              <p class="form-hint">Any image format, max 5MB</p>
             </div>
 
             <div class="err-box" id="oProfileErr"></div>
@@ -628,7 +628,6 @@
   let requestsViewList = [];
   let requestsPage = 1;
   let requestsStatusFilter = '';
-  let locationAutocompleteTimers = {};
 
   /* ── Sidebar init ───────────────────── */
   document.getElementById('sName').textContent = user ? user.username : '';
@@ -988,124 +987,8 @@
   }
 
   function initLocationAutocomplete() {
-    var inputs = document.querySelectorAll('[data-location-autocomplete]');
-    if (!inputs.length) return;
-
-    inputs.forEach(function (input) {
-      if (input.dataset.locationAutocompleteInit) return;
-      input.dataset.locationAutocompleteInit = '1';
-
-      var wrap = input.closest('[data-location-autocomplete-wrap]');
-      var panel = wrap ? wrap.querySelector('[data-location-suggestions]') : null;
-      if (!panel) return;
-
-      function closePanel() {
-        panel.hidden = true;
-        panel.innerHTML = '';
-        input.setAttribute('aria-expanded', 'false');
-      }
-
-      function chooseSuggestion(item) {
-        var value = item.label || item.query || '';
-        input.value = value;
-        input.dataset.locationSelected = value;
-        closePanel();
-      }
-
-      function renderSuggestions(items, message) {
-        if (!items.length) {
-          panel.innerHTML = '<div class="location-suggestions__empty">'
-            + UI.escHtml(message || 'No matching cities found in Pakistan.')
-            + '</div>';
-          panel.hidden = false;
-          input.setAttribute('aria-expanded', 'true');
-          return;
-        }
-
-        panel.innerHTML = items.slice(0, 6).map(function (item) {
-          var label = item.label || item.query || '';
-          var meta = item.displayName || 'OpenStreetMap result';
-          return '<button type="button" class="location-suggestion" data-location-choice="1">'
-            + '<span class="location-suggestion__title">' + UI.escHtml(label) + '</span>'
-            + '<span class="location-suggestion__meta">' + UI.escHtml(meta) + '</span>'
-            + '</button>';
-        }).join('');
-
-        panel.querySelectorAll('[data-location-choice]').forEach(function (btn, index) {
-          btn.addEventListener('mousedown', function (event) {
-            event.preventDefault();
-            chooseSuggestion(items[index]);
-          });
-        });
-
-        panel.hidden = false;
-        input.setAttribute('aria-expanded', 'true');
-      }
-
-      function performSearch(query) {
-        if (!query || query.length < 2) {
-          closePanel();
-          return;
-        }
-        if (typeof LocationState === 'undefined' || !LocationState.geocode) {
-          renderSuggestions([], 'Location search is not available right now.');
-          return;
-        }
-
-        var currentToken = Date.now();
-        input.dataset.locationRequestToken = String(currentToken);
-
-        LocationState.geocode(query).then(function (results) {
-          if (input.dataset.locationRequestToken !== String(currentToken)) return;
-          var seen = {};
-          var filtered = [];
-          results.forEach(function (item) {
-            var label = (item.label || item.query || '').trim();
-            var key = label.toLowerCase();
-            if (!label || seen[key]) return;
-            seen[key] = true;
-            filtered.push(item);
-          });
-          renderSuggestions(filtered, 'No matching cities found in Pakistan.');
-        }).catch(function () {
-          renderSuggestions([], 'Location search is not available right now.');
-        });
-      }
-
-      input.addEventListener('input', function () {
-        input.dataset.locationSelected = '';
-        clearTimeout(locationAutocompleteTimers[input.id]);
-        var query = input.value.trim();
-        if (query.length < 2) {
-          closePanel();
-          return;
-        }
-        locationAutocompleteTimers[input.id] = setTimeout(function () {
-          performSearch(query);
-        }, 250);
-      });
-
-      input.addEventListener('focus', function () {
-        var query = input.value.trim();
-        if (query.length >= 2 && panel.hidden) {
-          performSearch(query);
-        }
-      });
-
-      input.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-          closePanel();
-        }
-        if (event.key === 'Enter' && !panel.hidden) {
-          event.preventDefault();
-          var firstChoice = panel.querySelector('[data-location-choice]');
-          if (firstChoice) firstChoice.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-        }
-      });
-
-      input.addEventListener('blur', function () {
-        setTimeout(closePanel, 160);
-      });
+    document.querySelectorAll('[data-location-autocomplete]').forEach(function (input) {
+      LocationAutocomplete.attach(input);
     });
   }
 
@@ -1177,10 +1060,14 @@
         zone.classList.remove('upload-zone--drag');
       });
     });
+    function isImageFile(file) {
+      if (!file) return false;
+      if (file.type && file.type.indexOf('image/') === 0) return true;
+      return /\.(jpe?g|jpe|jfif|png|gif|webp|bmp|tiff?|heic|heif|avif|svg|ico|ppm|pgm)$/i.test(file.name || '');
+    }
+
     zone.addEventListener('drop', function (e) {
-      var dropped = Array.from(e.dataTransfer.files || []).filter(function (f) {
-        return f.type && f.type.indexOf('image/') === 0;
-      });
+      var dropped = Array.from(e.dataTransfer.files || []).filter(isImageFile);
       if (!dropped.length) return;
       var dt = new DataTransfer();
       selectedFiles.concat(dropped).forEach(function (f) { dt.items.add(f); });
@@ -1199,16 +1086,26 @@
     var model = document.getElementById('cModel').value.trim();
     var year = parseInt(document.getElementById('cYear').value);
     var carType = document.getElementById('cType').value;
-    var location = document.getElementById('cLocation').value.trim();
+    var locationInput = document.getElementById('cLocation');
+    var location = locationInput ? locationInput.value.trim() : '';
     var desc = document.getElementById('cDesc').value.trim();
     var errBox = document.getElementById('addCarErr');
     var btn = document.getElementById('addCarBtn');
     var rental = collectRentalPayload('c');
+    var locationErr = LocationAutocomplete.validateInput(locationInput, {
+      required: true,
+      requireSelection: true,
+    });
 
     errBox.style.display = 'none';
 
     if (!brand || !model || !year || !location) {
       errBox.textContent = 'Please fill all required fields marked with *.';
+      errBox.style.display = 'block';
+      return;
+    }
+    if (locationErr) {
+      errBox.textContent = locationErr;
       errBox.style.display = 'block';
       return;
     }
@@ -1269,7 +1166,7 @@
     document.getElementById('ePriceMonth').value = car.price_per_month || '';
     toggleRentalPriceFields('e');
     document.getElementById('eType').value = car.car_type;
-    document.getElementById('eLocation').value = car.location;
+    LocationAutocomplete.markSelected(document.getElementById('eLocation'), car.location);
     document.getElementById('eDesc').value = car.description || '';
     document.getElementById('eAvailable').checked = car.is_available;
     document.getElementById('editCarErr').style.display = 'none';
@@ -1288,13 +1185,24 @@
       return;
     }
 
+    var editLocationInput = document.getElementById('eLocation');
+    var editLocationErr = LocationAutocomplete.validateInput(editLocationInput, {
+      required: true,
+      requireSelection: true,
+    });
+    if (editLocationErr) {
+      errBox.textContent = editLocationErr;
+      errBox.style.display = 'block';
+      return;
+    }
+
     try {
       var patchBody = Object.assign({
         brand: document.getElementById('eBrand').value,
         model: document.getElementById('eModel').value,
         year: parseInt(document.getElementById('eYear').value),
         car_type: document.getElementById('eType').value,
-        location: document.getElementById('eLocation').value,
+        location: editLocationInput.value.trim(),
         description: document.getElementById('eDesc').value,
         is_available: document.getElementById('eAvailable').checked,
       }, rental.data);

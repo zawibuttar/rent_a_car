@@ -45,13 +45,8 @@ _csrf = os.getenv(
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 
 # Upload limits (car images)
-CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(5 * 1024 * 1024)))
+CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(10 * 1024 * 1024)))
 CAR_IMAGE_MAX_COUNT = int(os.getenv('CAR_IMAGE_MAX_COUNT', '10'))
-CAR_IMAGE_ALLOWED_TYPES = {
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-}
 
 # Cache (Redis when CACHE_ENABLED=1, else in-memory for local dev)
 CACHE_ENABLED = os.getenv('CACHE_ENABLED', '0').lower() in ('1', 'true', 'yes')
@@ -224,5 +219,6 @@ REST_FRAMEWORK = {
         'user': os.getenv('THROTTLE_USER', '120/minute'),
         'auth': os.getenv('THROTTLE_AUTH', '10/minute'),
         'booking': os.getenv('THROTTLE_BOOKING', '30/minute'),
+        'location': os.getenv('THROTTLE_LOCATION', '30/minute'),
     },
 }

@@ -1,7 +1,7 @@
 {% load static %}
 <section class="popular-cities page-section">
   <h2>Popular Cities</h2>
-  <div class="popular-cities__list">
+  <div class="popular-cities__list" role="list" aria-label="Popular rental cities">
     <button type="button" class="city-card" data-location-city="Lahore">
       <img src="{% static 'images/cities/lahore.svg' %}" alt="Lahore" onerror="this.src='{% static 'images/no-image.svg' %}'" />
       <div class="city-name">Lahore</div>

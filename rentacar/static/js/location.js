@@ -29,12 +29,15 @@ const LocationState = {
     return current && current.query ? current.query : this.getLabel();
   },
 
+  isCityActive(cityName, selectedLabel) {
+    if (!cityName || !selectedLabel) return false;
+    return selectedLabel.trim().toLowerCase() === String(cityName).trim().toLowerCase();
+  },
+
   save(location) {
     this.state = location ? {
       label: location.label || location.query || '',
       query: location.query || location.label || '',
-      lat: location.lat != null ? Number(location.lat) : null,
-      lon: location.lon != null ? Number(location.lon) : null,
       source: location.source || 'manual',
     } : null;
 
@@ -57,53 +60,39 @@ const LocationState = {
 
   normalizeResult(result) {
     if (!result) return null;
-    const address = result.address || {};
-    const city = address.city || address.town || address.village || address.municipality || address.county || address.state || result.display_name || '';
-    const label = city ? String(city).trim() : String(result.display_name || '').split(',')[0].trim();
-    const lat = result.lat != null ? parseFloat(result.lat) : null;
-    const lon = result.lon != null ? parseFloat(result.lon) : null;
+    const label = (result.label || result.query || '').trim();
     if (!label) return null;
     return {
       label: label,
-      query: label,
-      displayName: result.display_name || '',
-      lat: isNaN(lat) ? null : lat,
-      lon: isNaN(lon) ? null : lon,
-      source: 'map',
+      query: result.query || label,
+      displayName: result.displayName || result.display_name || '',
+      source: result.source || 'map',
     };
   },
 
   async geocode(query) {
-    const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&countrycodes=pk&q=' + encodeURIComponent(query);
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'en' },
-    });
-    if (!res.ok) {
-      throw new Error('City lookup failed.');
-    }
-    const data = await res.json();
-    return Array.isArray(data) ? data.map((item) => this.normalizeResult(item)).filter(Boolean) : [];
+    const res = await API.get(
+      '/api/cars/location/search/?q=' + encodeURIComponent(query)
+    );
+    if (!Array.isArray(res)) return [];
+    return res.map((item) => this.normalizeResult(item)).filter(Boolean);
   },
 
   async reverseGeocode(lat, lon) {
-    const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon);
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'en' },
-    });
-    if (!res.ok) {
-      throw new Error('Could not detect your city.');
-    }
-    const data = await res.json();
-    return this.normalizeResult(data);
+    const res = await API.get(
+      '/api/cars/location/reverse/?lat=' + encodeURIComponent(lat)
+      + '&lon=' + encodeURIComponent(lon)
+    );
+    return this.normalizeResult(res);
   },
 
   renderResults(results) {
     const wrap = document.getElementById('cityResults');
     if (!wrap) return;
 
-    const selected = this.getLabel().toLowerCase();
+    const selected = this.getLabel();
     const cityButtons = this.popularCities.map(function (city) {
-      const active = selected && selected.indexOf(city.toLowerCase()) >= 0 ? ' is-active' : '';
+      const active = LocationState.isCityActive(city, selected) ? ' is-active' : '';
       return '<button type="button" class="location-result location-result--preset' + active + '" data-location-city="' + UI.escHtml(city) + '">'
         + '<span class="location-result__title">' + UI.escHtml(city) + '</span>'
         + '<span class="location-result__meta">Popular city</span>'
@@ -112,11 +101,8 @@ const LocationState = {
 
     const cityResults = results.map(function (result) {
       const label = result.label || result.query;
-      const meta = result.display_name || 'OpenStreetMap result';
-      return '<button type="button" class="location-result" data-location-query="' + UI.escHtml(result.query || label) + '"'
-        + (result.lat != null ? ' data-location-lat="' + UI.escHtml(result.lat) + '"' : '')
-        + (result.lon != null ? ' data-location-lon="' + UI.escHtml(result.lon) + '"' : '')
-        + '>'
+      const meta = result.displayName || 'Suggested city';
+      return '<button type="button" class="location-result" data-location-query="' + UI.escHtml(result.query || label) + '">'
         + '<span class="location-result__title">' + UI.escHtml(label) + '</span>'
         + '<span class="location-result__meta">' + UI.escHtml(meta) + '</span>'
         + '</button>';
@@ -136,16 +122,11 @@ const LocationState = {
     wrap.querySelectorAll('[data-location-query]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const query = btn.getAttribute('data-location-query') || '';
-        const lat = btn.getAttribute('data-location-lat');
-        const lon = btn.getAttribute('data-location-lon');
         this.save({
           label: query,
           query: query,
-          lat: lat ? parseFloat(lat) : null,
-          lon: lon ? parseFloat(lon) : null,
           source: 'search',
         });
-        if (lat && lon) this.centerMap(parseFloat(lat), parseFloat(lon), 11);
         this.close();
         toast('Showing listings for ' + query + '.', 'success');
       });
@@ -168,26 +149,24 @@ const LocationState = {
     const label = current && current.label ? current.label : 'Choose city';
 
     document.querySelectorAll('[data-location-toggle]').forEach((btn) => {
-      const active = current && current.label ? ' location-toggle--active' : '';
       btn.classList.toggle('location-toggle--active', !!(current && current.label));
       btn.innerHTML = UI.icon('pin', 'icon icon-sm') + '<span class="location-toggle__text">' + UI.escHtml(label) + '</span>';
       btn.setAttribute('aria-label', current && current.label ? 'Change city to ' + current.label : 'Choose your city');
     });
 
     document.querySelectorAll('[data-location-city]').forEach((card) => {
-      const city = (card.getAttribute('data-location-city') || '').toLowerCase();
-      const isActive = current && current.label && current.label.toLowerCase().indexOf(city) >= 0;
-      card.classList.toggle('is-active', !!isActive);
+      const city = card.getAttribute('data-location-city') || '';
+      const isActive = this.isCityActive(city, current && current.label ? current.label : '');
+      card.classList.toggle('is-active', isActive);
       card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
     const status = document.getElementById('locationStatus');
     if (status) {
       status.textContent = current && current.label
-        ? 'Current city: ' + current.label + '. Listings are filtered automatically.'
+        ? 'Current city: ' + current.label + '. Listings are filtered by city name.'
         : 'No city selected yet. Choose one below or detect your current city.';
     }
-
   },
 
   close() {
@@ -224,8 +203,6 @@ const LocationState = {
         if (!picked) {
           throw new Error('Could not detect a city for your location.');
         }
-        picked.lat = lat;
-        picked.lon = lon;
         picked.source = 'geolocation';
         this.save(picked);
         this.close();
@@ -246,20 +223,16 @@ const LocationState = {
   async search(query) {
     const results = query ? await this.geocode(query) : [];
     this.renderResults(results);
-    const current = this.get();
-    if (current && current.lat != null && current.lon != null) {
-      this.centerMap(current.lat, current.lon, 11);
-    }
   },
 
   bindEvents() {
-    const toggleBtn = document.querySelector('[data-location-toggle]');
-    if (toggleBtn && !toggleBtn.dataset.locationBound) {
+    document.querySelectorAll('[data-location-toggle]').forEach((toggleBtn) => {
+      if (toggleBtn.dataset.locationBound) return;
       toggleBtn.dataset.locationBound = '1';
       toggleBtn.addEventListener('click', () => {
         this.open();
       });
-    }
+    });
 
     document.querySelectorAll('[data-location-city]').forEach((card) => {
       if (card.dataset.locationBound) return;
@@ -324,6 +297,155 @@ const LocationState = {
   },
 };
 
+const LocationAutocomplete = {
+  timers: {},
+
+  dedupeResults(results) {
+    const seen = {};
+    const filtered = [];
+    (results || []).forEach(function (item) {
+      const label = (item.label || item.query || '').trim();
+      const key = label.toLowerCase();
+      if (!label || seen[key]) return;
+      seen[key] = true;
+      filtered.push(item);
+    });
+    return filtered;
+  },
+
+  attach(input, options) {
+    if (!input || input.dataset.locationAutocompleteInit) return;
+    options = options || {};
+    input.dataset.locationAutocompleteInit = '1';
+
+    const wrap = input.closest('[data-location-autocomplete-wrap]');
+    const panel = options.panel || (wrap ? wrap.querySelector('[data-location-suggestions]') : null);
+    if (!panel) return;
+
+    const debounceMs = options.debounceMs || 250;
+    const emptyMessage = options.emptyMessage || 'No matching cities found in Pakistan.';
+
+    function closePanel() {
+      panel.hidden = true;
+      panel.innerHTML = '';
+      input.setAttribute('aria-expanded', 'false');
+    }
+
+    function chooseSuggestion(item) {
+      const value = item.label || item.query || '';
+      input.value = value;
+      input.dataset.locationSelected = value;
+      closePanel();
+    }
+
+    function renderSuggestions(items, message) {
+      if (!items.length) {
+        panel.innerHTML = '<div class="location-suggestions__empty">'
+          + UI.escHtml(message || emptyMessage)
+          + '</div>';
+        panel.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        return;
+      }
+
+      panel.innerHTML = items.slice(0, 6).map(function (item) {
+        const label = item.label || item.query || '';
+        const meta = item.displayName || 'Suggested city';
+        return '<button type="button" class="location-suggestion" data-location-choice="1">'
+          + '<span class="location-suggestion__title">' + UI.escHtml(label) + '</span>'
+          + '<span class="location-suggestion__meta">' + UI.escHtml(meta) + '</span>'
+          + '</button>';
+      }).join('');
+
+      panel.querySelectorAll('[data-location-choice]').forEach(function (btn, index) {
+        btn.addEventListener('mousedown', function (event) {
+          event.preventDefault();
+          chooseSuggestion(items[index]);
+        });
+      });
+
+      panel.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function performSearch(query) {
+      if (!query || query.length < 2) {
+        closePanel();
+        return;
+      }
+      if (typeof LocationState === 'undefined' || !LocationState.geocode) {
+        renderSuggestions([], 'Location search is not available right now.');
+        return;
+      }
+
+      const currentToken = Date.now();
+      input.dataset.locationRequestToken = String(currentToken);
+
+      LocationState.geocode(query).then(function (results) {
+        if (input.dataset.locationRequestToken !== String(currentToken)) return;
+        renderSuggestions(LocationAutocomplete.dedupeResults(results), emptyMessage);
+      }).catch(function () {
+        renderSuggestions([], 'Location search is not available right now.');
+      });
+    }
+
+    input.addEventListener('input', function () {
+      input.dataset.locationSelected = '';
+      clearTimeout(LocationAutocomplete.timers[input.id]);
+      const query = input.value.trim();
+      if (query.length < 2) {
+        closePanel();
+        return;
+      }
+      LocationAutocomplete.timers[input.id] = setTimeout(function () {
+        performSearch(query);
+      }, debounceMs);
+    });
+
+    input.addEventListener('focus', function () {
+      const query = input.value.trim();
+      if (query.length >= 2 && panel.hidden) {
+        performSearch(query);
+      }
+    });
+
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closePanel();
+      }
+      if (event.key === 'Enter' && !panel.hidden) {
+        event.preventDefault();
+        const firstChoice = panel.querySelector('[data-location-choice]');
+        if (firstChoice) firstChoice.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      }
+    });
+
+    input.addEventListener('blur', function () {
+      setTimeout(closePanel, 160);
+    });
+  },
+
+  validateInput(input, options) {
+    options = options || {};
+    if (!input) return null;
+    const value = input.value.trim();
+    const selected = (input.dataset.locationSelected || '').trim();
+    if (!value) {
+      return options.required ? 'Pickup location is required.' : null;
+    }
+    if (options.requireSelection && selected.toLowerCase() !== value.toLowerCase()) {
+      return 'Select a city from the suggestions list.';
+    }
+    return null;
+  },
+
+  markSelected(input, value) {
+    if (!input) return;
+    input.value = value || '';
+    input.dataset.locationSelected = value || '';
+  },
+};
+
 document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('locationModal')) {
     LocationState.init();
@@ -331,3 +453,4 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 window.LocationState = LocationState;
+window.LocationAutocomplete = LocationAutocomplete;

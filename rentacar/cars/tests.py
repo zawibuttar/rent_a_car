@@ -1,9 +1,12 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
+from .geocoding import search_cities
 from .models import Car
 
 User = get_user_model()
@@ -26,6 +29,18 @@ class PublicCarListTests(APITestCase):
             description='Visible car',
             location='NYC',
             price_per_day=50,
+            is_available=True,
+            is_approved=True,
+        )
+        Car.objects.create(
+            owner=self.owner,
+            brand='Honda',
+            model='Civic',
+            year=2021,
+            car_type='sedan',
+            description='Los Angeles car',
+            location='Los Angeles, CA',
+            price_per_day=55,
             is_available=True,
             is_approved=True,
         )
@@ -55,8 +70,51 @@ class PublicCarListTests(APITestCase):
         response = self.client.get(url, {'location': 'NYC'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         brands = [c['brand'] for c in response.data['results']]
-        self.assertIn('Toyota', brands)
+        self.assertEqual(brands, ['Toyota'])
+        self.assertNotIn('Honda', brands)
         self.assertNotIn('Hidden', brands)
+
+    def test_public_list_filters_by_city_alias(self):
+        url = reverse('car-list')
+        response = self.client.get(url, {'city': 'Los Angeles'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        brands = [c['brand'] for c in response.data['results']]
+        self.assertEqual(brands, ['Honda'])
+        self.assertNotIn('Toyota', brands)
+
+
+class LocationSearchApiTests(APITestCase):
+    @patch('cars.geocoding._fetch_json')
+    def test_location_search_returns_normalized_cities(self, mock_fetch):
+        mock_fetch.return_value = [{
+            'lat': '31.5497',
+            'lon': '74.3436',
+            'display_name': 'Lahore, Punjab, Pakistan',
+            'address': {'city': 'Lahore'},
+        }]
+        url = reverse('location-search')
+        response = self.client.get(url, {'q': 'Lahore'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['label'], 'Lahore')
+
+    def test_location_search_requires_min_length(self):
+        url = reverse('location-search')
+        response = self.client.get(url, {'q': 'L'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    @patch('cars.geocoding._fetch_json')
+    def test_search_cities_uses_cache(self, mock_fetch):
+        mock_fetch.return_value = [{
+            'lat': '24.86',
+            'lon': '67.00',
+            'display_name': 'Karachi, Pakistan',
+            'address': {'city': 'Karachi'},
+        }]
+        search_cities('Karachi')
+        search_cities('Karachi')
+        mock_fetch.assert_called_once()
 
 
 class AdminCarApprovalTests(APITestCase):

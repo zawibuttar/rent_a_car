@@ -1008,6 +1008,17 @@ a.dash-action-chip {
   text-underline-offset: 2px;
 }
 .filter-chip-clear:hover { color: var(--text); }
+.filter-chip-dismiss {
+  border: none;
+  background: none;
+  padding: 0 0 0 4px;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.filter-chip-dismiss:hover { color: var(--text); }
 
 /* ── Car grid & listing cards ───────── */
 .cars-grid {

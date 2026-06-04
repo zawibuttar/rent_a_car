@@ -67,14 +67,19 @@ const Catalog = {
     const f = Catalog.getFilterState();
     const chips = [];
 
-    if (f.search) chips.push('Search: ' + f.search);
-    if (f.type) chips.push(Catalog.typeLabels[f.type] || f.type);
-    if (f.min && f.max) chips.push('$' + f.min + '–$' + f.max + '/day');
-    else if (f.min) chips.push('Min $' + f.min + '/day');
-    else if (f.max) chips.push('Max $' + f.max + '/day');
-    if (f.location) chips.push('City: ' + f.location);
+    if (f.search) chips.push('<span class="filter-chip">Search: ' + UI.escHtml(f.search) + '</span>');
+    if (f.type) chips.push('<span class="filter-chip">' + UI.escHtml(Catalog.typeLabels[f.type] || f.type) + '</span>');
+    if (f.min && f.max) chips.push('<span class="filter-chip">$' + UI.escHtml(f.min) + '–$' + UI.escHtml(f.max) + '/day</span>');
+    else if (f.min) chips.push('<span class="filter-chip">Min $' + UI.escHtml(f.min) + '/day</span>');
+    else if (f.max) chips.push('<span class="filter-chip">Max $' + UI.escHtml(f.max) + '/day</span>');
+    if (f.location) {
+      chips.push(
+        '<span class="filter-chip filter-chip--location">City: ' + UI.escHtml(f.location)
+        + '<button type="button" class="filter-chip-dismiss" id="clearCityFilter" aria-label="Clear city filter">×</button></span>'
+      );
+    }
     if (f.sort && f.sort !== '-created_at') {
-      chips.push(Catalog.sortLabels[f.sort] || f.sort);
+      chips.push('<span class="filter-chip">' + UI.escHtml(Catalog.sortLabels[f.sort] || f.sort) + '</span>');
     }
 
     if (!chips.length) {
@@ -86,13 +91,13 @@ const Catalog = {
     wrap.hidden = false;
     wrap.innerHTML =
       '<span class="active-filters__label">Active filters</span>'
-      + chips.map(function (c) {
-        return '<span class="filter-chip">' + UI.escHtml(c) + '</span>';
-      }).join('')
+      + chips.join('')
       + '<button type="button" class="filter-chip-clear" id="clearFilterChips">Reset listing filters</button>';
 
     const clearBtn = document.getElementById('clearFilterChips');
     if (clearBtn) clearBtn.addEventListener('click', Catalog.resetFilters);
+    const clearCityBtn = document.getElementById('clearCityFilter');
+    if (clearCityBtn) clearCityBtn.addEventListener('click', Catalog.clearCityFilter);
   },
 
   async loadCars(page) {
@@ -171,6 +176,14 @@ const Catalog = {
       const pag = document.getElementById('carsPagination');
       if (pag) pag.hidden = true;
     }
+  },
+
+  clearCityFilter() {
+    if (typeof LocationState !== 'undefined' && LocationState.clear) {
+      LocationState.clear();
+    }
+    Catalog.page = 1;
+    Catalog.loadCars(1);
   },
 
   resetFilters() {

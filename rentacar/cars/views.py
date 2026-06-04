@@ -1,3 +1,6 @@
+import json
+from urllib.error import HTTPError, URLError
+
 from django.db.models import OuterRef, Subquery
 from rest_framework import status, generics, permissions, filters
 from rest_framework.response import Response
@@ -17,6 +20,8 @@ from rentacar.caching import (
 )
 from rentacar.utils import parse_bool
 from rentacar.image_validation import validate_car_image_file
+from rentacar.throttling import LocationRateThrottle
+from .geocoding import search_cities, reverse_geocode
 
 # Create your views here.
 
@@ -201,3 +206,42 @@ class AdminCarApprovalView(APIView):
             "car_id" : car.id,
             "is_approved": car.is_approved,
         }, status=status.HTTP_200_OK)
+
+
+class LocationSearchView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [LocationRateThrottle]
+
+    def get(self, request):
+        query = (request.query_params.get('q') or '').strip()
+        if len(query) < 2:
+            return Response([])
+        try:
+            return Response(search_cities(query))
+        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+            return Response(
+                {'detail': 'City lookup is temporarily unavailable.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
+class LocationReverseView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [LocationRateThrottle]
+
+    def get(self, request):
+        try:
+            lat = float(request.query_params.get('lat', ''))
+            lon = float(request.query_params.get('lon', ''))
+        except (TypeError, ValueError):
+            return Response({'detail': 'lat and lon are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = reverse_geocode(lat, lon)
+        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+            return Response(
+                {'detail': 'City lookup is temporarily unavailable.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        if not result:
+            return Response({'detail': 'No city found for this location.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
