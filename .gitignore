@@ -50,3 +50,4 @@ build/
 
 # Pytest
 .cache/
+postgres_data/

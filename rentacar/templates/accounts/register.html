@@ -1,91 +1,146 @@
-<!-- templates/accounts/register.html -->
 {% extends 'base.html' %}
-{% block title %}Create Account{% endblock %}
+{% block title %}Register — RentACar{% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-box">
-    <h2>Create your account</h2>
+<div class="auth-page auth-page--register">
+  <div class="auth-box auth-box--register">
 
-    <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="username" placeholder="Choose a username"/>
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="email" placeholder="your@email.com"/>
-    </div>
-    <div class="form-group">
-      <label>I want to</label>
-      <select id="role">
-        <option value="customer">Rent a car (Customer)</option>
-        <option value="owner">List my car (Owner)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="password" placeholder="Min 8 characters"/>
-    </div>
-    <div class="form-group">
-      <label>Confirm Password</label>
-      <input type="password" id="password2" placeholder="Repeat your password"/>
+    <div class="auth-brand" aria-hidden="true">
+      <svg class="icon icon-brand"><use href="#icon-logo"/></svg>
+      <span>RentACar</span>
     </div>
 
-    <div id="regError" class="form-error" style="margin-bottom:.75rem;"></div>
+    <h1>Create your account</h1>
+    <p class="sub">Join as a customer or list your car as an owner</p>
 
-    <button class="btn btn-primary" style="width:100%" onclick="doRegister()" id="regBtn">
+    <div class="auth-role-grid">
+      <div id="roleCustomer" class="auth-role-card active" role="button" tabindex="0"
+        aria-pressed="true" onclick="selectRole('customer')" onkeydown="roleKeySelect(event, 'customer')">
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
+        <div class="auth-role-title">Customer</div>
+        <div class="auth-role-desc text-small">I want to rent cars</div>
+      </div>
+      <div id="roleOwner" class="auth-role-card" role="button" tabindex="0"
+        aria-pressed="false" onclick="selectRole('owner')" onkeydown="roleKeySelect(event, 'owner')">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg>
+        <div class="auth-role-title">Car Owner</div>
+        <div class="auth-role-desc text-small">I want to list my car</div>
+      </div>
+    </div>
+
+    <input type="hidden" id="role" value="customer"/>
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-control" type="text" id="username" name="username"
+          placeholder="Choose a username" autocomplete="username" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-control" type="email" id="email" name="email"
+          placeholder="your@email.com" autocomplete="email" required/>
+      </div>
+    </div>
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" type="password" id="password" name="password"
+          placeholder="Min 8 characters" autocomplete="new-password" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password2">Confirm Password</label>
+        <input class="form-control" type="password" id="password2" name="password2"
+          placeholder="Repeat password" autocomplete="new-password" required/>
+      </div>
+    </div>
+
+    <div class="err-box" id="regErr"></div>
+
+    <button class="btn btn-primary btn-block btn-lg" id="regBtn" onclick="doRegister()">
       Create Account
     </button>
 
-    <p class="auth-note">
-      Already have an account? <a href="/login/">Login here</a>
-    </p>
+    <div class="footer">
+      Already have an account? <a href="/login/">Sign in</a>
+    </div>
+
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function doRegister() {
-    const username  = document.getElementById('username').value.trim();
-    const email     = document.getElementById('email').value.trim();
-    const role      = document.getElementById('role').value;
-    const password  = document.getElementById('password').value;
-    const password2 = document.getElementById('password2').value;
-    const btn       = document.getElementById('regBtn');
-    const errEl     = document.getElementById('regError');
+function selectRole(role) {
+  document.getElementById('role').value = role;
+  document.getElementById('roleCustomer').classList.toggle('active', role === 'customer');
+  document.getElementById('roleOwner').classList.toggle('active', role === 'owner');
+  document.getElementById('roleCustomer').classList.toggle('selected', role === 'customer');
+  document.getElementById('roleOwner').classList.toggle('selected', role === 'owner');
+  document.getElementById('roleCustomer').setAttribute('aria-pressed', role === 'customer' ? 'true' : 'false');
+  document.getElementById('roleOwner').setAttribute('aria-pressed', role === 'owner' ? 'true' : 'false');
+}
 
-    if (!username || !email || !password || !password2) {
-      errEl.textContent = 'Please fill in all fields.';
-      return;
-    }
-
-    if (password !== password2) {
-      errEl.textContent = 'Passwords do not match.';
-      return;
-    }
-
-    btn.disabled      = true;
-    btn.innerHTML     = '<span class="spinner"></span> Creating account...';
-    errEl.textContent = '';
-
-    try {
-      const data = await API.post('/api/accounts/register/', {
-        username, email, role, password, password2
-      });
-      API.saveSession(data.token, data.user);
-      showFlash('Account created! Redirecting...', 'success');
-
-      setTimeout(() => {
-        if (role === 'owner')    window.location.href = '/dashboard/owner/';
-        else window.location.href = '/dashboard/customer/';
-      }, 800);
-
-    } catch (err) {
-      errEl.textContent = err.message;
-      btn.disabled  = false;
-      btn.innerHTML = 'Create Account';
-    }
+function roleKeySelect(e, role) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    selectRole(role);
   }
+}
+
+async function doRegister() {
+  const username  = document.getElementById('username').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const role      = document.getElementById('role').value;
+  const password  = document.getElementById('password').value;
+  const password2 = document.getElementById('password2').value;
+  const errBox    = document.getElementById('regErr');
+  const btn       = document.getElementById('regBtn');
+
+  errBox.style.display = 'none';
+
+  if (!username || !email || !password || !password2) {
+    errBox.textContent   = 'Please fill in all fields.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if (password !== password2) {
+    errBox.textContent   = 'Passwords do not match.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if (password.length < 8) {
+    errBox.textContent   = 'Password must be at least 8 characters.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Creating account...';
+
+  try {
+    const data = await API.post('/api/accounts/register/', {
+      username, email, role, password, password2
+    });
+    API.save(data.token, data.user);
+    toast('Account created successfully!', 'success');
+
+    setTimeout(function() {
+      if (role === 'owner') window.location.href = '/dashboard/owner/';
+      else                  window.location.href = '/dashboard/customer/';
+    }, 600);
+
+  } catch(err) {
+    errBox.textContent   = err.message;
+    errBox.style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = 'Create Account';
+  }
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') doRegister();
+});
 </script>
 {% endblock %}

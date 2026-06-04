@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, status, permissions
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.response import Response
@@ -7,12 +7,21 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout
 from .models import *
 from .serializers import *
+from .permissions import IsPlatformAdmin
+from rentacar.caching import (
+    NoCacheMixin,
+    RedisListCacheMixin,
+    admin_owners_key,
+    invalidate_admin_lists,
+)
+from rentacar.throttling import AuthRateThrottle
 
 # Create your views here.
 
 class RegisterView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
@@ -33,6 +42,7 @@ class RegisterView(APIView):
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -123,7 +133,43 @@ class OwnerProfileView(generics.RetrieveUpdateAPIView):
         if not request.user.is_owner:
             return Response({'message': 'Only owners can access this endpoint.'}, status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
-    
+
+
+class AdminOwnerListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    serializer_class = OwnerProfileSerializer
+    queryset = OwnerProfile.objects.all().select_related('user')
+    redis_cache_key = admin_owners_key()
+
+
+class AdminOwnerVerificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+
+    def patch(self, request, pk):
+        profile = get_object_or_404(
+            OwnerProfile.objects.select_related('user'),
+            pk=pk
+        )
+        if not request.user.is_platform_admin:
+            return Response({'message': 'Only admins can manage owner verification.'}, status=status.HTTP_403_FORBIDDEN)
+
+        is_verified = request.data.get('is_verified')
+        if is_verified is None:
+            return Response({
+                'error': "Please provide 'is_verified': true or false."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if isinstance(is_verified, str):
+            is_verified = is_verified.lower() in ['true', '1', 'yes']
+
+        profile.is_verified = bool(is_verified)
+        profile.save()
+        invalidate_admin_lists()
+        return Response({
+            'message': f"Owner profile has been {'verified' if profile.is_verified else 'marked as unverified' }.",
+            'owner_profile': OwnerProfileSerializer(profile).data
+        }, status=status.HTTP_200_OK)
+
 
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]

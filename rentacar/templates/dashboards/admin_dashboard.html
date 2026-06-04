@@ -1,151 +1,615 @@
-<!-- templates/dashboards/admin_dashboard.html -->
 {% extends 'base.html' %}
-{% block title %}Admin Panel{% endblock %}
+{% block title %}Admin Panel — RentACar{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Admin Panel</h1>
-    <p class="page-subtitle">Review listings, manage bookings, and keep the marketplace safe.</p>
+<div class="dash-layout role-admin">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sAvatar"
+        style="background:var(--danger-light);color:var(--danger)"></div>
+      <div>
+        <div class="sidebar-name" id="sName"></div>
+        <span class="sidebar-role" style="background:var(--danger)">Admin</span>
+      </div>
+    </div>
+
+    <div class="sidebar-menu">
+      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </button>
+      <button class="s-item" id="btn-cars" onclick="showTab('cars', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
+      </button>
+      <button class="s-item" id="btn-owners" onclick="showTab('owners', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+        <span>Owner Verifications</span>
+        <span class="s-badge" id="pendingOwnersBadge" hidden></span>
+      </button>
+      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
+      </button>
+      <div class="s-divider"></div>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="dash-main">
+
+    <!-- ══ OVERVIEW TAB ══ -->
+    <div class="tab-panel active" id="tab-overview">
+
+      <div class="page-head">
+        <div>
+          <h1>Admin Panel</h1>
+          <p>Full platform control and monitoring</p>
+        </div>
+      </div>
+
+      <div class="dash-quick-actions" role="group" aria-label="Quick actions">
+        <button type="button" class="dash-action-chip dash-action-chip--primary dash-action-chip--wide"
+          id="adminQuickOwners"
+          onclick="showTab('owners', document.getElementById('btn-owners'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+          Owner verifications
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('cars', document.getElementById('btn-cars'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg>
+          All cars
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
+          All bookings
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="aStats">
+        <div class="loading"><span class="spinner"></span></div>
+      </div>
+
+      <!-- Recent bookings -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Recent Bookings</h2>
+          <button type="button" class="btn btn-ghost btn-sm"
+            onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+            View all
+          </button>
+        </div>
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Customer</th><th>Car</th>
+                <th>Dates</th><th>Cost</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="aBookingsPreview">
+              <tr><td colspan="6">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ ALL CARS TAB ══ -->
+    <div class="tab-panel" id="tab-cars">
+
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div><h1>All Cars</h1><p>Every car on the platform</p></div>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='admin_cars' tabs_id='adminCarsFilterTabs' tabs_label='Filter cars' %}
+        <div class="results-bar">
+          <span id="adminCarsResultCount" class="results-bar__count text-caption"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Car</th><th>Owner</th><th class="col-hide-sm">Type</th>
+                <th>Price/day</th><th class="col-hide-sm">Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="allCarsTable">
+              <tr><td colspan="9">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="adminCarsPagination" class="pagination-wrap" hidden></div>
+
+    </div>
+
+    <!-- ══ ALL BOOKINGS TAB ══ -->
+    <div class="tab-panel" id="tab-bookings">
+
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div><h1>All Bookings</h1><p>Monitor every booking on the platform</p></div>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='adminBookingsFilterTabs' tabs_label='Filter bookings by status' %}
+        <div class="results-bar">
+          <span id="adminBookingsResultCount" class="results-bar__count text-caption"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Customer</th><th>Car</th><th class="col-hide-sm">Owner</th>
+                <th>Period</th><th class="col-hide-sm">Duration</th>
+                <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="allBookingsTable">
+              <tr><td colspan="9">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="adminBookingsPagination" class="pagination-wrap" hidden></div>
+
+    </div>
+
+    <!-- ══ OWNER APPROVALS TAB ══ -->
+    <div class="tab-panel" id="tab-owners">
+
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div><h1>Owner Verifications</h1><p>Approve and review owner profiles.</p></div>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='admin_owners' tabs_id='adminOwnersFilterTabs' tabs_label='Filter owners' %}
+        <div class="results-bar">
+          <span id="adminOwnersResultCount" class="results-bar__count text-caption"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Owner</th><th class="col-hide-sm">Email</th><th class="col-hide-sm">Phone</th><th>Status</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="allOwnersTable">
+              <tr><td colspan="6">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="adminOwnersPagination" class="pagination-wrap" hidden></div>
+
+    </div>
+
   </div>
 </div>
-
-<!-- Stats -->
-<div class="stats-row">
-  <div class="stat-card">
-    <div class="stat-number" id="statCars">—</div>
-    <div class="stat-label">Total Cars</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number" id="statBookings">—</div>
-    <div class="stat-label">Total Bookings</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number" id="statPending">—</div>
-    <div class="stat-label">Pending Approvals</div>
-  </div>
-</div>
-
-<!-- Pending Cars -->
-<div class="card" style="margin-bottom:1.5rem">
-  <h2 style="margin-bottom:1rem">Cars Awaiting Approval</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr><th>#</th><th>Car</th><th>Owner</th><th>Price/day</th><th>Location</th><th>Action</th></tr>
-      </thead>
-      <tbody id="pendingCars">
-        <tr><td colspan="6"><span class="spinner"></span></td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- All Bookings -->
-<div class="card">
-  <h2 style="margin-bottom:1rem">All Bookings</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr><th>#</th><th>Customer</th><th>Car</th><th>Dates</th><th>Cost</th><th>Status</th><th>Action</th></tr>
-      </thead>
-      <tbody id="allBookings">
-        <tr><td colspan="7"><span class="spinner"></span></td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-  if (!API.isLoggedIn()) window.location.href = '/login/';
-  if (API.getRole() !== 'admin') window.location.href = '/';
+/* ── Guard ──────────────────────────── */
+const user = API.getUser();
+if (!API.loggedIn() || (API.role() !== 'admin' && !(user && user.is_superuser))) {
+  window.location.href = '/login/';
+}
+let allAdminCars     = [];
+let allAdminBookings = [];
+let allAdminOwners   = [];
+let adminCarsViewList = [];
+let adminCarsPage = 1;
+let adminCarsFilter = 'all';
+let adminBookingsViewList = [];
+let adminBookingsPage = 1;
+let adminBookingsStatusFilter = '';
+let adminOwnersViewList = [];
+let adminOwnersPage = 1;
+let adminOwnersFilter = 'all';
 
-  const STATUS_BADGE = {
-    pending:'badge-amber', approved:'badge-green',
-    rejected:'badge-red', cancelled:'badge-gray', completed:'badge-blue',
-  };
+/* ── Sidebar init ───────────────────── */
+document.getElementById('sName').textContent   = user ? user.username : '';
+document.getElementById('sAvatar').textContent = initials(user ? user.username : '');
 
-  async function loadAdmin() {
-    try {
-      const [cars, bookings] = await Promise.all([
-        API.get('/api/cars/admin/all/'),
-        API.get('/api/bookings/admin/all/'),
-      ]);
+/* ── Tab switching ──────────────────── */
+function showTab(name, btn) {
+  UI.switchDashLegacy({
+    panelClass: 'tab-panel',
+    navClass: 's-item',
+    panelPrefix: 'tab-',
+    tabId: name,
+    btn: btn,
+    onActivate: function (n) {
+      if (n === 'overview') loadOverview();
+      if (n === 'cars') loadAllCars();
+      if (n === 'owners') loadAllOwners();
+      if (n === 'bookings') loadAllBookings();
+    },
+  });
+}
 
-      const pending = cars.filter(c => !c.is_approved);
-      document.getElementById('statCars').textContent     = cars.length;
-      document.getElementById('statBookings').textContent = bookings.length;
-      document.getElementById('statPending').textContent  = pending.length;
-
-      // Pending cars table
-      document.getElementById('pendingCars').innerHTML = pending.length
-        ? pending.map(c => `
-          <tr>
-            <td>#${c.id}</td>
-            <td>${c.brand} ${c.model} (${c.year})</td>
-            <td>${c.owner.username}</td>
-            <td>$${c.price_per_day}</td>
-            <td>${c.location}</td>
-            <td>
-              <button class="btn btn-success" style="font-size:.8rem;padding:.3rem .6rem;margin-right:.25rem"
-                onclick="approveCar(${c.id}, true)">Approve</button>
-              <button class="btn btn-danger"  style="font-size:.8rem;padding:.3rem .6rem"
-                onclick="approveCar(${c.id}, false)">Reject</button>
-            </td>
-          </tr>`).join('')
-        : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No pending cars</td></tr>';
-
-      // All bookings table
-      document.getElementById('allBookings').innerHTML = bookings.length
-        ? bookings.map(b => `
-          <tr>
-            <td>#${b.id}</td>
-            <td>${b.customer.username}</td>
-            <td>${b.car.brand} ${b.car.model}</td>
-            <td>${b.start_date} → ${b.end_date}</td>
-            <td>$${b.total_cost}</td>
-            <td><span class="badge ${STATUS_BADGE[b.status]}">${b.status}</span></td>
-            <td>
-              <select onchange="adminUpdateBooking(${b.id}, this.value)" style="font-size:.8rem;padding:.25rem .5rem;border-radius:6px;border:1px solid var(--border)">
-                <option value="">Change status</option>
-                <option value="approved">Approve</option>
-                <option value="rejected">Reject</option>
-                <option value="cancelled">Cancel</option>
-                <option value="completed">Complete</option>
-              </select>
-            </td>
-          </tr>`).join('')
-        : '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No bookings found</td></tr>';
-
-    } catch (err) {
-      showFlash(err.message, 'error');
+function updatePendingOwnersBadge(count) {
+  var badge = document.getElementById('pendingOwnersBadge');
+  var quick = document.getElementById('adminQuickOwners');
+  if (badge) {
+    if (count > 0) {
+      badge.hidden = false;
+      badge.textContent = count > 99 ? '99+' : String(count);
+      badge.setAttribute('aria-label', count + ' pending verifications');
+    } else {
+      badge.hidden = true;
+      badge.textContent = '';
+      badge.removeAttribute('aria-label');
     }
   }
-
-  async function approveCar(id, approve) {
-    try {
-      await API.patch(`/api/cars/admin/${id}/approve/`, { is_approved: approve });
-      showFlash(`Car ${approve ? 'approved' : 'rejected'}.`, 'success');
-      loadAdmin();
-    } catch (err) {
-      showFlash(err.message, 'error');
+  if (quick) {
+    var label = 'Owner verifications';
+    if (count > 0) label += ' (' + count + ' pending)';
+    quick.setAttribute('aria-label', label);
+    var chipCount = quick.querySelector('.dash-action-chip__count');
+    if (count > 0) {
+      if (!chipCount) {
+        chipCount = document.createElement('span');
+        chipCount.className = 'dash-action-chip__count';
+        quick.appendChild(chipCount);
+      }
+      chipCount.textContent = count > 99 ? '99+' : String(count);
+    } else if (chipCount) {
+      chipCount.remove();
     }
   }
+}
 
-  async function adminUpdateBooking(id, newStatus) {
-    if (!newStatus) return;
-    try {
-      await API.patch(`/api/bookings/admin/${id}/action/`, { status: newStatus });
-      showFlash(`Booking updated to "${newStatus}".`, 'success');
-      loadAdmin();
-    } catch (err) {
-      showFlash(err.message, 'error');
+/* ══ OVERVIEW ═══════════════════════ */
+async function loadOverview() {
+  try {
+    var results = await Promise.all([
+      API.fetchAllPages('/api/cars/admin/all/'),
+      API.fetchAllPages('/api/bookings/admin/all/'),
+      API.fetchAllPages('/api/accounts/admin/owners/'),
+    ]);
+    allAdminCars = results[0];
+    allAdminBookings = results[1];
+    allAdminOwners = results[2];
+
+    var totalCars      = allAdminCars.length;
+    var available      = allAdminCars.filter(function(c){ return c.is_available; }).length;
+    var totalBooks     = allAdminBookings.length;
+    var activeBooks    = allAdminBookings.filter(function(b){ return b.status === 'approved'; }).length;
+    var pending        = allAdminBookings.filter(function(b){ return b.status === 'pending'; }).length;
+    var pendingOwners  = allAdminOwners.filter(function(o){ return !o.is_verified; }).length;
+    var verifiedOwners = allAdminOwners.filter(function(o){ return o.is_verified; }).length;
+    var revenue        = allAdminBookings
+      .filter(function(b){ return b.status === 'completed'; })
+      .reduce(function(sum, b){ return sum + parseFloat(b.total_cost); }, 0);
+
+    updatePendingOwnersBadge(pendingOwners);
+
+    /* stat cards */
+    document.getElementById('aStats').innerHTML =
+      UI.statCardButton('cars', totalCars, 'Total Cars',
+        "showTab('cars', document.getElementById('btn-cars'))") +
+      UI.statCardButton('active', available, 'Available Cars',
+        "showTab('cars', document.getElementById('btn-cars'))") +
+      UI.statCardButton('owners', allAdminOwners.length, 'Owner Profiles',
+        "showTab('owners', document.getElementById('btn-owners'))") +
+      UI.statCardButton('verified', verifiedOwners, 'Verified Owners',
+        "showTab('owners', document.getElementById('btn-owners'))") +
+      UI.statCardButton('pending', pendingOwners, 'Pending Verification',
+        "showTab('owners', document.getElementById('btn-owners'))") +
+      UI.statCardButton('bookings', totalBooks, 'Total Bookings',
+        "showTab('bookings', document.getElementById('btn-bookings'))") +
+      UI.statCardButton('active', activeBooks, 'Active Rentals',
+        "showTab('bookings', document.getElementById('btn-bookings'))") +
+      UI.statCard('revenue', '$' + revenue.toFixed(0), 'Platform Revenue');
+
+    /* bookings preview */
+    if (!allAdminBookings.length) {
+      document.getElementById('aBookingsPreview').innerHTML =
+        '<tr><td colspan="6">'
+        + UI.emptyState('No bookings yet', 'Bookings will appear here as customers rent cars.')
+        + '</td></tr>';
+    } else {
+      document.getElementById('aBookingsPreview').innerHTML =
+        allAdminBookings.slice(0, 5).map(function(b) {
+          return '<tr>'
+            + '<td class="td-id">#' + b.id + '</td>'
+            + '<td>' + UI.escHtml(b.customer.username) + '</td>'
+            + '<td>' + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</td>'
+            + '<td class="td-meta">'
+            + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+            + '<td class="td-money">$'
+            + parseFloat(b.total_cost).toFixed(2) + '</td>'
+            + '<td>' + statusBadge(b.status) + '</td>'
+            + '</tr>';
+        }).join('');
     }
+    UI.refreshTableScrollHints();
+
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+/* ══ ALL CARS ═══════════════════════ */
+async function loadAllCars() {
+  try {
+    allAdminCars = await API.fetchAllPages('/api/cars/admin/all/');
+    adminCarsPage = 1;
+    applyAdminCarsFilter(adminCarsFilter);
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+function applyAdminCarsFilter(filter) {
+  adminCarsFilter = filter || 'all';
+  adminCarsPage = 1;
+  renderCarsTable(UI.filterCarList(allAdminCars, adminCarsFilter));
+  UI.scrollToEl('allCarsTable');
+}
+
+async function setCarVisibility(id, isApproved) {
+  try {
+    await API.patch('/api/cars/admin/' + id + '/approve/', { is_approved: isApproved });
+    toast(isApproved ? 'Listing restored on Browse Cars.' : 'Listing hidden from customers.', 'success');
+    loadAllCars();
+    loadOverview();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+function renderCarsTable(list) {
+  adminCarsViewList = list;
+  var meta = UI.paginateSlice(list, adminCarsPage, UI_PAGE.table);
+  adminCarsPage = meta.page;
+  var tbody = document.getElementById('allCarsTable');
+
+  UI.updateResultsCount('adminCarsResultCount', {
+    filtered: list.length,
+    total: allAdminCars.length,
+    label: allAdminCars.length === 1 ? 'car' : 'cars',
+    filterLabel: UI.carFilterLabel(adminCarsFilter),
+  });
+
+  if (!meta.items.length) {
+    var carEmpty = adminCarsFilter && adminCarsFilter !== 'all'
+      ? 'No cars match this filter.'
+      : 'No cars found';
+    tbody.innerHTML =
+      '<tr><td colspan="9">'
+      + '<div class="empty"><h3>' + UI.escHtml(carEmpty) + '</h3></div>'
+      + '</td></tr>';
+    UI.mountPagination('adminCarsPagination', meta, function () {}, { label: 'cars' });
+    return;
   }
 
-  loadAdmin();
+  tbody.innerHTML = meta.items.map(function(c) {
+    var vis = c.is_approved
+      ? '<span class="badge badge-green">On marketplace</span>'
+      : '<span class="badge badge-red">Hidden</span>';
+    var actions = '<div class="table-actions">'
+      + (c.is_approved
+        ? '<button type="button" class="btn btn-sm btn-danger" onclick="setCarVisibility(' + c.id + ', false)">Hide</button>'
+        : '<button type="button" class="btn btn-sm btn-primary" onclick="setCarVisibility(' + c.id + ', true)">Restore</button>')
+      + '</div>';
+    return '<tr>'
+      + '<td class="td-id">#' + c.id + '</td>'
+      + '<td>'
+      + '<a href="/cars/' + encodeURIComponent(c.id) + '/" target="_blank" rel="noopener" class="text-strong">'
+      + UI.escHtml(c.brand + ' ' + c.model) + '</a>'
+      + '<div class="text-subline">' + UI.escHtml(c.year) + '</div>'
+      + '</td>'
+      + '<td class="text-small">' + UI.escHtml(c.owner.username) + '</td>'
+      + '<td class="col-hide-sm"><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
+      + '<td class="td-money">$'
+      + parseFloat(c.price_per_day).toFixed(2) + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(c.location) + '</td>'
+      + '<td>' + vis + '</td>'
+      + '<td>'
+      + (c.is_available
+          ? '<span class="badge badge-green">Yes</span>'
+          : '<span class="badge badge-gray">No</span>')
+      + '</td>'
+      + '<td>' + actions + '</td>'
+      + '</tr>';
+  }).join('');
+
+  UI.mountPagination('adminCarsPagination', meta, function (p) {
+    adminCarsPage = p;
+    renderCarsTable(adminCarsViewList);
+    UI.scrollToEl('allCarsTable');
+  }, { label: 'cars' });
+  UI.refreshTableScrollHints();
+}
+
+/* ══ ALL BOOKINGS ═══════════════════ */
+async function loadAllBookings() {
+  try {
+    allAdminBookings = await API.fetchAllPages('/api/bookings/admin/all/');
+    adminBookingsPage = 1;
+    applyAdminBookingsFilter(adminBookingsStatusFilter);
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+function applyAdminBookingsFilter(status) {
+  adminBookingsStatusFilter = status || '';
+  adminBookingsPage = 1;
+  var list = adminBookingsStatusFilter
+    ? allAdminBookings.filter(function (b) { return b.status === adminBookingsStatusFilter; })
+    : allAdminBookings;
+  renderBookingsTable(list);
+  UI.scrollToEl('allBookingsTable');
+}
+
+function renderBookingsTable(list) {
+  adminBookingsViewList = list;
+  var meta = UI.paginateSlice(list, adminBookingsPage, UI_PAGE.table);
+  adminBookingsPage = meta.page;
+  var tbody = document.getElementById('allBookingsTable');
+
+  UI.updateResultsCount('adminBookingsResultCount', {
+    filtered: list.length,
+    total: allAdminBookings.length,
+    label: allAdminBookings.length === 1 ? 'booking' : 'bookings',
+    filterLabel: UI.bookingStatusLabel(adminBookingsStatusFilter),
+  });
+
+  if (!meta.items.length) {
+    var bookEmpty = adminBookingsStatusFilter
+      ? 'No ' + UI.bookingStatusLabel(adminBookingsStatusFilter).toLowerCase() + ' bookings.'
+      : 'No bookings found';
+    tbody.innerHTML =
+      '<tr><td colspan="9">'
+      + '<div class="empty"><h3>' + UI.escHtml(bookEmpty) + '</h3></div>'
+      + '</td></tr>';
+    UI.mountPagination('adminBookingsPagination', meta, function () {}, { label: 'bookings' });
+    return;
+  }
+
+  tbody.innerHTML = meta.items.map(function(b) {
+    return '<tr>'
+      + '<td class="td-id">#' + b.id + '</td>'
+      + '<td>'
+      + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
+      + '<div class="text-subline">'
+      + UI.escHtml(b.customer.email || '') + '</div>'
+      + '</td>'
+      + '<td>'
+      + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" target="_blank">'
+      + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
+      + '</td>'
+      + '<td class="td-meta col-hide-sm">'
+      + UI.escHtml(b.car.owner ? b.car.owner.username : '—') + '</td>'
+      + '<td class="td-meta">'
+      + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(UI.bookingDurationLabel(b)) + '</td>'
+      + '<td class="col-hide-sm"><span class="badge badge-blue">'
+      + UI.escHtml(UI.rentalTypeLabel(b.rental_type)) + '</span></td>'
+      + '<td class="td-money">$'
+      + parseFloat(b.total_cost).toFixed(2) + '</td>'
+      + '<td>' + statusBadge(b.status) + '</td>'
+      + '</tr>';
+  }).join('');
+
+  UI.mountPagination('adminBookingsPagination', meta, function (p) {
+    adminBookingsPage = p;
+    renderBookingsTable(adminBookingsViewList);
+    UI.scrollToEl('allBookingsTable');
+  }, { label: 'bookings' });
+  UI.refreshTableScrollHints();
+}
+
+async function loadAllOwners() {
+  try {
+    allAdminOwners = await API.fetchAllPages('/api/accounts/admin/owners/');
+    adminOwnersPage = 1;
+    var pending = allAdminOwners.filter(function (o) { return !o.is_verified; }).length;
+    updatePendingOwnersBadge(pending);
+    applyAdminOwnersFilter(adminOwnersFilter);
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+function applyAdminOwnersFilter(filter) {
+  adminOwnersFilter = filter || 'all';
+  adminOwnersPage = 1;
+  var list = allAdminOwners;
+  if (adminOwnersFilter === 'pending') {
+    list = list.filter(function (o) { return !o.is_verified; });
+  } else if (adminOwnersFilter === 'verified') {
+    list = list.filter(function (o) { return o.is_verified; });
+  }
+  renderOwnersTable(list);
+  UI.scrollToEl('allOwnersTable');
+}
+
+function renderOwnersTable(list) {
+  adminOwnersViewList = list;
+  var meta = UI.paginateSlice(list, adminOwnersPage, UI_PAGE.table);
+  adminOwnersPage = meta.page;
+  var tbody = document.getElementById('allOwnersTable');
+
+  var ownerFilterLabel = adminOwnersFilter === 'pending' ? 'Pending verification'
+    : adminOwnersFilter === 'verified' ? 'Verified' : '';
+
+  UI.updateResultsCount('adminOwnersResultCount', {
+    filtered: list.length,
+    total: allAdminOwners.length,
+    label: allAdminOwners.length === 1 ? 'owner' : 'owners',
+    filterLabel: ownerFilterLabel,
+  });
+
+  if (!meta.items.length) {
+    var ownerEmpty = ownerFilterLabel
+      ? 'No ' + ownerFilterLabel.toLowerCase() + ' owners.'
+      : 'No owners found';
+    tbody.innerHTML =
+      '<tr><td colspan="6">'
+      + '<div class="empty"><h3>' + UI.escHtml(ownerEmpty) + '</h3></div>'
+      + '</td></tr>';
+    UI.mountPagination('adminOwnersPagination', meta, function () {}, { label: 'owners' });
+    return;
+  }
+
+  tbody.innerHTML = meta.items.map(function(o) {
+    var actionButtons = '<div class="table-actions">'
+      + (o.is_verified
+        ? '<button type="button" class="btn btn-sm btn-danger" onclick="updateOwnerStatus(' + o.id + ', false)">Revoke</button>'
+        : '<button type="button" class="btn btn-sm btn-primary" onclick="updateOwnerStatus(' + o.id + ', true)">Approve</button>'
+          + '<button type="button" class="btn btn-sm btn-outline" onclick="updateOwnerStatus(' + o.id + ', false)">Reject</button>')
+      + '</div>';
+
+    return '<tr>'
+      + '<td class="td-id">#' + o.id + '</td>'
+      + '<td>' + UI.escHtml(o.user.username || '') + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(o.user.email || '—') + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(o.phone_number || '—') + '</td>'
+      + '<td>' + (o.is_verified
+          ? '<span class="badge badge-green">Verified</span>'
+          : '<span class="badge badge-amber">Pending</span>') + '</td>'
+      + '<td>' + actionButtons + '</td>'
+      + '</tr>';
+  }).join('');
+
+  UI.mountPagination('adminOwnersPagination', meta, function (p) {
+    adminOwnersPage = p;
+    renderOwnersTable(adminOwnersViewList);
+    UI.scrollToEl('allOwnersTable');
+  }, { label: 'owners' });
+  UI.refreshTableScrollHints();
+}
+
+async function updateOwnerStatus(id, isVerified) {
+  try {
+    await API.patch('/api/accounts/admin/owners/' + id + '/verify/', {
+      is_verified: isVerified
+    });
+    toast(isVerified ? 'Owner profile approved.' : 'Owner profile rejected.', 'success');
+    loadAllOwners();
+    loadOverview();
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+/* ── Boot ───────────────────────────── */
+UI.initFilterTabs('adminCarsFilterTabs', applyAdminCarsFilter);
+UI.initFilterTabs('adminBookingsFilterTabs', applyAdminBookingsFilter);
+UI.initFilterTabs('adminOwnersFilterTabs', applyAdminOwnersFilter);
+loadOverview();
 </script>
 {% endblock %}

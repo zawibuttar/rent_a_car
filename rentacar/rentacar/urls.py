@@ -20,9 +20,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from .import page_views
+from .health_views import HealthView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/health/', HealthView.as_view(), name='health'),
     path('api/accounts/', include('accounts.urls')),
     path('api/cars/', include('cars.urls')),
     path('api/bookings/', include('bookings.urls')),
@@ -33,6 +35,7 @@ urlpatterns = [
     path('cars/<int:pk>/', page_views.car_detail, name='car-detail-page'),
     path('login/', page_views.login_page, name='login-page'),
     path('register/', page_views.register_page, name='register-page'),
+    path('dashboard/', page_views.main_dashboard, name='main-dashboard'),
     path('dashboard/customer/', page_views.customer_dashboard, name='customer-dashboard'),
     path('dashboard/owner/', page_views.owner_dashboard, name='owner-dashboard'),
     path('dashboard/admin/', page_views.admin_dashboard, name='admin-dashboard'),

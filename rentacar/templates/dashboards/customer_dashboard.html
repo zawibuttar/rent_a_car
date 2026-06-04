@@ -1,54 +1,316 @@
-<!-- templates/dashboards/customer_dashboard.html -->
 {% extends 'base.html' %}
-{% block title %}My Dashboard{% endblock %}
+{% block title %}Customer Dashboard — RentACar{% endblock %}
 
 {% block content %}
+<div class="dash-layout role-customer">
 
-<div class="page-header">
-  <div>
-    <h1 class="page-title">My Dashboard</h1>
-    <p class="page-subtitle">Track your bookings, manage active trips, and view past rentals from one place.</p>
-  </div>
-  <div class="page-actions">
-    <a href="/cars/" class="btn btn-primary">Browse Cars</a>
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sAvatar" style="background:var(--primary-light);color:var(--primary)"></div>
+      <div>
+        <div class="sidebar-name" id="sName"></div>
+        <span class="sidebar-role" style="background:var(--primary)">Customer</span>
+      </div>
+    </div>
+
+    <div class="sidebar-menu">
+      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </button>
+      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> My Bookings
+      </button>
+      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
+      </button>
+      <button class="s-item" id="btn-password" onclick="showTab('password', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
+      </button>
+      <div class="s-divider"></div>
+      <a href="/cars/" class="s-item">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg> Browse Cars
+      </a>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="dash-main">
+
+    <!-- OVERVIEW TAB -->
+    <div class="tab-panel active" id="tab-overview">
+
+      <div class="page-head">
+        <div>
+          <h1>Overview</h1>
+          <p id="welcomeMsg"></p>
+        </div>
+        <a href="/cars/" class="btn btn-primary">+ Book a Car</a>
+      </div>
+
+      <div class="dash-quick-actions" role="group" aria-label="Quick actions">
+        <a href="/cars/" class="dash-action-chip dash-action-chip--primary dash-action-chip--wide">
+          <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          Browse cars
+        </a>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
+          My bookings
+        </button>
+        <button type="button" class="dash-action-chip"
+          onclick="showTab('profile', document.getElementById('btn-profile'))">
+          <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
+          Profile
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="statsRow">
+        <div class="loading"><span class="spinner"></span></div>
+      </div>
+
+      <!-- Recent bookings -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Recent Bookings</h2>
+          <button type="button" class="btn btn-ghost btn-sm"
+            onclick="showTab('bookings', document.getElementById('btn-bookings'))">
+            View all
+          </button>
+        </div>
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>Car</th>
+                <th>Dates</th>
+                <th>Cost</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentTable">
+              <tr>
+                <td colspan="4">
+                  <div class="loading"><span class="spinner"></span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOOKINGS TAB -->
+    <div class="tab-panel" id="tab-bookings">
+
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div>
+            <h1>My Bookings</h1>
+            <p>All your rental history</p>
+          </div>
+          <a href="/cars/" class="btn btn-primary">+ New Booking</a>
+        </div>
+        {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='bookingsFilterTabs' tabs_label='Filter bookings by status' %}
+        <div class="results-bar">
+          <span id="bookingsResultCount" class="results-bar__count text-caption"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Car</th>
+                <th class="col-hide-sm">Location</th>
+                <th>Period</th>
+                <th class="col-hide-sm">Duration</th>
+                <th class="col-hide-sm">Type</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTable">
+              <tr>
+                <td colspan="9">
+                  <div class="loading"><span class="spinner"></span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="bookingsPagination" class="pagination-wrap" hidden></div>
+
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div class="tab-panel" id="tab-profile">
+
+      <div class="page-head">
+        <div>
+          <h1>My Profile</h1>
+          <p>View and update your personal information</p>
+        </div>
+      </div>
+
+      <div class="profile-layout">
+
+        <!-- Profile card -->
+        <div class="profile-card">
+          <div class="profile-cover"></div>
+          <div class="profile-inner">
+            <div class="profile-av" id="profileAv" style="background:var(--primary-light);color:var(--primary)"></div>
+            <div class="profile-name" id="profileName"></div>
+            <div class="profile-email" id="profileEmail"></div>
+            <div class="profile-badge-row">
+              <span class="badge badge-blue">Customer</span>
+            </div>
+            <div class="profile-stats">
+              <div>
+                <div class="ps-val" id="psTot">—</div>
+                <div class="ps-lbl">Total</div>
+              </div>
+              <div>
+                <div class="ps-val" id="psAct">—</div>
+                <div class="ps-lbl">Active</div>
+              </div>
+              <div>
+                <div class="ps-val" id="psDone">—</div>
+                <div class="ps-lbl">Done</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit form -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Edit Profile</h2>
+          </div>
+          <div class="card-body">
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input class="form-control" type="tel" id="pPhone" placeholder="+92-300-0000000" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">National ID</label>
+                <input class="form-control" type="text" id="pNid" placeholder="35201-1234567-8" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Driving License Number</label>
+              <input class="form-control" type="text" id="pLicense" placeholder="e.g. LHR-1234567" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Address</label>
+              <textarea class="form-control" id="pAddress" placeholder="Your full address..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Profile Picture</label>
+              <input class="form-control" type="file" id="pPic" accept="image/*" />
+              <p class="form-hint">JPG or PNG, max 5MB</p>
+            </div>
+
+            <div class="err-box" id="profileErr"></div>
+
+            <button class="btn btn-primary" onclick="saveProfile()">
+              Save Changes
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CHANGE PASSWORD TAB -->
+    <div class="tab-panel" id="tab-password">
+
+      <div class="page-head">
+        <div>
+          <h1>Change Password</h1>
+          <p>Update your account password</p>
+        </div>
+      </div>
+
+      <div class="card form-panel-narrow">
+        <div class="card-body">
+
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input class="form-control" type="password" id="oldPwd" placeholder="Enter current password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input class="form-control" type="password" id="newPwd" placeholder="Min 8 characters" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input class="form-control" type="password" id="newPwd2" placeholder="Repeat new password" />
+          </div>
+
+          <div class="err-box" id="pwdErr"></div>
+
+          <button class="btn btn-primary" onclick="changePassword()">
+            Update Password
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+
   </div>
 </div>
 
-<!-- Stats -->
-<div class="stats-row" id="statsRow">
-  <div class="stat-card">
-    <div class="stat-number" id="totalBookings">—</div>
-    <div class="stat-label">Total Bookings</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number" id="activeBookings">—</div>
-    <div class="stat-label">Active Bookings</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number" id="completedBookings">—</div>
-    <div class="stat-label">Completed</div>
-  </div>
-</div>
-
-<!-- Bookings table -->
-<div class="card">
-  <h2 style="margin-bottom:1rem">My Bookings</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Car</th>
-          <th>Dates</th>
-          <th>Cost</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="bookingsTable">
-        <tr><td colspan="6"><span class="spinner"></span> Loading...</td></tr>
-      </tbody>
-    </table>
+<!-- Review Modal -->
+<div class="modal-bg" id="reviewModal" hidden aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Leave a Review</h3>
+      <button type="button" class="btn-icon btn-close-modal" onclick="closeModal('reviewModal')" aria-label="Close">
+        <svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Rating</label>
+        <select class="form-control" id="reviewRating">
+          <option value="5">Excellent (5)</option>
+          <option value="4">Good (4)</option>
+          <option value="3">Average (3)</option>
+          <option value="2">Poor (2)</option>
+          <option value="1">Terrible (1)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comment</label>
+        <textarea class="form-control" id="reviewComment"
+          placeholder="Share your experience with this car..."></textarea>
+      </div>
+      <div class="err-box" id="reviewErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('reviewModal')">Cancel</button>
+      <button class="btn btn-primary" id="submitReviewBtn" onclick="submitReview()">
+        Submit Review
+      </button>
+    </div>
   </div>
 </div>
 
@@ -56,89 +318,325 @@
 
 {% block scripts %}
 <script>
-  // Redirect if not logged in as customer
-  if (!API.isLoggedIn()) window.location.href = '/login/';
-  if (API.getRole() !== 'customer') window.location.href = '/';
+  /* ── Guard ─────────────────────────── */
+  if (!API.loggedIn() || API.role() !== 'customer') {
+    window.location.href = '/login/';
+  }
 
-  const STATUS_BADGE = {
-    pending:   'badge-amber',
-    approved:  'badge-green',
-    rejected:  'badge-red',
-    cancelled: 'badge-gray',
-    completed: 'badge-blue',
-  };
+  const user = API.getUser();
+  let allBookings = [];
+  let reviewBookingId = null;
 
-  async function loadDashboard() {
+  /* ── Init sidebar user info ────────── */
+  document.getElementById('sName').textContent = user ? user.username : '';
+  document.getElementById('sAvatar').textContent = initials(user ? user.username : '');
+  document.getElementById('welcomeMsg').textContent = 'Welcome back, ' + (user ? user.username : '') + '!';
+
+  /* ── Profile card init ─────────────── */
+  document.getElementById('profileAv').textContent = initials(user ? user.username : '');
+  document.getElementById('profileName').textContent = user ? user.username : '';
+  document.getElementById('profileEmail').textContent = user ? user.email : '';
+
+  /* ── Tab switching ──────────────────── */
+  function showTab(name, btn) {
+    UI.switchDashLegacy({
+      panelClass: 'tab-panel',
+      navClass: 's-item',
+      panelPrefix: 'tab-',
+      tabId: name,
+      btn: btn,
+      onActivate: function (n) {
+        if (n === 'overview') loadOverview();
+        if (n === 'bookings') loadBookings();
+        if (n === 'profile') loadProfile();
+      },
+    });
+  }
+
+  /* ── OVERVIEW ───────────────────────── */
+  async function loadOverview() {
     try {
-      const bookings = await API.get('/api/bookings/my-bookings/');
+      const bookings = await API.fetchAllPages('/api/bookings/my-bookings/');
+      allBookings = bookings;
 
-      // Stats
-      document.getElementById('totalBookings').textContent     = bookings.length;
-      document.getElementById('activeBookings').textContent    = bookings.filter(b => b.status === 'approved').length;
-      document.getElementById('completedBookings').textContent = bookings.filter(b => b.status === 'completed').length;
+      const total = bookings.length;
+      const active = bookings.filter(function (b) { return b.status === 'approved'; }).length;
+      const pending = bookings.filter(function (b) { return b.status === 'pending'; }).length;
+      const completed = bookings.filter(function (b) { return b.status === 'completed'; }).length;
 
-      if (!bookings.length) {
-        document.getElementById('bookingsTable').innerHTML = `
-          <tr><td colspan="6" class="empty-state">
-            <h3>No bookings yet</h3>
-            <p><a href="/cars/">Browse cars to make your first booking</a></p>
-          </td></tr>`;
+      /* update profile stats */
+      document.getElementById('psTot').textContent = total;
+      document.getElementById('psAct').textContent = active;
+      document.getElementById('psDone').textContent = completed;
+
+      /* stats cards */
+      document.getElementById('statsRow').innerHTML =
+        UI.statCardButton('bookings', total, 'Total Bookings',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('active', active, 'Active Rentals',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('pending', pending, 'Pending Approval',
+          "showTab('bookings', document.getElementById('btn-bookings'))") +
+        UI.statCardButton('bookings', completed, 'Completed',
+          "showTab('bookings', document.getElementById('btn-bookings'))");
+
+      /* recent bookings — last 5 */
+      const recent = bookings.slice(0, 5);
+      if (!recent.length) {
+        document.getElementById('recentTable').innerHTML =
+          '<tr><td colspan="4">'
+          + UI.emptyState(
+            'No bookings yet',
+            'Browse available cars and send your first booking request.',
+            '<a href="/cars/" class="btn btn-primary">Browse cars</a>'
+          )
+          + '</td></tr>';
+        UI.refreshTableScrollHints();
         return;
       }
-
-      document.getElementById('bookingsTable').innerHTML = bookings.map(b => `
-        <tr>
-          <td>#${b.id}</td>
-          <td>
-            <a href="/cars/${b.car.id}/">${b.car.brand} ${b.car.model}</a><br>
-            <small style="color:var(--text-muted)">📍 ${b.car.location}</small>
-          </td>
-          <td>${b.start_date} → ${b.end_date}</td>
-          <td><strong>PKR ${b.total_cost}</strong></td>
-          <td><span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span></td>
-          <td>
-            ${b.status === 'pending' || b.status === 'approved'
-              ? `<button class="btn btn-danger" style="font-size:.8rem;padding:.3rem .7rem"
-                   onclick="cancelBooking(${b.id})">Cancel</button>`
-              : '—'
-            }
-            ${b.status === 'completed' ? `<button class="btn btn-outline" style="font-size:.8rem;padding:.3rem .7rem"
-                onclick="leaveReview(${b.id})">Review</button>` : ''}
-          </td>
-        </tr>
-      `).join('');
+      document.getElementById('recentTable').innerHTML = recent.map(function (b) {
+        return '<tr>'
+          + '<td><a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
+          + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a></td>'
+          + '<td class="td-meta">' + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+          + '<td class="td-money">$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
+          + '<td>' + statusBadge(b.status) + '</td>'
+          + '</tr>';
+      }).join('');
+      UI.refreshTableScrollHints();
 
     } catch (err) {
-      document.getElementById('bookingsTable').innerHTML =
-        `<tr><td colspan="6" style="color:red">${err.message}</td></tr>`;
+      toast(err.message, 'error');
     }
+  }
+
+  /* ── BOOKINGS ───────────────────────── */
+  async function loadBookings() {
+    try {
+      allBookings = await API.fetchAllPages('/api/bookings/my-bookings/');
+      applyBookingsFilter(bookingsStatusFilter);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  let bookingsViewList = [];
+  let bookingsPage = 1;
+  let bookingsStatusFilter = '';
+
+  function applyBookingsFilter(status) {
+    bookingsStatusFilter = status || '';
+    bookingsPage = 1;
+    var filtered = bookingsStatusFilter
+      ? allBookings.filter(function (b) { return b.status === bookingsStatusFilter; })
+      : allBookings;
+    renderBookings(filtered);
+    UI.scrollToEl('bookingsTable');
+  }
+
+  function renderBookings(list) {
+    bookingsViewList = list;
+    var meta = UI.paginateSlice(list, bookingsPage, UI_PAGE.table);
+    bookingsPage = meta.page;
+    var tbody = document.getElementById('bookingsTable');
+
+    UI.updateResultsCount('bookingsResultCount', {
+      filtered: list.length,
+      total: allBookings.length,
+      label: allBookings.length === 1 ? 'booking' : 'bookings',
+      filterLabel: UI.bookingStatusLabel(bookingsStatusFilter),
+    });
+
+    if (!meta.items.length) {
+      var emptyMsg = bookingsStatusFilter
+        ? 'No ' + UI.bookingStatusLabel(bookingsStatusFilter).toLowerCase() + ' bookings.'
+        : 'No bookings found.';
+      tbody.innerHTML = '<tr><td colspan="9">'
+        + UI.emptyState(
+          emptyMsg,
+          'Try a different filter or book a new car.',
+          '<a href="/cars/" class="btn btn-primary">Book a car</a>'
+        )
+        + '</td></tr>';
+      UI.mountPagination('bookingsPagination', meta, function () {}, { label: 'bookings' });
+      return;
+    }
+
+    tbody.innerHTML = meta.items.map(function (b) {
+      var actions = '';
+
+      if (b.status === 'pending' || b.status === 'approved') {
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-danger btn-sm" '
+          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>'
+          + '</div>';
+      } else if (b.status === 'completed') {
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-outline btn-sm" '
+          + 'onclick="openReview(' + b.id + ')">Review</button>'
+          + '</div>';
+      } else {
+        actions = UI.tableEmpty();
+      }
+
+      return '<tr>'
+        + '<td class="td-id">#' + b.id + '</td>'
+        + '<td>'
+        + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
+        + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
+        + '<div class="text-subline">'
+        + UI.escHtml((b.car.year || '') + ' · ' + (b.car.car_type || ''))
+        + '</div>'
+        + '</td>'
+        + '<td class="td-meta col-hide-sm">' + UI.escHtml(b.car.location) + '</td>'
+        + '<td class="td-meta">' + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+        + '<td class="td-meta col-hide-sm">' + UI.escHtml(UI.bookingDurationLabel(b)) + '</td>'
+        + '<td class="col-hide-sm"><span class="badge badge-blue">'
+        + UI.escHtml(UI.rentalTypeLabel(b.rental_type)) + '</span></td>'
+        + '<td class="td-money">'
+        + '$' + parseFloat(b.total_cost).toFixed(2) + '</td>'
+        + '<td>' + statusBadge(b.status) + '</td>'
+        + '<td>' + actions + '</td>'
+        + '</tr>';
+    }).join('');
+
+    UI.mountPagination('bookingsPagination', meta, function (p) {
+      bookingsPage = p;
+      renderBookings(bookingsViewList);
+      UI.scrollToEl('bookingsTable');
+    }, { label: 'bookings' });
+    UI.refreshTableScrollHints();
   }
 
   async function cancelBooking(id) {
-    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    if (!confirm('Cancel this booking?')) return;
     try {
-      await API.patch(`/api/bookings/${id}/cancel/`, {});
-      showFlash('Booking cancelled.', 'success');
-      loadDashboard();
+      await API.patch('/api/bookings/' + id + '/cancel/', {});
+      toast('Booking cancelled.', 'success');
+      loadBookings();
+      loadOverview();
     } catch (err) {
-      showFlash(err.message, 'error');
+      toast(err.message, 'error');
     }
   }
 
-  function leaveReview(bookingId) {
-    const rating  = prompt('Rate your experience (1-5 stars):');
-    const comment = prompt('Leave a comment (optional):');
-    if (!rating) return;
+  /* ── PROFILE ────────────────────────── */
+  async function loadProfile() {
+    try {
+      var p = await API.get('/api/accounts/profile/customer/');
+      document.getElementById('pPhone').value = p.phone_number || '';
+      document.getElementById('pNid').value = p.national_id_number || '';
+      document.getElementById('pLicense').value = p.driving_license_number || '';
+      document.getElementById('pAddress').value = p.address || '';
 
-    API.post('/api/bookings/review/', {
-      booking: bookingId,
-      rating:  parseInt(rating),
-      comment: comment || ''
-    }).then(() => {
-      showFlash('Review submitted. Thank you!', 'success');
-    }).catch(err => showFlash(err.message, 'error'));
+      /* show profile pic if exists */
+      if (p.profile_picture) {
+        document.getElementById('profileAv').innerHTML =
+          '<img src="' + UI.escHtml(p.profile_picture) + '" alt=""/>';
+      }
+    } catch (err) {
+      toast(err.message, 'error');
+    }
   }
 
-  loadDashboard();
+  async function saveProfile() {
+    var fd = new FormData();
+    fd.append('phone_number', document.getElementById('pPhone').value);
+    fd.append('national_id_number', document.getElementById('pNid').value);
+    fd.append('driving_license_number', document.getElementById('pLicense').value);
+    fd.append('address', document.getElementById('pAddress').value);
+
+    var pic = document.getElementById('pPic').files[0];
+    if (pic) fd.append('profile_picture', pic);
+
+    var errBox = document.getElementById('profileErr');
+    errBox.style.display = 'none';
+
+    try {
+      await API.uploadPatch('/api/accounts/profile/customer/', fd);
+      toast('Profile updated successfully!', 'success');
+      loadProfile();
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    }
+  }
+
+  /* ── CHANGE PASSWORD ────────────────── */
+  async function changePassword() {
+    var old = document.getElementById('oldPwd').value;
+    var n1 = document.getElementById('newPwd').value;
+    var n2 = document.getElementById('newPwd2').value;
+    var errBox = document.getElementById('pwdErr');
+    errBox.style.display = 'none';
+
+    if (!old || !n1 || !n2) {
+      errBox.textContent = 'Please fill in all fields.';
+      errBox.style.display = 'block'; return;
+    }
+    if (n1 !== n2) {
+      errBox.textContent = 'New passwords do not match.';
+      errBox.style.display = 'block'; return;
+    }
+    if (n1.length < 8) {
+      errBox.textContent = 'Password must be at least 8 characters.';
+      errBox.style.display = 'block'; return;
+    }
+
+    try {
+      await API.post('/api/accounts/change-password/', {
+        old_password: old,
+        new_password: n1,
+        new_password2: n2
+      });
+      toast('Password changed. Please log in again.', 'success');
+      setTimeout(function () {
+        API.clear();
+        window.location.href = '/login/';
+      }, 1500);
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    }
+  }
+
+  /* ── REVIEWS ────────────────────────── */
+  function openReview(bookingId) {
+    reviewBookingId = bookingId;
+    document.getElementById('reviewErr').style.display = 'none';
+    document.getElementById('reviewComment').value = '';
+    document.getElementById('reviewRating').value = '5';
+    openModal('reviewModal');
+  }
+
+  async function submitReview() {
+    var rating = document.getElementById('reviewRating').value;
+    var comment = document.getElementById('reviewComment').value;
+    var errBox = document.getElementById('reviewErr');
+    var btn = document.getElementById('submitReviewBtn');
+    errBox.style.display = 'none';
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      await API.post('/api/bookings/review/', {
+        booking: reviewBookingId,
+        rating: parseInt(rating),
+        comment: comment
+      });
+      closeModal('reviewModal');
+      toast('Review submitted. Thank you!', 'success');
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Submit Review';
+    }
+  }
+
+  /* ── Boot ───────────────────────────── */
+  UI.initFilterTabs('bookingsFilterTabs', applyBookingsFilter);
+  loadOverview();
 </script>
 {% endblock %}

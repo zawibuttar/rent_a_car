@@ -12,4 +12,5 @@ urlpatterns = [
     path('images/<int:pk>/delete/', CarImageDeleteView.as_view(), name='car-image-delete'),
 
     path('admin/all/', AdminCarListView.as_view(), name='admin-car-list'),
+    path('admin/<int:pk>/approve/', AdminCarApprovalView.as_view(), name='admin-car-approve'),
 ]

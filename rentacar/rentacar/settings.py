@@ -23,12 +23,59 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
+DEBUG = os.getenv('DEBUG', '1').lower() in ('1', 'true', 'yes')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if DEBUG:
+    SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-rentacar-dev-only-change-me')
+else:
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    if not SECRET_KEY:
+        raise ValueError('SECRET_KEY environment variable is required when DEBUG is false.')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+_allowed = os.getenv(
+    'ALLOWED_HOSTS',
+    '127.0.0.1,localhost,.ngrok-free.app,.ngrok-free.dev,.ngrok.io,.ngrok.app',
+)
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+
+_csrf = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io,https://*.ngrok.app',
+)
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
+
+# Upload limits (car images)
+CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(5 * 1024 * 1024)))
+CAR_IMAGE_MAX_COUNT = int(os.getenv('CAR_IMAGE_MAX_COUNT', '10'))
+CAR_IMAGE_ALLOWED_TYPES = {
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+}
+
+# Cache (Redis when CACHE_ENABLED=1, else in-memory for local dev)
+CACHE_ENABLED = os.getenv('CACHE_ENABLED', '0').lower() in ('1', 'true', 'yes')
+CACHE_TTL_ADMIN_LIST = int(os.getenv('CACHE_TTL_ADMIN_LIST', '120'))
+CACHE_TTL_PUBLIC_LIST = int(os.getenv('CACHE_TTL_PUBLIC_LIST', '600'))
+
+if CACHE_ENABLED:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'rentacar',
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'rentacar-local',
+        }
+    }
 
 
 # Application definition
@@ -54,6 +101,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -87,8 +135,16 @@ WSGI_APPLICATION = 'rentacar.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DB_NAME', os.path.join(BASE_DIR, 'db.sqlite3')),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', ''),
+        'CONN_MAX_AGE': 600,  # Connection pooling: reuse connections for 10 minutes
+        'OPTIONS': {
+            'connect_timeout': 10,
+        }
     }
 }
 
@@ -127,11 +183,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
@@ -140,8 +197,26 @@ AUTH_USER_MODEL = 'accounts.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 12,
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv('THROTTLE_ANON', '60/minute'),
+        'user': os.getenv('THROTTLE_USER', '120/minute'),
+        'auth': os.getenv('THROTTLE_AUTH', '10/minute'),
+        'booking': os.getenv('THROTTLE_BOOKING', '30/minute'),
+    },
 }

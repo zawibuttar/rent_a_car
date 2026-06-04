@@ -1,0 +1,45 @@
+{# Catalog filter bar — shared by home (no inline search) and browse (with search) #}
+<div class="filters-bar" id="catalogFiltersBar">
+  {% if show_inline_search %}
+  <div class="filter-field filter-field--grow">
+    <label for="fSearch">Search</label>
+    <input type="search" class="search-input" id="fSearch"
+      placeholder="Brand, model or city..."
+      autocomplete="off"
+      aria-label="Search cars"/>
+  </div>
+  {% endif %}
+  <div class="filter-field">
+    <label for="fType">Car Type</label>
+    <select id="fType" aria-label="Filter by car type">
+      <option value="">All Types</option>
+      <option value="sedan">Sedan</option>
+      <option value="suv">SUV</option>
+      <option value="luxury">Luxury</option>
+      <option value="hatchback">Hatchback</option>
+      <option value="truck">Truck</option>
+      <option value="van">Van</option>
+    </select>
+  </div>
+  <div class="filter-field filter-field--narrow">
+    <label for="fMin">Min $/day</label>
+    <input type="number" id="fMin" placeholder="0" min="0" aria-label="Minimum price per day"/>
+  </div>
+  <div class="filter-field filter-field--narrow">
+    <label for="fMax">Max $/day</label>
+    <input type="number" id="fMax" placeholder="Any" min="0" aria-label="Maximum price per day"/>
+  </div>
+  <div class="filter-field">
+    <label for="fSort">Sort By</label>
+    <select id="fSort" aria-label="Sort results">
+      <option value="-created_at">Newest First</option>
+      <option value="price_per_day">Price: Low to High</option>
+      <option value="-price_per_day">Price: High to Low</option>
+      <option value="-year">Newest Year</option>
+      <option value="year">Oldest Year</option>
+    </select>
+  </div>
+  <div class="filters-bar__actions">
+    <button type="button" class="btn btn-ghost btn-sm" id="catalogResetBtn">Reset</button>
+  </div>
+</div>

@@ -25,3 +25,17 @@ def owner_dashboard(request):
 
 def admin_dashboard(request):
     return render(request, 'dashboards/admin_dashboard.html')
+
+def main_dashboard(request):
+    from django.shortcuts import redirect
+    if not request.user.is_authenticated:
+        return redirect('login-page')
+    
+    if getattr(request.user, 'is_customer', False):
+        return redirect('customer-dashboard')
+    elif getattr(request.user, 'is_owner', False):
+        return redirect('owner-dashboard')
+    elif getattr(request.user, 'is_admin', False) or request.user.is_superuser:
+        return redirect('admin-dashboard')
+    
+    return redirect('home')
