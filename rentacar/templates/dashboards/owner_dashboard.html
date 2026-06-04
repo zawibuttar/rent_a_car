@@ -97,13 +97,12 @@
                 <th class="col-hide-sm">Type</th>
                 <th>Rate</th>
                 <th class="col-hide-sm">Location</th>
-                <th>Status</th>
-                <th class="col-hide-sm">Available</th>
+                <th>Listing status</th>
               </tr>
             </thead>
             <tbody id="oCarsPreview">
               <tr>
-                <td colspan="6">
+                <td colspan="5">
                   <div class="loading"><span class="spinner"></span></div>
                 </td>
               </tr>
@@ -158,6 +157,10 @@
           </button>
         </div>
         {% include 'includes/status_filter_tabs.html' with variant='owner_cars' tabs_id='ownerCarsFilterTabs' tabs_label='Filter your listings' %}
+        <p class="owner-cars-filter-hint text-caption">
+          <strong>Paused by you</strong> — you turned off “open for bookings”.
+          <strong>Removed by admin</strong> — not shown on Browse Cars until restored.
+        </p>
         <div class="results-bar">
           <span id="ownerCarsResultCount" class="results-bar__count text-caption"></span>
         </div>
@@ -191,6 +194,29 @@
 
       <form class="listing-form card" id="addCarForm" novalidate onsubmit="event.preventDefault(); addCar();">
         <div class="card-body listing-form-body">
+
+          <section class="form-section form-section--featured" aria-labelledby="addSectionLocation">
+            <div class="form-section-head">
+              <h2 class="form-section-title" id="addSectionLocation">Pickup location</h2>
+              <p class="form-section-desc">Choose a city or enter a more specific pickup area for this car.</p>
+            </div>
+            <div class="form-group form-group--featured-location">
+              <label class="form-label" for="cLocation">Pickup location <span class="req">*</span></label>
+              <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
+                <div class="input-icon-wrap">
+                  <span class="input-icon" aria-hidden="true">
+                    <svg class="icon icon-sm"><use href="#icon-pin"/></svg>
+                  </span>
+                  <input class="form-control input-with-icon" type="text" id="cLocation"
+                    data-location-autocomplete required
+                    placeholder="Start typing any city in Pakistan" autocomplete="off"
+                    aria-autocomplete="list" aria-expanded="false" />
+                </div>
+                <div class="location-suggestions" id="cLocationSuggestions" data-location-suggestions hidden></div>
+              </div>
+              <p class="form-hint">This will be saved with the listing and used to filter browse results.</p>
+            </div>
+          </section>
 
           <section class="form-section" aria-labelledby="addSectionVehicle">
             <div class="form-section-head">
@@ -270,16 +296,6 @@
                 <input class="form-control" type="number" id="cPriceMonth" min="1" step="0.01" placeholder="900.00" />
               </div>
             </div>
-            <div class="form-group" style="margin-top:12px">
-              <label class="form-label" for="cLocation">Pickup location <span class="req">*</span></label>
-              <div class="input-icon-wrap">
-                <span class="input-icon" aria-hidden="true">
-                  <svg class="icon icon-sm"><use href="#icon-pin"/></svg>
-                </span>
-                <input class="form-control input-with-icon" type="text" id="cLocation" required
-                  placeholder="e.g. Lahore, Pakistan" autocomplete="address-level2" />
-              </div>
-            </div>
           </section>
 
           <section class="form-section" aria-labelledby="addSectionDesc">
@@ -308,10 +324,10 @@
                     <svg class="icon"><use href="#icon-camera"/></svg>
                   </div>
                   <p class="upload-zone-title">Drop photos here or <span class="upload-zone-link">browse</span></p>
-                  <p class="upload-zone-hint">JPG or PNG · up to 10 MB each · multiple files OK</p>
+                  <p class="upload-zone-hint">Any image format · up to 10 MB each · multiple files OK</p>
                 </div>
               </div>
-              <input type="file" id="cImages" multiple accept="image/jpeg,image/png,image/webp"
+              <input type="file" id="cImages" multiple accept="image/*"
                 class="visually-hidden" aria-hidden="true" />
               <p class="upload-meta" id="uploadMeta" hidden></p>
               <div class="preview-grid" id="imgPreview"></div>
@@ -442,7 +458,7 @@
             <div class="form-group">
               <label class="form-label">Profile Picture</label>
               <input class="form-control" type="file" id="oPic" accept="image/*" />
-              <p class="form-hint">JPG or PNG, max 5MB</p>
+              <p class="form-hint">Any image format, max 5MB</p>
             </div>
 
             <div class="err-box" id="oProfileErr"></div>
@@ -562,7 +578,12 @@
         </div>
         <div class="form-group">
           <label class="form-label">Location</label>
-          <input class="form-control" type="text" id="eLocation" />
+          <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
+            <input class="form-control" type="text" id="eLocation" data-location-autocomplete
+              placeholder="Start typing any city in Pakistan" autocomplete="off"
+              aria-autocomplete="list" aria-expanded="false" />
+            <div class="location-suggestions" id="eLocationSuggestions" data-location-suggestions hidden></div>
+          </div>
         </div>
       </div>
 
@@ -574,7 +595,7 @@
       <div class="form-group">
         <label class="form-check-label">
           <input type="checkbox" id="eAvailable" />
-          Mark as Available for Rent
+          Open for bookings (shows on Browse when approved)
         </label>
       </div>
 
@@ -705,7 +726,7 @@
       /* cars preview table */
       if (!cars.length) {
         document.getElementById('oCarsPreview').innerHTML =
-          '<tr><td colspan="6">'
+          '<tr><td colspan="5">'
           + UI.emptyState(
             'No cars listed yet',
             'Publish your first listing to appear on Browse Cars.',
@@ -728,15 +749,7 @@
                   + '<span class="text-caption">/' + UI.escHtml(r.unit) + '</span></td>';
               })()
               + '<td class="td-meta col-hide-sm">' + UI.escHtml(c.location) + '</td>'
-              + '<td>' + (c.is_approved && c.is_available
-                ? '<span class="badge badge-green">Live</span>'
-                : (!c.is_approved ? '<span class="badge badge-red">Removed</span>'
-                  : '<span class="badge badge-gray">Hidden</span>')) + '</td>'
-              + '<td class="col-hide-sm">'
-              + (c.is_available
-                ? '<span class="badge badge-blue">Available</span>'
-                : '<span class="badge badge-gray">Unavailable</span>')
-              + '</td>'
+              + '<td><div class="car-badges">' + carListingBadges(c) + '</div></td>'
               + '</tr>';
           }).join('');
       }
@@ -800,7 +813,7 @@
       filtered: cars.length,
       total: myCarsList.length,
       label: myCarsList.length === 1 ? 'car' : 'cars',
-      filterLabel: UI.carFilterLabel(ownerCarsFilter),
+      filterLabel: UI.carFilterLabel(ownerCarsFilter, 'owner'),
     });
 
     if (!meta.items.length) {
@@ -840,6 +853,9 @@
           + previewLink
           + '<div class="car-title">' + UI.escHtml(car.brand + ' ' + car.model + ' (' + car.year + ')') + '</div>'
           + '<div class="car-badges">' + carListingBadges(car) + '</div>'
+          + (UI.bookedSlotsSummary(car)
+            ? '<div class="owner-car-booked-row">' + UI.bookedSlotsSummary(car) + '</div>'
+            : '')
           + UI.locationLine(car.location, '')
           + '<div class="car-footer">'
           + (function () {
@@ -919,6 +935,7 @@
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
+    clearLocationSuggestionPanels();
     document.getElementById('cRentDaily').checked = true;
     document.getElementById('cRentHourly').checked = false;
     document.getElementById('cRentWeekly').checked = false;
@@ -954,6 +971,23 @@
         meta.textContent = '';
       }
     }
+  }
+
+  function clearLocationSuggestionPanels() {
+    document.querySelectorAll('[data-location-suggestions]').forEach(function (panel) {
+      panel.hidden = true;
+      panel.innerHTML = '';
+    });
+    document.querySelectorAll('[data-location-autocomplete]').forEach(function (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.dataset.locationSelected = '';
+    });
+  }
+
+  function initLocationAutocomplete() {
+    document.querySelectorAll('[data-location-autocomplete]').forEach(function (input) {
+      LocationAutocomplete.attach(input);
+    });
   }
 
   function previewImgs(input) {
@@ -1024,10 +1058,14 @@
         zone.classList.remove('upload-zone--drag');
       });
     });
+    function isImageFile(file) {
+      if (!file) return false;
+      if (file.type && file.type.indexOf('image/') === 0) return true;
+      return /\.(jpe?g|jpe|jfif|png|gif|webp|bmp|tiff?|heic|heif|avif|svg|ico|ppm|pgm)$/i.test(file.name || '');
+    }
+
     zone.addEventListener('drop', function (e) {
-      var dropped = Array.from(e.dataTransfer.files || []).filter(function (f) {
-        return f.type && f.type.indexOf('image/') === 0;
-      });
+      var dropped = Array.from(e.dataTransfer.files || []).filter(isImageFile);
       if (!dropped.length) return;
       var dt = new DataTransfer();
       selectedFiles.concat(dropped).forEach(function (f) { dt.items.add(f); });
@@ -1046,16 +1084,26 @@
     var model = document.getElementById('cModel').value.trim();
     var year = parseInt(document.getElementById('cYear').value);
     var carType = document.getElementById('cType').value;
-    var location = document.getElementById('cLocation').value.trim();
+    var locationInput = document.getElementById('cLocation');
+    var location = locationInput ? locationInput.value.trim() : '';
     var desc = document.getElementById('cDesc').value.trim();
     var errBox = document.getElementById('addCarErr');
     var btn = document.getElementById('addCarBtn');
     var rental = collectRentalPayload('c');
+    var locationErr = LocationAutocomplete.validateInput(locationInput, {
+      required: true,
+      requireSelection: true,
+    });
 
     errBox.style.display = 'none';
 
     if (!brand || !model || !year || !location) {
       errBox.textContent = 'Please fill all required fields marked with *.';
+      errBox.style.display = 'block';
+      return;
+    }
+    if (locationErr) {
+      errBox.textContent = locationErr;
       errBox.style.display = 'block';
       return;
     }
@@ -1116,7 +1164,7 @@
     document.getElementById('ePriceMonth').value = car.price_per_month || '';
     toggleRentalPriceFields('e');
     document.getElementById('eType').value = car.car_type;
-    document.getElementById('eLocation').value = car.location;
+    LocationAutocomplete.markSelected(document.getElementById('eLocation'), car.location);
     document.getElementById('eDesc').value = car.description || '';
     document.getElementById('eAvailable').checked = car.is_available;
     document.getElementById('editCarErr').style.display = 'none';
@@ -1135,13 +1183,24 @@
       return;
     }
 
+    var editLocationInput = document.getElementById('eLocation');
+    var editLocationErr = LocationAutocomplete.validateInput(editLocationInput, {
+      required: true,
+      requireSelection: true,
+    });
+    if (editLocationErr) {
+      errBox.textContent = editLocationErr;
+      errBox.style.display = 'block';
+      return;
+    }
+
     try {
       var patchBody = Object.assign({
         brand: document.getElementById('eBrand').value,
         model: document.getElementById('eModel').value,
         year: parseInt(document.getElementById('eYear').value),
         car_type: document.getElementById('eType').value,
-        location: document.getElementById('eLocation').value,
+        location: editLocationInput.value.trim(),
         description: document.getElementById('eDesc').value,
         is_available: document.getElementById('eAvailable').checked,
       }, rental.data);
@@ -1380,6 +1439,7 @@
   UI.initFilterTabs('ownerCarsFilterTabs', applyOwnerCarsFilter);
   UI.initFilterTabs('ownerRequestsFilterTabs', applyOwnerRequestsFilter);
   initListingForm();
+  initLocationAutocomplete();
   toggleRentalPriceFields('c');
   loadOverview();
 </script>

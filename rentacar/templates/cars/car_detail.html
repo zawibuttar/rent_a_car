@@ -181,6 +181,67 @@ function buildBookingCta(car) {
   return '<div class="detail-notice">This listing is not available for booking right now.</div>';
 }
 
+function buildReviewsSection(car) {
+  const summary = car.review_summary || { count: 0, average_rating: null, distribution: {} };
+  const reviews = car.reviews || [];
+  const count = summary.count || 0;
+
+  if (!count) {
+    return '<div class="card detail-reviews detail-reviews--empty">'
+      + '<div class="card-head"><h2>Customer reviews</h2></div>'
+      + '<div class="card-body">'
+      + '<div class="detail-reviews-empty">'
+      + UI.icon('star', 'icon')
+      + '<p><strong>No reviews yet</strong></p>'
+      + '<span>Be the first to rent this car and share your experience.</span>'
+      + '</div></div></div>';
+  }
+
+  const dist = summary.distribution || {};
+  let barsHtml = '';
+  for (let star = 5; star >= 1; star--) {
+    const n = dist[String(star)] || 0;
+    const pct = Math.round((n / count) * 100);
+    barsHtml += '<div class="review-bar-row">'
+      + '<span class="review-bar-label">' + star + UI.icon('star', 'icon icon-inline') + '</span>'
+      + '<div class="review-bar-track"><div class="review-bar-fill" style="width:' + pct + '%"></div></div>'
+      + '<span class="review-bar-count">' + n + '</span>'
+      + '</div>';
+  }
+
+  const listHtml = reviews.map(function (r) {
+    const comment = (r.comment || '').trim();
+    return '<article class="review-card">'
+      + '<div class="review-card-head">'
+      + '<div class="review-card-avatar" aria-hidden="true">' + initials(r.reviewer_name || '?') + '</div>'
+      + '<div class="review-card-meta">'
+      + '<div class="review-card-name">' + UI.escHtml(r.reviewer_name || 'Customer') + '</div>'
+      + '<div class="review-card-date">' + UI.escHtml(UI.formatReviewDate(r.created_at)) + '</div>'
+      + '</div>'
+      + UI.renderStars(r.rating, { size: 'sm' })
+      + '</div>'
+      + (comment
+        ? '<p class="review-card-comment">' + UI.escHtml(comment) + '</p>'
+        : '<p class="review-card-comment review-card-comment--muted">No written comment.</p>')
+      + '</article>';
+  }).join('');
+
+  return '<div class="card detail-reviews" id="detailReviews">'
+    + '<div class="card-head"><h2>Customer reviews</h2>'
+    + '<span class="text-caption">' + count + ' total</span></div>'
+    + '<div class="card-body">'
+    + '<div class="review-summary-panel">'
+    + '<div class="review-summary-score">'
+    + '<div class="review-summary-score__num">' + Number(summary.average_rating).toFixed(1) + '</div>'
+    + UI.renderStars(summary.average_rating, { size: 'lg' })
+    + '<div class="review-summary-score__lbl">Average rating</div>'
+    + '</div>'
+    + '<div class="review-bars" aria-label="Rating distribution">' + barsHtml + '</div>'
+    + '</div>'
+    + '<div class="review-list">' + listHtml + '</div>'
+    + '</div></div>';
+}
+
 function buildInfoRows(car) {
   const listed = car.created_at
     ? new Date(car.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -195,7 +256,7 @@ function buildInfoRows(car) {
     + '<div class="detail-info-row">'
     + '<span class="detail-info-icon">' + UI.icon('user', 'icon') + '</span>'
     + '<div class="detail-info-body"><div class="detail-info-lbl">Listed by</div>'
-    + '<div class="detail-info-val">' + UI.escHtml(car.owner.username) + '</div></div>'
+    + '<div class="detail-info-val">' + UI.escHtml(UI.ownerDisplayName(car)) + '</div></div>'
     + '</div>'
     + '<div class="detail-info-row">'
     + '<span class="detail-info-icon">' + UI.icon('calendar', 'icon') + '</span>'
@@ -216,9 +277,25 @@ function renderCar(car) {
 
   const images = car.images || [];
   const typeLabel = formatCarType(car.car_type);
-  const availBadge = car.is_available
-    ? '<span class="badge badge-green">Available now</span>'
-    : '<span class="badge badge-red">Unavailable</span>';
+  let availBadge = '';
+  if (car.is_currently_booked) {
+    const activeSlot = (car.booked_slots || []).find(function (s) { return s.is_active; });
+    const until = activeSlot ? UI.bookedSlotEndShort(activeSlot) : '';
+    availBadge = '<span class="badge badge-amber">Rented until ' + UI.escHtml(until) + '</span>';
+    if (car.is_available) {
+      availBadge += ' <span class="badge badge-green">Listed</span>';
+    }
+  } else if (car.is_available) {
+    availBadge = '<span class="badge badge-green">Available now</span>';
+  } else {
+    availBadge = '<span class="badge badge-red">Unavailable</span>';
+  }
+  const bookedPeriodsBlock = (car.booked_slots && car.booked_slots.length)
+    ? '<div class="card detail-booked-periods">'
+      + '<div class="card-head"><h2>Booked periods</h2></div>'
+      + '<div class="card-body">' + UI.bookedSlotsListHtml(car) + '</div>'
+      + '</div>'
+    : '';
   const aboutBlock = car.description
     ? '<div class="card detail-about">'
       + '<div class="card-head"><h2>About this car</h2></div>'
@@ -236,6 +313,7 @@ function renderCar(car) {
     + '<div class="detail-main">'
     + buildGallery(images, car)
     + aboutBlock
+    + buildReviewsSection(car)
 
     + '<div class="card">'
     + '<div class="card-head"><h2>Specifications</h2></div>'
@@ -261,6 +339,7 @@ function renderCar(car) {
     + '<span>' + UI.escHtml(typeLabel) + '</span>'
     + '</p>'
     + '<div class="detail-badges">' + availBadge + '</div>'
+    + '<div class="detail-rating-row">' + UI.reviewSummaryLine(car) + '</div>'
     + (function () {
       var rate = UI.primaryRateDisplay(car);
       var chips = (car.enabled_rental_types || []).map(function (t) {
@@ -278,13 +357,14 @@ function renderCar(car) {
     + buildInfoRows(car)
     + '</div>'
     + '</div>'
+    + bookedPeriodsBlock
 
     + '<div class="card">'
     + '<div class="card-body detail-owner">'
-    + '<div class="detail-owner-av" aria-hidden="true">' + initials(car.owner.username) + '</div>'
+    + '<div class="detail-owner-av" aria-hidden="true">' + initials(UI.ownerDisplayName(car)) + '</div>'
     + '<div>'
-    + '<div class="detail-owner-name">' + UI.escHtml(car.owner.username) + '</div>'
-    + '<div class="detail-owner-role">Verified car owner</div>'
+    + '<div class="detail-owner-name">' + UI.escHtml(UI.ownerDisplayName(car)) + '</div>'
+    + '<div class="detail-owner-role">Verified Car Owner</div>'
     + '</div>'
     + '</div>'
     + '</div>'

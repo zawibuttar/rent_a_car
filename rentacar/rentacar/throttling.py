@@ -7,3 +7,7 @@ class AuthRateThrottle(ScopedRateThrottle):
 
 class BookingRateThrottle(ScopedRateThrottle):
     scope = 'booking'
+
+
+class LocationRateThrottle(ScopedRateThrottle):
+    scope = 'location'

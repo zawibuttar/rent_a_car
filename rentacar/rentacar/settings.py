@@ -45,13 +45,8 @@ _csrf = os.getenv(
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 
 # Upload limits (car images)
-CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(5 * 1024 * 1024)))
+CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(10 * 1024 * 1024)))
 CAR_IMAGE_MAX_COUNT = int(os.getenv('CAR_IMAGE_MAX_COUNT', '10'))
-CAR_IMAGE_ALLOWED_TYPES = {
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-}
 
 # Cache (Redis when CACHE_ENABLED=1, else in-memory for local dev)
 CACHE_ENABLED = os.getenv('CACHE_ENABLED', '0').lower() in ('1', 'true', 'yes')
@@ -133,20 +128,26 @@ WSGI_APPLICATION = 'rentacar.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')
+
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'ENGINE': DB_ENGINE,
         'NAME': os.getenv('DB_NAME', os.path.join(BASE_DIR, 'db.sqlite3')),
         'USER': os.getenv('DB_USER', ''),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', ''),
         'CONN_MAX_AGE': 600,  # Connection pooling: reuse connections for 10 minutes
-        'OPTIONS': {
-            'connect_timeout': 10,
-        }
     }
 }
+
+# Only set DB driver specific OPTIONS when not using sqlite (sqlite3 doesn't accept
+# options like connect_timeout).
+if DB_ENGINE != 'django.db.backends.sqlite3':
+    DATABASES['default']['OPTIONS'] = {
+        'connect_timeout': 10,
+    }
 
 
 # Password validation
@@ -218,5 +219,6 @@ REST_FRAMEWORK = {
         'user': os.getenv('THROTTLE_USER', '120/minute'),
         'auth': os.getenv('THROTTLE_AUTH', '10/minute'),
         'booking': os.getenv('THROTTLE_BOOKING', '30/minute'),
+        'location': os.getenv('THROTTLE_LOCATION', '30/minute'),
     },
 }

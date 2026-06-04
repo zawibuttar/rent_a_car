@@ -179,6 +179,15 @@ Each listing can offer one or more of **hourly**, **daily**, **weekly**, and **m
 
 ---
 
+## Location search
+
+- **Browse / home:** Customers pick a city via the nav control or Popular Cities section; the choice is stored in `localStorage` and passed as `?location=` (or `?city=`) to the public car list API.
+- **Owner listings:** Pickup location uses the same city autocomplete (must select a suggestion before submit).
+- **Geocoding:** Client calls `GET /api/cars/location/search/?q=` and `GET /api/cars/location/reverse/?lat=&lon=` — proxied server-side to OpenStreetMap Nominatim with User-Agent, cache, and rate limits. Filtering is **text match** on the car `location` field, not GPS radius.
+- **SQLite dev:** `DATABASES['OPTIONS']` (e.g. `connect_timeout`) is only applied when `DB_ENGINE` is not SQLite.
+
+---
+
 ## Public pages & dashboards
 
 | URL | Description |

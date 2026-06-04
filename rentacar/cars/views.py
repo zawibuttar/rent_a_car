@@ -1,3 +1,6 @@
+import json
+from urllib.error import HTTPError, URLError
+
 from django.db.models import OuterRef, Subquery
 from rest_framework import status, generics, permissions, filters
 from rest_framework.response import Response
@@ -17,6 +20,10 @@ from rentacar.caching import (
 )
 from rentacar.utils import parse_bool
 from rentacar.image_validation import validate_car_image_file
+from rentacar.throttling import LocationRateThrottle
+from .geocoding import search_cities, reverse_geocode
+from .review_stats import annotate_car_review_stats
+from .booking_availability import prefetch_active_bookings
 
 # Create your views here.
 
@@ -41,15 +48,19 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
         ).select_related('owner').prefetch_related('images').annotate(
             primary_image=Subquery(primary_image_subquery)
         )
+        queryset = annotate_car_review_stats(queryset)
 
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
+        location = self.request.query_params.get('location') or self.request.query_params.get('city')
 
         if min_price:
             queryset = queryset.filter(price_per_day__gte=min_price)
         if max_price:
             queryset = queryset.filter(price_per_day__lte=max_price)
-        return queryset
+        if location:
+            queryset = queryset.filter(location__icontains=location)
+        return prefetch_active_bookings(queryset)
 
 
 class CarDetailView(NoCacheMixin, generics.RetrieveAPIView):
@@ -57,7 +68,9 @@ class CarDetailView(NoCacheMixin, generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return Car.objects.filter(is_approved=True).prefetch_related('images').select_related('owner')
+        qs = Car.objects.filter(is_approved=True).prefetch_related('images').select_related('owner')
+        qs = annotate_car_review_stats(qs)
+        return prefetch_active_bookings(qs)
 
 
 # Owner sides
@@ -85,7 +98,8 @@ class MyCarListView(NoCacheMixin, generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def get_queryset(self):
-        return Car.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('images')
+        qs = Car.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('images')
+        return prefetch_active_bookings(qs)
 
 
 class CarUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
@@ -173,8 +187,12 @@ class CarImageDeleteView(APIView):
 class AdminCarListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     serializer_class   = AdminCarListSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
-    queryset           = Car.objects.all().select_related('owner')
     redis_cache_key = admin_cars_key()
+
+    def get_queryset(self):
+        return prefetch_active_bookings(
+            Car.objects.all().select_related('owner')
+        )
 
 
 class AdminCarApprovalView(APIView):
@@ -198,3 +216,42 @@ class AdminCarApprovalView(APIView):
             "car_id" : car.id,
             "is_approved": car.is_approved,
         }, status=status.HTTP_200_OK)
+
+
+class LocationSearchView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [LocationRateThrottle]
+
+    def get(self, request):
+        query = (request.query_params.get('q') or '').strip()
+        if len(query) < 2:
+            return Response([])
+        try:
+            return Response(search_cities(query))
+        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+            return Response(
+                {'detail': 'City lookup is temporarily unavailable.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
+class LocationReverseView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [LocationRateThrottle]
+
+    def get(self, request):
+        try:
+            lat = float(request.query_params.get('lat', ''))
+            lon = float(request.query_params.get('lon', ''))
+        except (TypeError, ValueError):
+            return Response({'detail': 'lat and lon are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = reverse_geocode(lat, lon)
+        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+            return Response(
+                {'detail': 'City lookup is temporarily unavailable.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        if not result:
+            return Response({'detail': 'No city found for this location.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)

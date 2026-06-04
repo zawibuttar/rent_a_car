@@ -415,8 +415,11 @@ function renderCarsTable(list) {
       + '<a href="/cars/' + encodeURIComponent(c.id) + '/" target="_blank" rel="noopener" class="text-strong">'
       + UI.escHtml(c.brand + ' ' + c.model) + '</a>'
       + '<div class="text-subline">' + UI.escHtml(c.year) + '</div>'
+      + (UI.bookedSlotsSummary(c)
+        ? '<div class="admin-car-booked-line text-caption">' + UI.bookedSlotsSummary(c) + '</div>'
+        : '')
       + '</td>'
-      + '<td class="text-small">' + UI.escHtml(c.owner.username) + '</td>'
+      + '<td class="text-small">' + UI.escHtml(UI.ownerDisplayName(c.owner || c)) + '</td>'
       + '<td class="col-hide-sm"><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
       + '<td class="td-money">$'
       + parseFloat(c.price_per_day).toFixed(2) + '</td>'
