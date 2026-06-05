@@ -216,9 +216,13 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_THROTTLE_RATES': {
         'anon': os.getenv('THROTTLE_ANON', '60/minute'),
-        'user': os.getenv('THROTTLE_USER', '120/minute'),
+        'user': os.getenv(
+            'THROTTLE_USER',
+            '1000/minute' if DEBUG else '120/minute',
+        ),
         'auth': os.getenv('THROTTLE_AUTH', '10/minute'),
         'booking': os.getenv('THROTTLE_BOOKING', '30/minute'),
         'location': os.getenv('THROTTLE_LOCATION', '30/minute'),
+        'admin': os.getenv('THROTTLE_ADMIN', '600/minute'),
     },
 }

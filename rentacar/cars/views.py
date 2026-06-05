@@ -13,17 +13,29 @@ from .models import *
 from .serializers import *
 from accounts.permissions import IsOwner, IsPlatformAdmin
 from rentacar.caching import (
+    ADMIN_CARS_KEY,
     NoCacheMixin,
     RedisListCacheMixin,
-    admin_cars_key,
     invalidate_car_caches,
 )
 from rentacar.utils import parse_bool
 from rentacar.image_validation import validate_car_image_file
-from rentacar.throttling import LocationRateThrottle
+from rentacar.throttling import AdminRateThrottle, LocationRateThrottle
 from .geocoding import search_cities, reverse_geocode
 from .review_stats import annotate_car_review_stats
 from .booking_availability import prefetch_active_bookings
+from .filters import AdminCarFilter, OwnerCarFilter
+
+ADMIN_REMOVED_CAR_MSG = (
+    "This listing was removed by admin. You can only delete it."
+)
+
+
+def owner_car_edit_response():
+    return Response(
+        {"error": ADMIN_REMOVED_CAR_MSG},
+        status=status.HTTP_403_FORBIDDEN,
+    )
 
 # Create your views here.
 
@@ -95,6 +107,11 @@ class CarCreateView(generics.CreateAPIView):
 class MyCarListView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = CarDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+    filter_backends    = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = OwnerCarFilter
+    search_fields      = ['brand', 'model', 'location']
+    ordering_fields    = ['price_per_day', 'year', 'created_at']
+    ordering           = ['-created_at']
 
     def get_queryset(self):
         qs = Car.objects.filter(owner=self.request.user).select_related('owner').prefetch_related('images')
@@ -112,6 +129,9 @@ class CarUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return {'request': self.request}
 
     def update(self, request, *args, **kwargs):
+        car = self.get_object()
+        if not car.is_approved:
+            return owner_car_edit_response()
         response = super().update(request, *args, **kwargs)
         response.data['message'] = "Car updated successfully."
         invalidate_car_caches()
@@ -136,6 +156,8 @@ class CarImageUploadView(APIView):
             Car.objects.prefetch_related('images'),
             pk=pk, owner=request.user
         )
+        if not car.is_approved:
+            return owner_car_edit_response()
         images = request.FILES.getlist('images')
 
         if not images:
@@ -174,6 +196,8 @@ class CarImageDeleteView(APIView):
             CarImage.objects.select_related('car__owner'),
             pk=pk, car__owner=request.user
         )
+        if not image.car.is_approved:
+            return owner_car_edit_response()
         image.delete()
         invalidate_car_caches()
         return Response(
@@ -186,7 +210,13 @@ class CarImageDeleteView(APIView):
 class AdminCarListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     serializer_class   = AdminCarListSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
-    redis_cache_key = admin_cars_key()
+    throttle_classes   = [AdminRateThrottle]
+    filter_backends    = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = AdminCarFilter
+    search_fields      = ['brand', 'model', 'location', 'owner__username']
+    ordering_fields    = ['price_per_day', 'year', 'created_at']
+    ordering           = ['-created_at']
+    redis_cache_key = ADMIN_CARS_KEY
 
     def get_queryset(self):
         return prefetch_active_bookings(

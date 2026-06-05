@@ -10,23 +10,35 @@ from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from rest_framework.response import Response
 
-# Fixed keys for admin list endpoints
+# Admin list cache prefixes (versioned at request time; see ADMIN_LIST_VERSION_KEY)
 ADMIN_CARS_KEY = 'list:admin:cars'
 ADMIN_BOOKINGS_KEY = 'list:admin:bookings'
 ADMIN_OWNERS_KEY = 'list:admin:owners'
+ADMIN_LIST_VERSION_KEY = 'version:admin:lists'
 PUBLIC_CAR_LIST_VERSION_KEY = 'version:public:car_list'
+
+_ADMIN_RESOURCE_KEYS = frozenset({
+    ADMIN_CARS_KEY,
+    ADMIN_BOOKINGS_KEY,
+    ADMIN_OWNERS_KEY,
+})
+
+
+def _versioned_admin_key(base: str) -> str:
+    version = cache.get(ADMIN_LIST_VERSION_KEY, 0)
+    return f'{base}:v{version}'
 
 
 def admin_cars_key():
-    return ADMIN_CARS_KEY
+    return _versioned_admin_key(ADMIN_CARS_KEY)
 
 
 def admin_bookings_key():
-    return ADMIN_BOOKINGS_KEY
+    return _versioned_admin_key(ADMIN_BOOKINGS_KEY)
 
 
 def admin_owners_key():
-    return ADMIN_OWNERS_KEY
+    return _versioned_admin_key(ADMIN_OWNERS_KEY)
 
 
 def public_car_list_key(query_string=''):
@@ -48,11 +60,12 @@ def owner_cars_key(user_id):
 
 
 def invalidate_admin_lists():
-    cache.delete_many([
-        admin_cars_key(),
-        admin_bookings_key(),
-        admin_owners_key(),
-    ])
+    """Bump admin list cache version so all paginated pages invalidate together."""
+    try:
+        current = cache.get(ADMIN_LIST_VERSION_KEY, 0)
+        cache.set(ADMIN_LIST_VERSION_KEY, int(current) + 1, timeout=None)
+    except (TypeError, ValueError):
+        cache.set(ADMIN_LIST_VERSION_KEY, 1, timeout=None)
 
 
 def invalidate_public_car_lists():
@@ -139,11 +152,15 @@ class RedisListCacheMixin:
 
     def get_redis_cache_key(self):
         if self.redis_cache_key:
-            return self.redis_cache_key
+            base = self.redis_cache_key
+            if base in _ADMIN_RESOURCE_KEYS:
+                base = _versioned_admin_key(base)
+        else:
+            base = self.__class__.__name__
         params = '&'.join(
             f'{k}={v}' for k, v in sorted(self.request.query_params.items())
         )
-        return f'{self.__class__.__name__}:{params}'
+        return f'{base}:{params}' if params else base
 
     def get_redis_cache_ttl(self):
         if self.redis_cache_ttl is not None:

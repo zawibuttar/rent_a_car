@@ -11,3 +11,8 @@ class BookingRateThrottle(ScopedRateThrottle):
 
 class LocationRateThrottle(ScopedRateThrottle):
     scope = 'location'
+
+
+class AdminRateThrottle(ScopedRateThrottle):
+    """Higher limit for platform-admin list APIs (replaces default user throttle)."""
+    scope = 'admin'

@@ -9,12 +9,15 @@ from .serializers import *
 from accounts.models import OwnerProfile
 from accounts.permissions import IsCustomer, IsOwner, IsPlatformAdmin
 from rentacar.caching import (
+    ADMIN_BOOKINGS_KEY,
     NoCacheMixin,
     RedisListCacheMixin,
-    admin_bookings_key,
     invalidate_booking_caches,
 )
-from rentacar.throttling import BookingRateThrottle
+from rentacar.throttling import AdminRateThrottle, BookingRateThrottle
+from .filters import BookingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters as drf_filters
 
 # Create your views here.
 
@@ -41,6 +44,11 @@ class BookingCreateView(APIView):
 class MyBookingsView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
+    filter_backends    = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = BookingFilter
+    search_fields      = ['car__brand', 'car__model', 'car__location']
+    ordering_fields    = ['start_at', 'total_cost', 'created_at']
+    ordering           = ['-start_at']
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -91,6 +99,11 @@ class CancelBookingView(APIView):
 class OwnerBookingsView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+    filter_backends    = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = BookingFilter
+    search_fields      = ['customer__username', 'customer__email', 'car__brand', 'car__model']
+    ordering_fields    = ['start_at', 'total_cost', 'created_at']
+    ordering           = ['-start_at']
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -180,8 +193,17 @@ class ReviewCreateView(APIView):
 class AdminBookingListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes   = [AdminRateThrottle]
+    filter_backends    = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = BookingFilter
+    search_fields      = [
+        'customer__username', 'customer__email',
+        'car__brand', 'car__model', 'car__location', 'car__owner__username',
+    ]
+    ordering_fields    = ['start_at', 'total_cost', 'created_at']
+    ordering           = ['-start_at']
     queryset           = Booking.objects.all().select_related('car__owner', 'customer').prefetch_related('car__images')
-    redis_cache_key = admin_bookings_key()
+    redis_cache_key = ADMIN_BOOKINGS_KEY
 
 
 class AdminBookingActionView(APIView):

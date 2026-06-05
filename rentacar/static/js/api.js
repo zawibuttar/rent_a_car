@@ -20,13 +20,31 @@ const API = {
       || /\/profile\//.test(url);
   },
 
+  resolveUrl(url) {
+    if (!url) return null;
+    try {
+      const resolved = url.startsWith('http')
+        ? new URL(url)
+        : new URL(url, window.location.origin);
+      return window.location.origin + resolved.pathname + resolved.search;
+    } catch (_) {
+      return url.startsWith('/') ? window.location.origin + url : url;
+    }
+  },
+
   async req(method, url, body, multipart) {
     const opts = { method, headers: this.headers(multipart) };
     if (body) opts.body = multipart ? body : JSON.stringify(body);
-    if (method === 'GET' && this.shouldBypassCache(url)) {
+    const requestUrl = method === 'GET' ? this.resolveUrl(url) : url;
+    if (method === 'GET' && this.shouldBypassCache(requestUrl)) {
       opts.cache = 'no-store';
     }
-    const res  = await fetch(url, opts);
+    let res;
+    try {
+      res = await fetch(requestUrl, opts);
+    } catch (_) {
+      throw new Error('Could not reach the server. Make sure it is running and refresh the page.');
+    }
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       const msgs = [];
@@ -43,7 +61,7 @@ const API = {
   },
 
   async fetchAllPages(url) {
-    let nextUrl = url;
+    let nextUrl = this.resolveUrl(url);
     const all = [];
     while (nextUrl) {
       const data = await this.get(nextUrl);
@@ -51,7 +69,7 @@ const API = {
       const page = data.results || [];
       all.push.apply(all, page);
       if (!data.next) break;
-      nextUrl = data.next.startsWith('http') ? data.next : (window.location.origin + data.next);
+      nextUrl = this.resolveUrl(data.next);
     }
     return all;
   },
