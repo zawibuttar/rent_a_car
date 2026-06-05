@@ -116,6 +116,7 @@
           </div>
           <a href="/cars/" class="btn btn-primary">+ New Booking</a>
         </div>
+        {% include 'includes/table_filters.html' with variant='customer_bookings' toolbar_id='customerBookingsFilters' search_placeholder='Car brand, model, location…' %}
         {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='bookingsFilterTabs' tabs_label='Filter bookings by status' %}
         <div class="results-bar">
           <span id="bookingsResultCount" class="results-bar__count text-caption"></span>
@@ -127,7 +128,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th>
+                <th>No.</th>
                 <th>Car</th>
                 <th class="col-hide-sm">Location</th>
                 <th>Period</th>
@@ -347,7 +348,7 @@
       btn: btn,
       onActivate: function (n) {
         if (n === 'overview') loadOverview();
-        if (n === 'bookings') loadBookings();
+        if (n === 'bookings') fetchCustomerBookings();
         if (n === 'profile') loadProfile();
       },
     });
@@ -411,58 +412,59 @@
   }
 
   /* ── BOOKINGS ───────────────────────── */
-  async function loadBookings() {
+  var bookingsState = { page: 1, statusTab: '' };
+
+  function customerBookingsQuery() {
+    var toolbar = UI.getTableFilterState('customerBookingsFilters', 'customer_bookings');
+    var statusQ = UI.mapStatusTabToQuery('bookings', bookingsState.statusTab);
+    return UI.buildListQuery('/api/bookings/my-bookings/', Object.assign({
+      page: bookingsState.page,
+      search: toolbar.search,
+      ordering: toolbar.ordering,
+      rental_type: toolbar.rental_type,
+    }, statusQ));
+  }
+
+  async function fetchCustomerBookings() {
+    var tbody = document.getElementById('bookingsTable');
+    tbody.innerHTML = UI.tableLoadingRow(9);
     try {
-      allBookings = await API.fetchAllPages('/api/bookings/my-bookings/');
-      applyBookingsFilter(bookingsStatusFilter);
+      var meta = await UI.fetchListPage(customerBookingsQuery(), bookingsState.page, UI_PAGE.table);
+      bookingsState.page = meta.page;
+      renderBookings(meta);
     } catch (err) {
       toast(err.message, 'error');
     }
   }
 
-  let bookingsViewList = [];
-  let bookingsPage = 1;
-  let bookingsStatusFilter = '';
-
-  function applyBookingsFilter(status) {
-    bookingsStatusFilter = status || '';
-    bookingsPage = 1;
-    var filtered = bookingsStatusFilter
-      ? allBookings.filter(function (b) { return b.status === bookingsStatusFilter; })
-      : allBookings;
-    renderBookings(filtered);
-    UI.scrollToEl('bookingsTable');
-  }
-
-  function renderBookings(list) {
-    bookingsViewList = list;
-    var meta = UI.paginateSlice(list, bookingsPage, UI_PAGE.table);
-    bookingsPage = meta.page;
+  function renderBookings(meta) {
     var tbody = document.getElementById('bookingsTable');
+    var toolbar = UI.getTableFilterState('customerBookingsFilters', 'customer_bookings');
+    var hasFilters = !!(toolbar.search || toolbar.rental_type || bookingsState.statusTab);
 
     UI.updateResultsCount('bookingsResultCount', {
-      filtered: list.length,
-      total: allBookings.length,
-      label: allBookings.length === 1 ? 'booking' : 'bookings',
-      filterLabel: UI.bookingStatusLabel(bookingsStatusFilter),
+      filtered: meta.count,
+      total: meta.count,
+      label: meta.count === 1 ? 'booking' : 'bookings',
+      filterLabel: UI.bookingStatusLabel(bookingsState.statusTab),
+      searchText: toolbar.search,
     });
 
     if (!meta.items.length) {
-      var emptyMsg = bookingsStatusFilter
-        ? 'No ' + UI.bookingStatusLabel(bookingsStatusFilter).toLowerCase() + ' bookings.'
-        : 'No bookings found.';
       tbody.innerHTML = '<tr><td colspan="9">'
         + UI.emptyState(
-          emptyMsg,
-          'Try a different filter or book a new car.',
-          '<a href="/cars/" class="btn btn-primary">Book a car</a>'
+          hasFilters ? 'No matching bookings' : 'No bookings found.',
+          hasFilters ? 'Try adjusting your search or filters.' : 'Try a different filter or book a new car.',
+          hasFilters
+            ? '<button type="button" class="btn btn-ghost btn-sm" onclick="UI.resetTableFilters(\'customerBookingsFilters\',\'bookingsFilterTabs\');bookingsState.page=1;bookingsState.statusTab=\'\';fetchCustomerBookings();">Clear filters</button>'
+            : '<a href="/cars/" class="btn btn-primary">Book a car</a>'
         )
         + '</td></tr>';
       UI.mountPagination('bookingsPagination', meta, function () {}, { label: 'bookings' });
       return;
     }
 
-    tbody.innerHTML = meta.items.map(function (b) {
+    tbody.innerHTML = meta.items.map(function (b, i) {
       var actions = '';
 
       if (b.status === 'pending' || b.status === 'approved') {
@@ -480,7 +482,7 @@
       }
 
       return '<tr>'
-        + '<td class="td-id">#' + b.id + '</td>'
+        + UI.tdSerial(meta.rangeStart + i)
         + '<td>'
         + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
         + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</a>'
@@ -501,8 +503,8 @@
     }).join('');
 
     UI.mountPagination('bookingsPagination', meta, function (p) {
-      bookingsPage = p;
-      renderBookings(bookingsViewList);
+      bookingsState.page = p;
+      fetchCustomerBookings();
       UI.scrollToEl('bookingsTable');
     }, { label: 'bookings' });
     UI.refreshTableScrollHints();
@@ -513,7 +515,7 @@
     try {
       await API.patch('/api/bookings/' + id + '/cancel/', {});
       toast('Booking cancelled.', 'success');
-      loadBookings();
+      fetchCustomerBookings();
       loadOverview();
     } catch (err) {
       toast(err.message, 'error');
@@ -636,7 +638,20 @@
   }
 
   /* ── Boot ───────────────────────────── */
-  UI.initFilterTabs('bookingsFilterTabs', applyBookingsFilter);
+  UI.initTableFilters({
+    toolbarId: 'customerBookingsFilters',
+    variant: 'customer_bookings',
+    statusTabsId: 'bookingsFilterTabs',
+    onStatusChange: function (v) {
+      bookingsState.statusTab = v || '';
+      bookingsState.page = 1;
+      fetchCustomerBookings();
+    },
+    onChange: function () {
+      bookingsState.page = 1;
+      fetchCustomerBookings();
+    },
+  });
   loadOverview();
 </script>
 {% endblock %}

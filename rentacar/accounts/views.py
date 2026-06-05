@@ -9,12 +9,15 @@ from .models import *
 from .serializers import *
 from .permissions import IsPlatformAdmin
 from rentacar.caching import (
+    ADMIN_OWNERS_KEY,
     NoCacheMixin,
     RedisListCacheMixin,
-    admin_owners_key,
     invalidate_admin_lists,
 )
-from rentacar.throttling import AuthRateThrottle
+from rentacar.throttling import AdminRateThrottle, AuthRateThrottle
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters as drf_filters
+from .filters import AdminOwnerFilter
 
 # Create your views here.
 
@@ -137,9 +140,15 @@ class OwnerProfileView(generics.RetrieveUpdateAPIView):
 
 class AdminOwnerListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    filter_backends = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class = AdminOwnerFilter
+    search_fields = ['user__username', 'user__email', 'phone_number']
+    ordering_fields = ['user__username', 'created_at']
+    ordering = ['user__username']
     serializer_class = OwnerProfileSerializer
     queryset = OwnerProfile.objects.all().select_related('user')
-    redis_cache_key = admin_owners_key()
+    redis_cache_key = ADMIN_OWNERS_KEY
 
 
 class AdminOwnerVerificationView(APIView):

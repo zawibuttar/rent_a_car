@@ -156,6 +156,7 @@
             + Add Listing
           </button>
         </div>
+        {% include 'includes/table_filters.html' with variant='owner_cars' toolbar_id='ownerCarsFilters' search_placeholder='Brand, model, city…' %}
         {% include 'includes/status_filter_tabs.html' with variant='owner_cars' tabs_id='ownerCarsFilterTabs' tabs_label='Filter your listings' %}
         <p class="owner-cars-filter-hint text-caption">
           <strong>Paused by you</strong> — you turned off “open for bookings”.
@@ -359,6 +360,7 @@
             <p>Approve or reject incoming requests</p>
           </div>
         </div>
+        {% include 'includes/table_filters.html' with variant='owner_requests' toolbar_id='ownerRequestsFilters' search_placeholder='Customer, car…' %}
         {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='ownerRequestsFilterTabs' tabs_label='Filter requests by status' %}
         <div class="results-bar">
           <span id="ownerRequestsResultCount" class="results-bar__count text-caption"></span>
@@ -370,7 +372,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th>
+                <th>No.</th>
                 <th>Customer</th>
                 <th>Car</th>
                 <th>Dates</th>
@@ -626,11 +628,8 @@
   let allRequests = [];
   let selectedFiles = [];
   let myCarsList = [];
-  let myCarsPage = 1;
-  let ownerCarsFilter = 'all';
-  let requestsViewList = [];
-  let requestsPage = 1;
-  let requestsStatusFilter = '';
+  var ownerCarsState = { page: 1, statusTab: 'all' };
+  var ownerRequestsState = { page: 1, statusTab: '' };
 
   /* ── Sidebar init ───────────────────── */
   document.getElementById('sName').textContent = user ? user.username : '';
@@ -650,8 +649,8 @@
       btn: btn,
       onActivate: function (n) {
         if (n === 'overview') loadOverview();
-        if (n === 'mycars') loadMyCars();
-        if (n === 'requests') loadRequests();
+        if (n === 'mycars') fetchOwnerCars();
+        if (n === 'requests') fetchOwnerRequests();
         if (n === 'profile') loadOwnerProfile();
         if (n === 'addcar') resetAddForm();
       },
@@ -783,53 +782,55 @@
   }
 
   /* ══ MY CARS ════════════════════════ */
-  async function loadMyCars() {
+  function ownerCarsQuery() {
+    var toolbar = UI.getTableFilterState('ownerCarsFilters', 'owner_cars');
+    var statusQ = UI.mapStatusTabToQuery('owner_cars', ownerCarsState.statusTab);
+    return UI.buildListQuery('/api/cars/my-cars/', Object.assign({
+      page: ownerCarsState.page,
+      search: toolbar.search,
+      ordering: toolbar.ordering,
+      car_type: toolbar.car_type,
+    }, statusQ));
+  }
+
+  async function fetchOwnerCars() {
     var grid = document.getElementById('myCarsGrid');
     grid.innerHTML = '<div class="loading grid-span-full">'
       + '<span class="spinner spinner-lg"></span></div>';
-
     try {
-      myCarsList = await API.fetchAllPages('/api/cars/my-cars/');
-      myCarsPage = 1;
-      applyOwnerCarsFilter(ownerCarsFilter);
+      var meta = await UI.fetchListPage(ownerCarsQuery(), ownerCarsState.page, UI_PAGE.grid);
+      ownerCarsState.page = meta.page;
+      renderMyCarsGrid(meta);
     } catch (err) {
       grid.innerHTML = '<div class="grid-span-full">'
         + UI.emptyState('Failed to load cars', err.message) + '</div>';
     }
   }
 
-  function applyOwnerCarsFilter(filter) {
-    ownerCarsFilter = filter || 'all';
-    myCarsPage = 1;
-    renderMyCarsGrid(UI.filterCarList(myCarsList, ownerCarsFilter));
-    UI.scrollToEl('myCarsGrid');
-  }
-
-  function renderMyCarsGrid(cars) {
+  function renderMyCarsGrid(meta) {
     var grid = document.getElementById('myCarsGrid');
-    var meta = UI.paginateSlice(cars, myCarsPage, UI_PAGE.grid);
+    var toolbar = UI.getTableFilterState('ownerCarsFilters', 'owner_cars');
+    var hasFilters = !!(toolbar.search || toolbar.car_type
+      || (ownerCarsState.statusTab && ownerCarsState.statusTab !== 'all'));
 
     UI.updateResultsCount('ownerCarsResultCount', {
-      filtered: cars.length,
-      total: myCarsList.length,
-      label: myCarsList.length === 1 ? 'car' : 'cars',
-      filterLabel: UI.carFilterLabel(ownerCarsFilter, 'owner'),
+      filtered: meta.count,
+      total: meta.count,
+      label: meta.count === 1 ? 'car' : 'cars',
+      filterLabel: UI.carFilterLabel(ownerCarsState.statusTab, 'owner'),
+      searchText: toolbar.search,
     });
 
     if (!meta.items.length) {
-      var carsEmpty = ownerCarsFilter && ownerCarsFilter !== 'all'
-        ? 'No cars match this filter.'
-        : 'No cars listed yet';
-      var carsHint = ownerCarsFilter && ownerCarsFilter !== 'all'
-        ? 'Try another filter tab.'
-        : 'Click "Add Listing" to get started';
-      var emptyAction = (!ownerCarsFilter || ownerCarsFilter === 'all')
-        ? '<button type="button" class="btn btn-primary" '
-          + 'onclick="showTab(\'addcar\', document.getElementById(\'btn-addcar\'))">'
-          + 'Add Listing</button>'
-        : '';
+      var emptyAction = hasFilters
+        ? '<button type="button" class="btn btn-ghost btn-sm" onclick="UI.resetTableFilters(\'ownerCarsFilters\',\'ownerCarsFilterTabs\');ownerCarsState.page=1;ownerCarsState.statusTab=\'all\';fetchOwnerCars();">Clear filters</button>'
+        : '<button type="button" class="btn btn-primary" onclick="showTab(\'addcar\', document.getElementById(\'btn-addcar\'))">Add Listing</button>';
       grid.innerHTML = '<div class="grid-span-full">'
-        + UI.emptyState(carsEmpty, carsHint, emptyAction)
+        + UI.emptyState(
+          hasFilters ? 'No matching cars' : 'No cars listed yet',
+          hasFilters ? 'Try adjusting your search or filters.' : 'Click "Add Listing" to get started',
+          emptyAction
+        )
         + '</div>';
       UI.mountPagination('myCarsPagination', meta, function () {}, { label: 'cars' });
       return;
@@ -865,8 +866,10 @@
           })()
           + '</div>'
           + '<div class="car-card-actions">'
-          + '<button type="button" class="btn btn-outline btn-sm" '
-          + 'onclick=\'openEditCar(' + JSON.stringify(car) + ')\'>Edit</button>'
+          + (car.is_approved
+            ? '<button type="button" class="btn btn-outline btn-sm" '
+              + 'onclick=\'openEditCar(' + JSON.stringify(car) + ')\'>Edit</button>'
+            : '')
           + '<button type="button" class="btn btn-danger btn-sm" aria-label="Delete listing" '
           + 'onclick="deleteCar(' + car.id + ')">Delete</button>'
           + '</div>'
@@ -874,10 +877,9 @@
           + '</div>';
     }).join('');
 
-    myCarsPage = meta.page;
     UI.mountPagination('myCarsPagination', meta, function (p) {
-      myCarsPage = p;
-      renderMyCarsGrid(UI.filterCarList(myCarsList, ownerCarsFilter));
+      ownerCarsState.page = p;
+      fetchOwnerCars();
       UI.scrollToEl('myCarsGrid');
     }, { label: 'cars' });
   }
@@ -1150,6 +1152,10 @@
 
   /* ══ EDIT CAR ═══════════════════════ */
   function openEditCar(car) {
+    if (!car.is_approved) {
+      toast('This listing was removed by admin. You can only delete it.', 'error');
+      return;
+    }
     document.getElementById('editCarId').value = car.id;
     document.getElementById('eBrand').value = car.brand;
     document.getElementById('eModel').value = car.model;
@@ -1216,7 +1222,7 @@
 
       closeModal('editCarModal');
       toast('Listing updated.', 'success');
-      loadMyCars();
+      fetchOwnerCars();
       loadOverview();
 
     } catch (err) {
@@ -1230,57 +1236,61 @@
     try {
       await API.del('/api/cars/' + id + '/manage/');
       toast('Car deleted.', 'success');
-      loadMyCars();
+      fetchOwnerCars();
       loadOverview();
     } catch (err) { toast(err.message, 'error'); }
   }
 
   /* ══ BOOKING REQUESTS ═══════════════ */
-  async function loadRequests() {
+  function ownerRequestsQuery() {
+    var toolbar = UI.getTableFilterState('ownerRequestsFilters', 'owner_requests');
+    var statusQ = UI.mapStatusTabToQuery('bookings', ownerRequestsState.statusTab);
+    return UI.buildListQuery('/api/bookings/owner/', Object.assign({
+      page: ownerRequestsState.page,
+      search: toolbar.search,
+      ordering: toolbar.ordering,
+      rental_type: toolbar.rental_type,
+    }, statusQ));
+  }
+
+  async function fetchOwnerRequests() {
+    var tbody = document.getElementById('reqsTable');
+    tbody.innerHTML = UI.tableLoadingRow(10);
     try {
-      allRequests = await API.fetchAllPages('/api/bookings/owner/');
-      requestsPage = 1;
-      var pending = allRequests.filter(function (b) { return b.status === 'pending'; }).length;
-      updatePendingBadge(pending);
-      applyOwnerRequestsFilter(requestsStatusFilter);
+      var meta = await UI.fetchListPage(ownerRequestsQuery(), ownerRequestsState.page, UI_PAGE.table);
+      ownerRequestsState.page = meta.page;
+      renderRequests(meta);
     } catch (err) { toast(err.message, 'error'); }
   }
 
-  function applyOwnerRequestsFilter(status) {
-    requestsStatusFilter = status || '';
-    requestsPage = 1;
-    var list = requestsStatusFilter
-      ? allRequests.filter(function (b) { return b.status === requestsStatusFilter; })
-      : allRequests;
-    renderRequests(list);
-    UI.scrollToEl('reqsTable');
-  }
-
-  function renderRequests(list) {
-    requestsViewList = list;
-    var meta = UI.paginateSlice(list, requestsPage, UI_PAGE.table);
-    requestsPage = meta.page;
+  function renderRequests(meta) {
     var tbody = document.getElementById('reqsTable');
+    var toolbar = UI.getTableFilterState('ownerRequestsFilters', 'owner_requests');
+    var hasFilters = !!(toolbar.search || toolbar.rental_type || ownerRequestsState.statusTab);
 
     UI.updateResultsCount('ownerRequestsResultCount', {
-      filtered: list.length,
-      total: allRequests.length,
-      label: allRequests.length === 1 ? 'request' : 'requests',
-      filterLabel: UI.bookingStatusLabel(requestsStatusFilter),
+      filtered: meta.count,
+      total: meta.count,
+      label: meta.count === 1 ? 'request' : 'requests',
+      filterLabel: UI.bookingStatusLabel(ownerRequestsState.statusTab),
+      searchText: toolbar.search,
     });
 
     if (!meta.items.length) {
-      var reqEmpty = requestsStatusFilter
-        ? 'No ' + UI.bookingStatusLabel(requestsStatusFilter).toLowerCase() + ' requests.'
-        : 'No booking requests found';
       tbody.innerHTML = '<tr><td colspan="10">'
-        + '<div class="empty"><h3>' + UI.escHtml(reqEmpty) + '</h3></div>'
+        + UI.emptyState(
+          hasFilters ? 'No matching requests' : 'No booking requests found',
+          hasFilters ? 'Try adjusting your search or filters.' : '',
+          hasFilters
+            ? '<button type="button" class="btn btn-ghost btn-sm" onclick="UI.resetTableFilters(\'ownerRequestsFilters\',\'ownerRequestsFilterTabs\');ownerRequestsState.page=1;ownerRequestsState.statusTab=\'\';fetchOwnerRequests();">Clear filters</button>'
+            : ''
+        )
         + '</td></tr>';
       UI.mountPagination('reqsPagination', meta, function () {}, { label: 'requests' });
       return;
     }
 
-    tbody.innerHTML = meta.items.map(function (b) {
+    tbody.innerHTML = meta.items.map(function (b, i) {
       var actions = '';
 
       if (b.status === 'pending') {
@@ -1302,7 +1312,7 @@
       }
 
       return '<tr>'
-        + '<td class="td-id">#' + b.id + '</td>'
+        + UI.tdSerial(meta.rangeStart + i)
         + '<td>'
         + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
         + '<div class="text-subline">'
@@ -1325,8 +1335,8 @@
     }).join('');
 
     UI.mountPagination('reqsPagination', meta, function (p) {
-      requestsPage = p;
-      renderRequests(requestsViewList);
+      ownerRequestsState.page = p;
+      fetchOwnerRequests();
       UI.scrollToEl('reqsTable');
     }, { label: 'requests' });
     UI.refreshTableScrollHints();
@@ -1336,7 +1346,7 @@
     try {
       await API.patch('/api/bookings/' + id + '/manage/', { status: status });
       toast('Booking ' + status + '.', 'success');
-      loadRequests();
+      fetchOwnerRequests();
       loadOverview();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -1346,7 +1356,7 @@
     try {
       await API.patch('/api/bookings/' + id + '/complete/', {});
       toast('Booking completed. Earnings updated!', 'success');
-      loadRequests();
+      fetchOwnerRequests();
       loadOverview();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -1436,8 +1446,34 @@
   }
 
   /* ── Boot ───────────────────────────── */
-  UI.initFilterTabs('ownerCarsFilterTabs', applyOwnerCarsFilter);
-  UI.initFilterTabs('ownerRequestsFilterTabs', applyOwnerRequestsFilter);
+  UI.initTableFilters({
+    toolbarId: 'ownerCarsFilters',
+    variant: 'owner_cars',
+    statusTabsId: 'ownerCarsFilterTabs',
+    onStatusChange: function (v) {
+      ownerCarsState.statusTab = v || 'all';
+      ownerCarsState.page = 1;
+      fetchOwnerCars();
+    },
+    onChange: function () {
+      ownerCarsState.page = 1;
+      fetchOwnerCars();
+    },
+  });
+  UI.initTableFilters({
+    toolbarId: 'ownerRequestsFilters',
+    variant: 'owner_requests',
+    statusTabsId: 'ownerRequestsFilterTabs',
+    onStatusChange: function (v) {
+      ownerRequestsState.statusTab = v || '';
+      ownerRequestsState.page = 1;
+      fetchOwnerRequests();
+    },
+    onChange: function () {
+      ownerRequestsState.page = 1;
+      fetchOwnerRequests();
+    },
+  });
   initListingForm();
   initLocationAutocomplete();
   toggleRentalPriceFields('c');

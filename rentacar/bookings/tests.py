@@ -301,3 +301,114 @@ class PricingComputeTests(APITestCase):
         )
         with self.assertRaises(ValueError):
             compute_total(self.car, RENTAL_MONTHLY, start_at, end_at)
+
+
+class DashboardBookingListFilterTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='bookadmin',
+            email='bookadmin@example.com',
+            password='pass',
+            role=User.Role.ADMIN,
+        )
+        self.owner = User.objects.create_user(
+            username='bookowner',
+            email='bookowner@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        OwnerProfile.objects.create(user=self.owner)
+        self.customer = User.objects.create_user(
+            username='johnbook',
+            email='john@example.com',
+            password='pass',
+            role=User.Role.CUSTOMER,
+        )
+        self.other_customer = User.objects.create_user(
+            username='affanbook',
+            email='affan@example.com',
+            password='pass',
+            role=User.Role.CUSTOMER,
+        )
+        self.toyota = Car.objects.create(
+            owner=self.owner,
+            brand='Toyota',
+            model='Corolla',
+            year=2022,
+            car_type='sedan',
+            description='',
+            location='Lahore',
+            rent_daily=True,
+            price_per_day=50,
+            is_available=True,
+            is_approved=True,
+        )
+        self.honda = Car.objects.create(
+            owner=self.owner,
+            brand='Honda',
+            model='Civic',
+            year=2021,
+            car_type='sedan',
+            description='',
+            location='Karachi',
+            rent_daily=True,
+            price_per_day=60,
+            is_available=True,
+            is_approved=True,
+        )
+        start = date.today() + timedelta(days=10)
+        norm_start, norm_end = _daily_window(start, start)
+        Booking.objects.create(
+            customer=self.customer,
+            car=self.toyota,
+            rental_type=RENTAL_DAILY,
+            start_at=norm_start,
+            end_at=norm_end,
+            total_cost=Decimal('50'),
+            status='pending',
+        )
+        norm_start2, norm_end2 = _daily_window(start + timedelta(days=1), start + timedelta(days=1))
+        Booking.objects.create(
+            customer=self.other_customer,
+            car=self.honda,
+            rental_type=RENTAL_DAILY,
+            start_at=norm_start2,
+            end_at=norm_end2,
+            total_cost=Decimal('80'),
+            status='approved',
+        )
+        self.admin_url = reverse('admin-booking-list')
+        self.my_url = reverse('my-bookings')
+        self.owner_url = reverse('owner-bookings')
+
+    def test_admin_search_customer(self):
+        _auth(self.client, self.admin)
+        response = self.client.get(self.admin_url, {'search': 'john'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['customer']['username'], 'johnbook')
+
+    def test_admin_status_filter(self):
+        _auth(self.client, self.admin)
+        response = self.client.get(self.admin_url, {'status': 'approved'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(b['status'] == 'approved' for b in response.data['results']))
+
+    def test_admin_ordering_total_cost(self):
+        _auth(self.client, self.admin)
+        response = self.client.get(self.admin_url, {'ordering': '-total_cost'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        costs = [float(b['total_cost']) for b in response.data['results']]
+        self.assertEqual(costs, sorted(costs, reverse=True))
+
+    def test_my_bookings_search_car(self):
+        _auth(self.client, self.customer)
+        response = self.client.get(self.my_url, {'search': 'toyota'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+
+    def test_owner_bookings_search_customer(self):
+        _auth(self.client, self.owner)
+        response = self.client.get(self.owner_url, {'search': 'affan', 'status': 'approved'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)

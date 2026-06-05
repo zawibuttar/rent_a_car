@@ -2,8 +2,196 @@ const LocationState = {
   storageKey: 'rentacar.selectedLocation',
   modalId: 'locationModal',
   searchTimer: null,
-  popularCities: ['Lahore', 'Karachi', 'Islamabad', 'Peshawar', 'Multan', 'Muzaffarabad', 'Quetta'],
+  popularCitiesConfig: [
+    { name: 'Lahore', image: 'lahore.svg' },
+    { name: 'Karachi', image: 'karachi.svg' },
+    { name: 'Islamabad', image: 'islamabad.svg' },
+    { name: 'Peshawar', image: 'peshawar.svg' },
+    { name: 'Multan', image: 'multan.svg' },
+    { name: 'Muzaffarabad', image: 'muzaffarabad.svg' },
+    { name: 'Quetta', image: 'quetta.svg' },
+    { name: 'Faisalabad', image: 'faisalabad.svg' },
+    { name: 'Rawalpindi', image: 'rawalpindi.svg' },
+    { name: 'Hyderabad', image: 'hyderabad.svg' },
+    { name: 'Sialkot', image: 'sialkot.svg' },
+    { name: 'Abbottabad', image: 'abbottabad.svg' },
+  ],
   state: null,
+
+  getPopularCityNames() {
+    return this.popularCitiesConfig.map(function (city) { return city.name; });
+  },
+
+  cityImageUrl(imageFile) {
+    const base = window.STATIC_CITIES_BASE || '/static/images/cities/';
+    return base + (imageFile || 'city-placeholder.svg');
+  },
+
+  buildCityCardHtml(city) {
+    const img = this.cityImageUrl(city.image);
+    const fallback = window.STATIC_NO_IMAGE || '/static/images/no-image.svg';
+    return '<button type="button" class="city-card" role="listitem" data-location-city="'
+      + UI.escHtml(city.name) + '" aria-pressed="false">'
+      + '<img src="' + UI.escHtml(img) + '" alt="" onerror="this.src=\'' + fallback + '\'" />'
+      + '<div class="city-name">' + UI.escHtml(city.name) + '</div>'
+      + '</button>';
+  },
+
+  renderPopularCitiesMarquee() {
+    const track = document.getElementById('popularCitiesTrack');
+    if (!track) return;
+
+    const cards = this.popularCitiesConfig.map(function (city) {
+      return LocationState.buildCityCardHtml(city);
+    }).join('');
+
+    track.innerHTML = '<div class="popular-cities__set">' + cards + '</div>'
+      + '<div class="popular-cities__set" aria-hidden="true">' + cards + '</div>';
+
+    if (!track.dataset.cityClicksBound) {
+      track.dataset.cityClicksBound = '1';
+      track.addEventListener('click', function (event) {
+        const card = event.target.closest('.city-card[data-location-city]');
+        if (!card) return;
+        LocationState.selectPresetCity(card.getAttribute('data-location-city'));
+      });
+    }
+  },
+
+  initPopularCitiesScroll() {
+    const viewport = document.getElementById('popularCitiesViewport');
+    if (!viewport) return;
+
+    const DRAG_THRESHOLD = 10;
+    let paused = false;
+    let pauseTimer = null;
+    let isDragging = false;
+    let suppressClick = false;
+    let activePointer = null;
+    let dragStartX = 0;
+    let dragStartScroll = 0;
+    let autoScrolling = false;
+
+    function halfWidth() {
+      return viewport.scrollWidth / 2;
+    }
+
+    function wrapScroll() {
+      const half = halfWidth();
+      if (half <= 0) return;
+      if (viewport.scrollLeft >= half) {
+        viewport.scrollLeft -= half;
+      } else if (viewport.scrollLeft < 0) {
+        viewport.scrollLeft += half;
+      }
+    }
+
+    function pauseAutoScroll(ms) {
+      paused = true;
+      clearTimeout(pauseTimer);
+      pauseTimer = window.setTimeout(function () {
+        paused = false;
+      }, ms || 3500);
+    }
+
+    function tick() {
+      if (!paused && !isDragging && !activePointer && !UI.prefersReducedMotion()) {
+        const half = halfWidth();
+        if (half > viewport.clientWidth) {
+          autoScrolling = true;
+          viewport.scrollLeft += 0.55;
+          wrapScroll();
+        }
+      }
+      window.requestAnimationFrame(tick);
+    }
+
+    viewport.addEventListener('wheel', function () {
+      pauseAutoScroll(4500);
+    }, { passive: true });
+
+    viewport.addEventListener('scroll', function () {
+      if (!autoScrolling && !isDragging) {
+        wrapScroll();
+        pauseAutoScroll(4500);
+      }
+      autoScrolling = false;
+    }, { passive: true });
+
+    viewport.addEventListener('mouseenter', function () {
+      paused = true;
+    });
+
+    viewport.addEventListener('mouseleave', function () {
+      if (!isDragging && activePointer === null) {
+        pauseAutoScroll(800);
+      }
+    });
+
+    viewport.addEventListener('pointerdown', function (event) {
+      if (event.button !== 0) return;
+      activePointer = event.pointerId;
+      isDragging = false;
+      suppressClick = false;
+      dragStartX = event.clientX;
+      dragStartScroll = viewport.scrollLeft;
+      paused = true;
+    });
+
+    viewport.addEventListener('pointermove', function (event) {
+      if (event.pointerId !== activePointer) return;
+      const delta = event.clientX - dragStartX;
+      if (!isDragging && Math.abs(delta) < DRAG_THRESHOLD) return;
+
+      if (!isDragging) {
+        isDragging = true;
+        suppressClick = true;
+        viewport.setPointerCapture(event.pointerId);
+        viewport.classList.add('popular-cities__viewport--dragging');
+      }
+
+      viewport.scrollLeft = dragStartScroll - delta;
+      wrapScroll();
+    });
+
+    function endPointer(event) {
+      if (event.pointerId !== activePointer) return;
+      if (isDragging) {
+        viewport.classList.remove('popular-cities__viewport--dragging');
+        try {
+          viewport.releasePointerCapture(event.pointerId);
+        } catch (err) { /* ignore */ }
+      }
+      isDragging = false;
+      activePointer = null;
+      pauseAutoScroll(3500);
+    }
+
+    viewport.addEventListener('pointerup', endPointer);
+    viewport.addEventListener('pointercancel', endPointer);
+
+    viewport.addEventListener('click', function (event) {
+      if (!suppressClick) return;
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClick = false;
+    }, true);
+
+    if (!UI.prefersReducedMotion()) {
+      window.requestAnimationFrame(tick);
+    }
+  },
+
+  pulsePopularCities() {
+    const section = document.getElementById('popularCitiesSection');
+    if (!section || UI.prefersReducedMotion()) return;
+    section.classList.remove('popular-cities--pulse');
+    void section.offsetWidth;
+    section.classList.add('popular-cities--pulse');
+    window.setTimeout(function () {
+      section.classList.remove('popular-cities--pulse');
+    }, 600);
+  },
 
   load() {
     if (this.state !== null) return this.state;
@@ -91,10 +279,10 @@ const LocationState = {
     if (!wrap) return;
 
     const selected = this.getLabel();
-    const cityButtons = this.popularCities.map(function (city) {
-      const active = LocationState.isCityActive(city, selected) ? ' is-active' : '';
-      return '<button type="button" class="location-result location-result--preset' + active + '" data-location-city="' + UI.escHtml(city) + '">'
-        + '<span class="location-result__title">' + UI.escHtml(city) + '</span>'
+    const cityButtons = this.popularCitiesConfig.map(function (city) {
+      const active = LocationState.isCityActive(city.name, selected) ? ' is-active' : '';
+      return '<button type="button" class="location-result location-result--preset' + active + '" data-location-city="' + UI.escHtml(city.name) + '">'
+        + '<span class="location-result__title">' + UI.escHtml(city.name) + '</span>'
         + '<span class="location-result__meta">Popular city</span>'
         + '</button>';
     }).join('');
@@ -134,7 +322,7 @@ const LocationState = {
 
     wrap.querySelectorAll('[data-location-city]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this.selectCity(btn.getAttribute('data-location-city'));
+        this.selectPresetCity(btn.getAttribute('data-location-city'));
       });
     });
   },
@@ -172,6 +360,25 @@ const LocationState = {
   close() {
     const modal = document.getElementById(this.modalId);
     if (modal && modal.closeModal) modal.closeModal();
+  },
+
+  selectPresetCity(name) {
+    if (!name) return;
+
+    const current = this.getLabel();
+    if (this.isCityActive(name, current)) {
+      this.clear();
+      return;
+    }
+
+    this.save({
+      label: name,
+      query: name,
+      source: 'preset',
+    });
+    this.close();
+    this.pulsePopularCities();
+    toast('Showing listings for ' + name + '.', 'success');
   },
 
   async selectCity(query) {
@@ -235,10 +442,11 @@ const LocationState = {
     });
 
     document.querySelectorAll('[data-location-city]').forEach((card) => {
+      if (card.closest('#popularCitiesTrack')) return;
       if (card.dataset.locationBound) return;
       card.dataset.locationBound = '1';
       card.addEventListener('click', () => {
-        this.selectCity(card.getAttribute('data-location-city'));
+        this.selectPresetCity(card.getAttribute('data-location-city'));
       });
     });
 
@@ -291,6 +499,8 @@ const LocationState = {
 
   init() {
     this.load();
+    this.renderPopularCitiesMarquee();
+    this.initPopularCitiesScroll();
     this.bindEvents();
     this.refreshUI();
     this.renderResults([]);
@@ -447,7 +657,7 @@ const LocationAutocomplete = {
 };
 
 document.addEventListener('DOMContentLoaded', function () {
-  if (document.getElementById('locationModal')) {
+  if (document.getElementById('locationModal') || document.getElementById('popularCitiesTrack')) {
     LocationState.init();
   }
 });

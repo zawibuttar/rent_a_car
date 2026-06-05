@@ -359,15 +359,20 @@ function renderCar(car) {
     + '</div>'
     + bookedPeriodsBlock
 
-    + '<div class="card">'
-    + '<div class="card-body detail-owner">'
-    + '<div class="detail-owner-av" aria-hidden="true">' + initials(UI.ownerDisplayName(car)) + '</div>'
-    + '<div>'
-    + '<div class="detail-owner-name">' + UI.escHtml(UI.ownerDisplayName(car)) + '</div>'
-    + '<div class="detail-owner-role">Verified Car Owner</div>'
-    + '</div>'
-    + '</div>'
-    + '</div>'
+    + (function () {
+      const ownerVerified = !!(car.owner && car.owner.is_verified);
+      const ownerRoleClass = 'detail-owner-role' + (ownerVerified ? ' detail-owner-role--verified' : '');
+      const ownerRoleLabel = ownerVerified ? 'Verified Car Owner' : 'Car Owner';
+      return '<div class="card">'
+        + '<div class="card-body detail-owner">'
+        + '<div class="detail-owner-av" aria-hidden="true">' + initials(UI.ownerDisplayName(car)) + '</div>'
+        + '<div>'
+        + '<div class="detail-owner-name">' + UI.escHtml(UI.ownerDisplayName(car)) + '</div>'
+        + '<div class="' + ownerRoleClass + '">' + UI.escHtml(ownerRoleLabel) + '</div>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    })()
 
     + '</aside>'
     + '</article>';

@@ -281,7 +281,7 @@ Environment variables (see `docker-compose.yml` for examples):
 | `REDIS_URL` | Redis URL | `redis://redis:6379/1` |
 | `CACHE_ENABLED` | `1` enables Redis list cache for admin APIs | `1` in compose |
 | `CACHE_TTL_ADMIN_LIST` | Admin list cache TTL (seconds) | `120` |
-| `THROTTLE_ANON`, `THROTTLE_USER`, `THROTTLE_AUTH`, `THROTTLE_BOOKING` | DRF rate limits | see `settings.py` |
+| `THROTTLE_ANON`, `THROTTLE_USER`, `THROTTLE_AUTH`, `THROTTLE_BOOKING`, `THROTTLE_LOCATION`, `THROTTLE_ADMIN` | DRF rate limits (`THROTTLE_USER` defaults to `1000/minute` when `DEBUG=1`) | see `settings.py` |
 | `CAR_IMAGE_MAX_BYTES`, `CAR_IMAGE_MAX_COUNT` | Upload limits | 5MB, 10 images |
 
 DRF pagination: **`PAGE_SIZE = 12`** for list APIs (public catalog, dashboards use `API.fetchAllPages()` in the browser to load all pages). Health check: **`GET /api/health/`**.
@@ -386,14 +386,34 @@ rent_a_car/
 1. Register **owner** → create car → confirm it appears on **Browse** immediately.
 2. Register **customer** → book car → owner **approves** → owner **completes** → customer **reviews**.
 3. **Admin** → hide car → confirm it disappears from browse → restore.
-4. Toggle **dark mode** on home and dashboards.
-5. With 13+ cars, confirm **pagination** on Home/Browse.
+4. **Admin Overview** → **Total Cars** matches All Cars tab (filter **All**); **Live on Marketplace** matches **Live** tab.
+5. Toggle **dark mode** on home and dashboards.
+6. With 13+ cars, confirm **pagination** on Home/Browse and admin Overview totals (not capped at 12).
+
+### Admin dashboard & Redis cache
+
+Admin Overview aggregates data from paginated list APIs (`/api/cars/admin/all/`, bookings, owners). List responses are cached in Redis when `CACHE_ENABLED=1`.
+
+- Cache keys are **versioned** and include the **`page`** query param so `fetchAllPages` returns complete datasets.
+- `invalidate_admin_lists()` bumps a version counter when cars, bookings, or owners change.
+
+**After deploying admin cache fixes**, flush stale Redis entries once:
+
+```bash
+docker compose exec redis redis-cli FLUSHDB
+```
+
+Or wait for the admin list TTL (`CACHE_TTL_ADMIN_LIST`, default 120 seconds).
+
+**All Cars shows fewer cars than expected:** check the filter tab — **Live** only lists `is_approved && is_available`. Use **All** for the full count.
 
 ### Troubleshooting
 
 | Issue | Check |
 |-------|--------|
 | Browse shows 0 cars | Car must be `is_approved` and `is_available`; hard-refresh browser; `GET /api/cars/` should not be cached stale. |
+| Admin Overview wrong / capped at 12 | Redis cache; run `FLUSHDB` above or disable `CACHE_ENABLED` locally. |
+| Admin Live tab shows 1 car | Expected if only one car is approved and available; use **All** tab to compare. |
 | Port in use | Change `8002:8000` in `docker-compose.yml` or stop conflicting process. |
 | Static files old | Run `collectstatic` and hard-refresh. |
 

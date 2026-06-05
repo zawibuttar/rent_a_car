@@ -256,9 +256,12 @@ const Catalog = {
     const heroBtn = document.getElementById('heroSearchBtn');
     if (heroBtn) heroBtn.addEventListener('click', Catalog.heroSearch);
 
-    document.addEventListener('location:changed', function () {
+    document.addEventListener('location:changed', function (event) {
       Catalog.page = 1;
       Catalog.loadCars(1);
+      if (event.detail && document.getElementById('carsGrid')) {
+        UI.scrollToEl('carsGrid');
+      }
     });
 
     Catalog.loadCars(1);

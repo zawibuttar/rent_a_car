@@ -7,11 +7,10 @@
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
     <div class="sidebar-user">
-      <div class="sidebar-avatar" id="sAvatar"
-        style="background:var(--danger-light);color:var(--danger)"></div>
+      <div class="sidebar-avatar" id="sAvatar"></div>
       <div>
         <div class="sidebar-name" id="sName"></div>
-        <span class="sidebar-role" style="background:var(--danger)">Admin</span>
+        <span class="sidebar-role">Admin</span>
       </div>
     </div>
 
@@ -51,7 +50,7 @@
       </div>
 
       <div class="dash-quick-actions" role="group" aria-label="Quick actions">
-        <button type="button" class="dash-action-chip dash-action-chip--primary dash-action-chip--wide"
+        <button type="button" class="dash-action-chip"
           id="adminQuickOwners"
           onclick="showTab('owners', document.getElementById('btn-owners'))">
           <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
@@ -69,13 +68,15 @@
         </button>
       </div>
 
-      <!-- Stats -->
-      <div class="stats-row" id="aStats">
-        <div class="loading"><span class="spinner"></span></div>
+      <!-- Stats (grouped) -->
+      <div id="aStatsGroups">
+        <div class="admin-stats-panel">
+          <div class="loading"><span class="spinner"></span></div>
+        </div>
       </div>
 
       <!-- Recent bookings -->
-      <div class="card">
+      <div class="card card--dash-preview">
         <div class="card-head">
           <h2>Recent Bookings</h2>
           <button type="button" class="btn btn-ghost btn-sm"
@@ -87,7 +88,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Customer</th><th>Car</th>
+                <th>No.</th><th>Customer</th><th>Car</th>
                 <th>Dates</th><th>Cost</th><th>Status</th>
               </tr>
             </thead>
@@ -109,6 +110,7 @@
         <div class="page-head">
           <div><h1>All Cars</h1><p>Every car on the platform</p></div>
         </div>
+        {% include 'includes/table_filters.html' with variant='admin_cars' toolbar_id='adminCarsFilters' search_placeholder='Brand, model, owner, city…' %}
         {% include 'includes/status_filter_tabs.html' with variant='admin_cars' tabs_id='adminCarsFilterTabs' tabs_label='Filter cars' %}
         <div class="results-bar">
           <span id="adminCarsResultCount" class="results-bar__count text-caption"></span>
@@ -120,7 +122,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Car</th><th>Owner</th><th class="col-hide-sm">Type</th>
+                <th>No.</th><th>Car</th><th>Owner</th><th class="col-hide-sm">Type</th>
                 <th>Price/day</th><th class="col-hide-sm">Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
               </tr>
             </thead>
@@ -143,6 +145,7 @@
         <div class="page-head">
           <div><h1>All Bookings</h1><p>Monitor every booking on the platform</p></div>
         </div>
+        {% include 'includes/table_filters.html' with variant='admin_bookings' toolbar_id='adminBookingsFilters' search_placeholder='Customer, car, owner…' %}
         {% include 'includes/status_filter_tabs.html' with variant='bookings' tabs_id='adminBookingsFilterTabs' tabs_label='Filter bookings by status' %}
         <div class="results-bar">
           <span id="adminBookingsResultCount" class="results-bar__count text-caption"></span>
@@ -154,7 +157,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Customer</th><th>Car</th><th class="col-hide-sm">Owner</th>
+                <th>No.</th><th>Customer</th><th>Car</th><th class="col-hide-sm">Owner</th>
                 <th>Period</th><th class="col-hide-sm">Duration</th>
                 <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th>
               </tr>
@@ -178,6 +181,7 @@
         <div class="page-head">
           <div><h1>Owner Verifications</h1><p>Approve and review owner profiles.</p></div>
         </div>
+        {% include 'includes/table_filters.html' with variant='admin_owners' toolbar_id='adminOwnersFilters' search_placeholder='Username, email, phone…' %}
         {% include 'includes/status_filter_tabs.html' with variant='admin_owners' tabs_id='adminOwnersFilterTabs' tabs_label='Filter owners' %}
         <div class="results-bar">
           <span id="adminOwnersResultCount" class="results-bar__count text-caption"></span>
@@ -189,7 +193,7 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Owner</th><th class="col-hide-sm">Email</th><th class="col-hide-sm">Phone</th><th>Status</th><th>Action</th>
+                <th>No.</th><th>Owner</th><th class="col-hide-sm">Email</th><th class="col-hide-sm">Phone</th><th>Status</th><th>Action</th>
               </tr>
             </thead>
             <tbody id="allOwnersTable">
@@ -218,15 +222,10 @@ if (!API.loggedIn() || (API.role() !== 'admin' && !(user && user.is_superuser)))
 let allAdminCars     = [];
 let allAdminBookings = [];
 let allAdminOwners   = [];
-let adminCarsViewList = [];
-let adminCarsPage = 1;
-let adminCarsFilter = 'all';
-let adminBookingsViewList = [];
-let adminBookingsPage = 1;
-let adminBookingsStatusFilter = '';
-let adminOwnersViewList = [];
-let adminOwnersPage = 1;
-let adminOwnersFilter = 'all';
+let adminDataFetched = { overview: false };
+let adminCarsState = { page: 1, statusTab: 'all' };
+let adminBookingsState = { page: 1, statusTab: '' };
+let adminOwnersState = { page: 1, statusTab: 'all' };
 
 /* ── Sidebar init ───────────────────── */
 document.getElementById('sName').textContent   = user ? user.username : '';
@@ -242,9 +241,9 @@ function showTab(name, btn) {
     btn: btn,
     onActivate: function (n) {
       if (n === 'overview') loadOverview();
-      if (n === 'cars') loadAllCars();
-      if (n === 'owners') loadAllOwners();
-      if (n === 'bookings') loadAllBookings();
+      if (n === 'cars') fetchAdminCarsList();
+      if (n === 'owners') fetchAdminOwnersList();
+      if (n === 'bookings') fetchAdminBookingsList();
     },
   });
 }
@@ -267,6 +266,7 @@ function updatePendingOwnersBadge(count) {
     var label = 'Owner verifications';
     if (count > 0) label += ' (' + count + ' pending)';
     quick.setAttribute('aria-label', label);
+    quick.classList.toggle('dash-action-chip--attention', count > 0);
     var chipCount = quick.querySelector('.dash-action-chip__count');
     if (count > 0) {
       if (!chipCount) {
@@ -281,136 +281,222 @@ function updatePendingOwnersBadge(count) {
   }
 }
 
+function invalidateAdminData(keys) {
+  (keys || ['overview']).forEach(function (k) {
+    adminDataFetched[k] = false;
+  });
+}
+
+function adminListQuery(baseUrl, state, toolbarId, variant) {
+  var toolbar = UI.getTableFilterState(toolbarId, variant);
+  var statusQ = UI.mapStatusTabToQuery(variant, state.statusTab);
+  return UI.buildListQuery(baseUrl, Object.assign({
+    page: state.page,
+    search: toolbar.search,
+    ordering: toolbar.ordering,
+    car_type: toolbar.car_type,
+    rental_type: toolbar.rental_type,
+  }, statusQ));
+}
+
+function hasActiveTableFilters(toolbarId, statusTab) {
+  var t = UI.getTableFilterState(toolbarId, '');
+  return !!(t.search || t.car_type || t.rental_type
+    || (statusTab && statusTab !== 'all' && statusTab !== ''));
+}
+
+function tableFilterEmptyHtml(title, toolbarId, statusTab, resetJs) {
+  var filtered = hasActiveTableFilters(toolbarId, statusTab);
+  return UI.emptyState(
+    title,
+    filtered ? 'Try adjusting your search or filters.' : '',
+    filtered ? '<button type="button" class="btn btn-ghost btn-sm" onclick="' + resetJs + '">Clear filters</button>' : ''
+  );
+}
+
+function showAdminOverviewError(err) {
+  var msg = err && err.message ? err.message : 'Something went wrong.';
+  toast(msg, 'error');
+  document.getElementById('aStatsGroups').innerHTML =
+    '<div class="admin-stats-panel">'
+    + UI.emptyState(
+      'Could not load dashboard',
+      msg,
+      '<button type="button" class="btn btn-primary btn-sm" onclick="invalidateAdminData(); loadOverview(true);">Retry</button>'
+    )
+    + '</div>';
+  document.getElementById('aBookingsPreview').innerHTML =
+    '<tr><td colspan="6">'
+    + UI.emptyState('Could not load bookings', msg)
+    + '</td></tr>';
+}
+
+function showCarsTabWithFilter(filter) {
+  adminCarsState.statusTab = filter || 'all';
+  adminCarsState.page = 1;
+  showTab('cars', document.getElementById('btn-cars'));
+  var tabs = document.getElementById('adminCarsFilterTabs');
+  if (tabs) {
+    var ftab = tabs.querySelector('[data-filter="' + adminCarsState.statusTab + '"]');
+    if (ftab) UI.setFilterTabActive(tabs, ftab);
+  }
+}
+
+function showOwnersTabWithFilter(filter) {
+  adminOwnersState.statusTab = filter || 'all';
+  adminOwnersState.page = 1;
+  showTab('owners', document.getElementById('btn-owners'));
+  var tabs = document.getElementById('adminOwnersFilterTabs');
+  if (tabs) {
+    var ftab = tabs.querySelector('[data-filter="' + adminOwnersState.statusTab + '"]');
+    if (ftab) UI.setFilterTabActive(tabs, ftab);
+  }
+}
+
+function showBookingsTabWithFilter(status) {
+  adminBookingsState.statusTab = status || '';
+  adminBookingsState.page = 1;
+  showTab('bookings', document.getElementById('btn-bookings'));
+  var tabs = document.getElementById('adminBookingsFilterTabs');
+  if (tabs) {
+    var ftab = tabs.querySelector('[data-filter="' + (status || '') + '"]');
+    if (ftab) UI.setFilterTabActive(tabs, ftab);
+  }
+}
+
+function renderAdminOverview() {
+  var totalCars      = allAdminCars.length;
+  var liveCars       = allAdminCars.filter(function(c){ return c.is_approved && c.is_available; }).length;
+  var hiddenCars     = allAdminCars.filter(function(c){ return !c.is_approved; }).length;
+  var unavailableCars = allAdminCars.filter(function(c){ return !c.is_available; }).length;
+  var totalBooks     = allAdminBookings.length;
+  var activeBooks    = allAdminBookings.filter(function(b){ return b.status === 'approved'; }).length;
+  var pending        = allAdminBookings.filter(function(b){ return b.status === 'pending'; }).length;
+  var pendingOwners  = allAdminOwners.filter(function(o){ return !o.is_verified; }).length;
+  var verifiedOwners = allAdminOwners.filter(function(o){ return o.is_verified; }).length;
+  var revenue        = allAdminBookings
+    .filter(function(b){ return b.status === 'completed'; })
+    .reduce(function(sum, b){ return sum + parseFloat(b.total_cost); }, 0);
+
+  updatePendingOwnersBadge(pendingOwners);
+
+  document.getElementById('aStatsGroups').innerHTML =
+    '<div class="admin-stats-panel">'
+    + UI.adminStatsGroup('Fleet', 'car',
+      UI.statCardButton('cars', totalCars, 'Total cars', "showCarsTabWithFilter('all')") +
+      UI.statCardButton('active', liveCars, 'Live on marketplace', "showCarsTabWithFilter('live')") +
+      UI.statCardButton('hidden', hiddenCars, 'Removed by admin', "showCarsTabWithFilter('admin_removed')") +
+      UI.statCardButton('paused', unavailableCars, 'Paused by owner', "showCarsTabWithFilter('paused')")) +
+    UI.adminStatsGroup('Owners', 'users',
+      UI.statCardButton('owners', allAdminOwners.length, 'Owner profiles', "showOwnersTabWithFilter('all')") +
+      UI.statCardButton('verified', verifiedOwners, 'Verified', "showOwnersTabWithFilter('verified')") +
+      UI.statCardButton('pending', pendingOwners, 'Pending review', "showOwnersTabWithFilter('pending')")) +
+    UI.adminStatsGroup('Bookings', 'calendar',
+      UI.statCardButton('bookings', totalBooks, 'Total bookings', "showBookingsTabWithFilter('')") +
+      UI.statCardButton('active', activeBooks, 'Active rentals', "showBookingsTabWithFilter('approved')") +
+      UI.statCardButton('pending', pending, 'Pending', "showBookingsTabWithFilter('pending')") +
+      UI.statCard('revenue', '$' + revenue.toFixed(0), 'Platform revenue'))
+    + '</div>';
+
+  if (!allAdminBookings.length) {
+    document.getElementById('aBookingsPreview').innerHTML =
+      '<tr><td colspan="6">'
+      + UI.emptyState('No bookings yet', 'Bookings will appear here as customers rent cars.')
+      + '</td></tr>';
+  } else {
+    document.getElementById('aBookingsPreview').innerHTML =
+      allAdminBookings.slice(0, 5).map(function(b, i) {
+        return '<tr>'
+          + UI.tdSerial(i + 1)
+          + '<td>' + UI.escHtml(b.customer.username) + '</td>'
+          + '<td>' + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</td>'
+          + '<td class="td-meta">'
+          + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
+          + '<td class="td-money">$'
+          + parseFloat(b.total_cost).toFixed(2) + '</td>'
+          + '<td>' + statusBadge(b.status) + '</td>'
+          + '</tr>';
+      }).join('');
+  }
+  UI.refreshTableScrollHints();
+}
+
 /* ══ OVERVIEW ═══════════════════════ */
-async function loadOverview() {
+async function loadOverview(force) {
   try {
-    var results = await Promise.all([
-      API.fetchAllPages('/api/cars/admin/all/'),
-      API.fetchAllPages('/api/bookings/admin/all/'),
-      API.fetchAllPages('/api/accounts/admin/owners/'),
-    ]);
-    allAdminCars = results[0];
-    allAdminBookings = results[1];
-    allAdminOwners = results[2];
-
-    var totalCars      = allAdminCars.length;
-    var available      = allAdminCars.filter(function(c){ return c.is_available; }).length;
-    var totalBooks     = allAdminBookings.length;
-    var activeBooks    = allAdminBookings.filter(function(b){ return b.status === 'approved'; }).length;
-    var pending        = allAdminBookings.filter(function(b){ return b.status === 'pending'; }).length;
-    var pendingOwners  = allAdminOwners.filter(function(o){ return !o.is_verified; }).length;
-    var verifiedOwners = allAdminOwners.filter(function(o){ return o.is_verified; }).length;
-    var revenue        = allAdminBookings
-      .filter(function(b){ return b.status === 'completed'; })
-      .reduce(function(sum, b){ return sum + parseFloat(b.total_cost); }, 0);
-
-    updatePendingOwnersBadge(pendingOwners);
-
-    /* stat cards */
-    document.getElementById('aStats').innerHTML =
-      UI.statCardButton('cars', totalCars, 'Total Cars',
-        "showTab('cars', document.getElementById('btn-cars'))") +
-      UI.statCardButton('active', available, 'Available Cars',
-        "showTab('cars', document.getElementById('btn-cars'))") +
-      UI.statCardButton('owners', allAdminOwners.length, 'Owner Profiles',
-        "showTab('owners', document.getElementById('btn-owners'))") +
-      UI.statCardButton('verified', verifiedOwners, 'Verified Owners',
-        "showTab('owners', document.getElementById('btn-owners'))") +
-      UI.statCardButton('pending', pendingOwners, 'Pending Verification',
-        "showTab('owners', document.getElementById('btn-owners'))") +
-      UI.statCardButton('bookings', totalBooks, 'Total Bookings',
-        "showTab('bookings', document.getElementById('btn-bookings'))") +
-      UI.statCardButton('active', activeBooks, 'Active Rentals',
-        "showTab('bookings', document.getElementById('btn-bookings'))") +
-      UI.statCard('revenue', '$' + revenue.toFixed(0), 'Platform Revenue');
-
-    /* bookings preview */
-    if (!allAdminBookings.length) {
-      document.getElementById('aBookingsPreview').innerHTML =
-        '<tr><td colspan="6">'
-        + UI.emptyState('No bookings yet', 'Bookings will appear here as customers rent cars.')
-        + '</td></tr>';
-    } else {
-      document.getElementById('aBookingsPreview').innerHTML =
-        allAdminBookings.slice(0, 5).map(function(b) {
-          return '<tr>'
-            + '<td class="td-id">#' + b.id + '</td>'
-            + '<td>' + UI.escHtml(b.customer.username) + '</td>'
-            + '<td>' + UI.escHtml(b.car.brand + ' ' + b.car.model) + '</td>'
-            + '<td class="td-meta">'
-            + UI.escHtml(UI.formatBookingPeriod(b)) + '</td>'
-            + '<td class="td-money">$'
-            + parseFloat(b.total_cost).toFixed(2) + '</td>'
-            + '<td>' + statusBadge(b.status) + '</td>'
-            + '</tr>';
-        }).join('');
+    if (!force && adminDataFetched.overview) {
+      renderAdminOverview();
+      return;
     }
-    UI.refreshTableScrollHints();
-
-  } catch(err) { toast(err.message, 'error'); }
+    if (!force && adminDataFetched.overview) {
+      renderAdminOverview();
+      return;
+    }
+    var fetches = [
+      API.fetchAllPages('/api/cars/admin/all/').then(function (d) { allAdminCars = d; }),
+      API.fetchAllPages('/api/bookings/admin/all/').then(function (d) { allAdminBookings = d; }),
+      API.fetchAllPages('/api/accounts/admin/owners/').then(function (d) { allAdminOwners = d; }),
+    ];
+    await Promise.all(fetches);
+    adminDataFetched.overview = true;
+    renderAdminOverview();
+  } catch(err) { showAdminOverviewError(err); }
 }
 
 /* ══ ALL CARS ═══════════════════════ */
-async function loadAllCars() {
+async function fetchAdminCarsList() {
+  var tbody = document.getElementById('allCarsTable');
+  tbody.innerHTML = UI.tableLoadingRow(9);
   try {
-    allAdminCars = await API.fetchAllPages('/api/cars/admin/all/');
-    adminCarsPage = 1;
-    applyAdminCarsFilter(adminCarsFilter);
-  } catch(err) { toast(err.message, 'error'); }
-}
-
-function applyAdminCarsFilter(filter) {
-  adminCarsFilter = filter || 'all';
-  adminCarsPage = 1;
-  renderCarsTable(UI.filterCarList(allAdminCars, adminCarsFilter));
-  UI.scrollToEl('allCarsTable');
+    var url = adminListQuery('/api/cars/admin/all/', adminCarsState, 'adminCarsFilters', 'admin_cars');
+    var meta = await UI.fetchListPage(url, adminCarsState.page, UI_PAGE.table);
+    adminCarsState.page = meta.page;
+    renderCarsTable(meta);
+  } catch (err) { toast(err.message, 'error'); tbody.innerHTML = UI.tableLoadingRow(9); }
 }
 
 async function setCarVisibility(id, isApproved) {
   try {
     await API.patch('/api/cars/admin/' + id + '/approve/', { is_approved: isApproved });
     toast(isApproved ? 'Listing restored on Browse Cars.' : 'Listing hidden from customers.', 'success');
-    loadAllCars();
-    loadOverview();
+    invalidateAdminData(['overview']);
+    fetchAdminCarsList();
+    loadOverview(true);
   } catch (err) { toast(err.message, 'error'); }
 }
 
-function renderCarsTable(list) {
-  adminCarsViewList = list;
-  var meta = UI.paginateSlice(list, adminCarsPage, UI_PAGE.table);
-  adminCarsPage = meta.page;
+function renderCarsTable(meta) {
   var tbody = document.getElementById('allCarsTable');
+  var toolbar = UI.getTableFilterState('adminCarsFilters', 'admin_cars');
 
   UI.updateResultsCount('adminCarsResultCount', {
-    filtered: list.length,
-    total: allAdminCars.length,
-    label: allAdminCars.length === 1 ? 'car' : 'cars',
-    filterLabel: UI.carFilterLabel(adminCarsFilter),
+    filtered: meta.count,
+    total: meta.count,
+    label: meta.count === 1 ? 'car' : 'cars',
+    filterLabel: UI.carFilterLabel(adminCarsState.statusTab),
+    searchText: toolbar.search,
   });
 
   if (!meta.items.length) {
-    var carEmpty = adminCarsFilter && adminCarsFilter !== 'all'
-      ? 'No cars match this filter.'
-      : 'No cars found';
-    tbody.innerHTML =
-      '<tr><td colspan="9">'
-      + '<div class="empty"><h3>' + UI.escHtml(carEmpty) + '</h3></div>'
+    tbody.innerHTML = '<tr><td colspan="9">'
+      + tableFilterEmptyHtml('No cars found', 'adminCarsFilters', adminCarsState.statusTab,
+        "UI.resetTableFilters('adminCarsFilters','adminCarsFilterTabs');adminCarsState.page=1;adminCarsState.statusTab='all';fetchAdminCarsList();")
       + '</td></tr>';
     UI.mountPagination('adminCarsPagination', meta, function () {}, { label: 'cars' });
     return;
   }
 
-  tbody.innerHTML = meta.items.map(function(c) {
+  tbody.innerHTML = meta.items.map(function(c, i) {
     var vis = c.is_approved
       ? '<span class="badge badge-green">On marketplace</span>'
-      : '<span class="badge badge-red">Hidden</span>';
+      : '<span class="badge badge-red">Removed by admin</span>';
     var actions = '<div class="table-actions">'
       + (c.is_approved
         ? '<button type="button" class="btn btn-sm btn-danger" onclick="setCarVisibility(' + c.id + ', false)">Hide</button>'
         : '<button type="button" class="btn btn-sm btn-primary" onclick="setCarVisibility(' + c.id + ', true)">Restore</button>')
       + '</div>';
     return '<tr>'
-      + '<td class="td-id">#' + c.id + '</td>'
+      + UI.tdSerial(meta.rangeStart + i)
       + '<td>'
       + '<a href="/cars/' + encodeURIComponent(c.id) + '/" target="_blank" rel="noopener" class="text-strong">'
       + UI.escHtml(c.brand + ' ' + c.model) + '</a>'
@@ -427,68 +513,57 @@ function renderCarsTable(list) {
       + '<td>' + vis + '</td>'
       + '<td>'
       + (c.is_available
-          ? '<span class="badge badge-green">Yes</span>'
-          : '<span class="badge badge-gray">No</span>')
+          ? '<span class="badge badge-green">Available</span>'
+          : '<span class="badge badge-amber">Paused</span>')
       + '</td>'
       + '<td>' + actions + '</td>'
       + '</tr>';
   }).join('');
 
   UI.mountPagination('adminCarsPagination', meta, function (p) {
-    adminCarsPage = p;
-    renderCarsTable(adminCarsViewList);
+    adminCarsState.page = p;
+    fetchAdminCarsList();
     UI.scrollToEl('allCarsTable');
   }, { label: 'cars' });
   UI.refreshTableScrollHints();
 }
 
 /* ══ ALL BOOKINGS ═══════════════════ */
-async function loadAllBookings() {
-  try {
-    allAdminBookings = await API.fetchAllPages('/api/bookings/admin/all/');
-    adminBookingsPage = 1;
-    applyAdminBookingsFilter(adminBookingsStatusFilter);
-  } catch(err) { toast(err.message, 'error'); }
-}
-
-function applyAdminBookingsFilter(status) {
-  adminBookingsStatusFilter = status || '';
-  adminBookingsPage = 1;
-  var list = adminBookingsStatusFilter
-    ? allAdminBookings.filter(function (b) { return b.status === adminBookingsStatusFilter; })
-    : allAdminBookings;
-  renderBookingsTable(list);
-  UI.scrollToEl('allBookingsTable');
-}
-
-function renderBookingsTable(list) {
-  adminBookingsViewList = list;
-  var meta = UI.paginateSlice(list, adminBookingsPage, UI_PAGE.table);
-  adminBookingsPage = meta.page;
+async function fetchAdminBookingsList() {
   var tbody = document.getElementById('allBookingsTable');
+  tbody.innerHTML = UI.tableLoadingRow(9);
+  try {
+    var url = adminListQuery('/api/bookings/admin/all/', adminBookingsState, 'adminBookingsFilters', 'bookings');
+    var meta = await UI.fetchListPage(url, adminBookingsState.page, UI_PAGE.table);
+    adminBookingsState.page = meta.page;
+    renderBookingsTable(meta);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+function renderBookingsTable(meta) {
+  var tbody = document.getElementById('allBookingsTable');
+  var toolbar = UI.getTableFilterState('adminBookingsFilters', 'admin_bookings');
 
   UI.updateResultsCount('adminBookingsResultCount', {
-    filtered: list.length,
-    total: allAdminBookings.length,
-    label: allAdminBookings.length === 1 ? 'booking' : 'bookings',
-    filterLabel: UI.bookingStatusLabel(adminBookingsStatusFilter),
+    filtered: meta.count,
+    total: meta.count,
+    label: meta.count === 1 ? 'booking' : 'bookings',
+    filterLabel: UI.bookingStatusLabel(adminBookingsState.statusTab),
+    searchText: toolbar.search,
   });
 
   if (!meta.items.length) {
-    var bookEmpty = adminBookingsStatusFilter
-      ? 'No ' + UI.bookingStatusLabel(adminBookingsStatusFilter).toLowerCase() + ' bookings.'
-      : 'No bookings found';
-    tbody.innerHTML =
-      '<tr><td colspan="9">'
-      + '<div class="empty"><h3>' + UI.escHtml(bookEmpty) + '</h3></div>'
+    tbody.innerHTML = '<tr><td colspan="9">'
+      + tableFilterEmptyHtml('No bookings found', 'adminBookingsFilters', adminBookingsState.statusTab,
+        "UI.resetTableFilters('adminBookingsFilters','adminBookingsFilterTabs');adminBookingsState.page=1;adminBookingsState.statusTab='';fetchAdminBookingsList();")
       + '</td></tr>';
     UI.mountPagination('adminBookingsPagination', meta, function () {}, { label: 'bookings' });
     return;
   }
 
-  tbody.innerHTML = meta.items.map(function(b) {
+  tbody.innerHTML = meta.items.map(function(b, i) {
     return '<tr>'
-      + '<td class="td-id">#' + b.id + '</td>'
+      + UI.tdSerial(meta.rangeStart + i)
       + '<td>'
       + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
       + '<div class="text-subline">'
@@ -512,65 +587,48 @@ function renderBookingsTable(list) {
   }).join('');
 
   UI.mountPagination('adminBookingsPagination', meta, function (p) {
-    adminBookingsPage = p;
-    renderBookingsTable(adminBookingsViewList);
+    adminBookingsState.page = p;
+    fetchAdminBookingsList();
     UI.scrollToEl('allBookingsTable');
   }, { label: 'bookings' });
   UI.refreshTableScrollHints();
 }
 
-async function loadAllOwners() {
-  try {
-    allAdminOwners = await API.fetchAllPages('/api/accounts/admin/owners/');
-    adminOwnersPage = 1;
-    var pending = allAdminOwners.filter(function (o) { return !o.is_verified; }).length;
-    updatePendingOwnersBadge(pending);
-    applyAdminOwnersFilter(adminOwnersFilter);
-  } catch(err) { toast(err.message, 'error'); }
-}
-
-function applyAdminOwnersFilter(filter) {
-  adminOwnersFilter = filter || 'all';
-  adminOwnersPage = 1;
-  var list = allAdminOwners;
-  if (adminOwnersFilter === 'pending') {
-    list = list.filter(function (o) { return !o.is_verified; });
-  } else if (adminOwnersFilter === 'verified') {
-    list = list.filter(function (o) { return o.is_verified; });
-  }
-  renderOwnersTable(list);
-  UI.scrollToEl('allOwnersTable');
-}
-
-function renderOwnersTable(list) {
-  adminOwnersViewList = list;
-  var meta = UI.paginateSlice(list, adminOwnersPage, UI_PAGE.table);
-  adminOwnersPage = meta.page;
+async function fetchAdminOwnersList() {
   var tbody = document.getElementById('allOwnersTable');
+  tbody.innerHTML = UI.tableLoadingRow(6);
+  try {
+    var url = adminListQuery('/api/accounts/admin/owners/', adminOwnersState, 'adminOwnersFilters', 'admin_owners');
+    var meta = await UI.fetchListPage(url, adminOwnersState.page, UI_PAGE.table);
+    adminOwnersState.page = meta.page;
+    renderOwnersTable(meta);
+  } catch (err) { toast(err.message, 'error'); }
+}
 
-  var ownerFilterLabel = adminOwnersFilter === 'pending' ? 'Pending verification'
-    : adminOwnersFilter === 'verified' ? 'Verified' : '';
+function renderOwnersTable(meta) {
+  var tbody = document.getElementById('allOwnersTable');
+  var toolbar = UI.getTableFilterState('adminOwnersFilters', 'admin_owners');
+  var ownerFilterLabel = adminOwnersState.statusTab === 'pending' ? 'Pending verification'
+    : adminOwnersState.statusTab === 'verified' ? 'Verified' : '';
 
   UI.updateResultsCount('adminOwnersResultCount', {
-    filtered: list.length,
-    total: allAdminOwners.length,
-    label: allAdminOwners.length === 1 ? 'owner' : 'owners',
+    filtered: meta.count,
+    total: meta.count,
+    label: meta.count === 1 ? 'owner' : 'owners',
     filterLabel: ownerFilterLabel,
+    searchText: toolbar.search,
   });
 
   if (!meta.items.length) {
-    var ownerEmpty = ownerFilterLabel
-      ? 'No ' + ownerFilterLabel.toLowerCase() + ' owners.'
-      : 'No owners found';
-    tbody.innerHTML =
-      '<tr><td colspan="6">'
-      + '<div class="empty"><h3>' + UI.escHtml(ownerEmpty) + '</h3></div>'
+    tbody.innerHTML = '<tr><td colspan="6">'
+      + tableFilterEmptyHtml('No owners found', 'adminOwnersFilters', adminOwnersState.statusTab,
+        "UI.resetTableFilters('adminOwnersFilters','adminOwnersFilterTabs');adminOwnersState.page=1;adminOwnersState.statusTab='all';fetchAdminOwnersList();")
       + '</td></tr>';
     UI.mountPagination('adminOwnersPagination', meta, function () {}, { label: 'owners' });
     return;
   }
 
-  tbody.innerHTML = meta.items.map(function(o) {
+  tbody.innerHTML = meta.items.map(function(o, i) {
     var actionButtons = '<div class="table-actions">'
       + (o.is_verified
         ? '<button type="button" class="btn btn-sm btn-danger" onclick="updateOwnerStatus(' + o.id + ', false)">Revoke</button>'
@@ -579,7 +637,7 @@ function renderOwnersTable(list) {
       + '</div>';
 
     return '<tr>'
-      + '<td class="td-id">#' + o.id + '</td>'
+      + UI.tdSerial(meta.rangeStart + i)
       + '<td>' + UI.escHtml(o.user.username || '') + '</td>'
       + '<td class="td-meta col-hide-sm">' + UI.escHtml(o.user.email || '—') + '</td>'
       + '<td class="td-meta col-hide-sm">' + UI.escHtml(o.phone_number || '—') + '</td>'
@@ -591,8 +649,8 @@ function renderOwnersTable(list) {
   }).join('');
 
   UI.mountPagination('adminOwnersPagination', meta, function (p) {
-    adminOwnersPage = p;
-    renderOwnersTable(adminOwnersViewList);
+    adminOwnersState.page = p;
+    fetchAdminOwnersList();
     UI.scrollToEl('allOwnersTable');
   }, { label: 'owners' });
   UI.refreshTableScrollHints();
@@ -604,15 +662,55 @@ async function updateOwnerStatus(id, isVerified) {
       is_verified: isVerified
     });
     toast(isVerified ? 'Owner profile approved.' : 'Owner profile rejected.', 'success');
-    loadAllOwners();
-    loadOverview();
+    invalidateAdminData(['overview']);
+    fetchAdminOwnersList();
+    loadOverview(true);
   } catch(err) { toast(err.message, 'error'); }
 }
 
 /* ── Boot ───────────────────────────── */
-UI.initFilterTabs('adminCarsFilterTabs', applyAdminCarsFilter);
-UI.initFilterTabs('adminBookingsFilterTabs', applyAdminBookingsFilter);
-UI.initFilterTabs('adminOwnersFilterTabs', applyAdminOwnersFilter);
+UI.initTableFilters({
+  toolbarId: 'adminCarsFilters',
+  variant: 'admin_cars',
+  statusTabsId: 'adminCarsFilterTabs',
+  onStatusChange: function (v) {
+    adminCarsState.statusTab = v || 'all';
+    adminCarsState.page = 1;
+    fetchAdminCarsList();
+  },
+  onChange: function () {
+    adminCarsState.page = 1;
+    fetchAdminCarsList();
+  },
+});
+UI.initTableFilters({
+  toolbarId: 'adminBookingsFilters',
+  variant: 'admin_bookings',
+  statusTabsId: 'adminBookingsFilterTabs',
+  onStatusChange: function (v) {
+    adminBookingsState.statusTab = v || '';
+    adminBookingsState.page = 1;
+    fetchAdminBookingsList();
+  },
+  onChange: function () {
+    adminBookingsState.page = 1;
+    fetchAdminBookingsList();
+  },
+});
+UI.initTableFilters({
+  toolbarId: 'adminOwnersFilters',
+  variant: 'admin_owners',
+  statusTabsId: 'adminOwnersFilterTabs',
+  onStatusChange: function (v) {
+    adminOwnersState.statusTab = v || 'all';
+    adminOwnersState.page = 1;
+    fetchAdminOwnersList();
+  },
+  onChange: function () {
+    adminOwnersState.page = 1;
+    fetchAdminOwnersList();
+  },
+});
 loadOverview();
 </script>
 {% endblock %}

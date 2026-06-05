@@ -152,7 +152,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .text-subline { font-size: var(--text-xs); color: var(--text-2); line-height: var(--leading-snug); }
-.td-id { font-size: var(--text-xs); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.td-serial {
+  width: 48px;
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
 .td-meta { font-size: var(--text-sm); color: var(--text-2); }
 .table-empty { font-size: var(--text-sm); color: var(--text-3); }
 .text-strong { font-weight: var(--font-semibold); color: var(--text); }
@@ -409,18 +415,55 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* Popular Cities */
 .popular-cities { margin: 20px 0 28px; }
-.popular-cities h2 { margin-bottom: 12px; }
-.popular-cities__list {
-  display: flex;
-  flex-direction: row;
-  gap: 14px;
-  flex-wrap: nowrap; /* keep all cards in a single row */
-  overflow-x: auto; /* allow horizontal scroll on narrow screens */
-  padding-bottom: 6px;
-  align-items: center;
+.popular-cities h2 { margin-bottom: 6px; }
+.popular-cities__lead {
+  margin: 0 0 14px;
+  color: var(--text-3);
 }
-
-.popular-cities__list .city-card {
+.popular-cities__viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0 10px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+  cursor: grab;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+}
+.popular-cities__viewport::-webkit-scrollbar {
+  height: 6px;
+}
+.popular-cities__viewport::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+.popular-cities__viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+.popular-cities__viewport--dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+.popular-cities__track {
+  display: flex;
+  width: max-content;
+}
+.popular-cities__set {
+  display: flex;
+  flex-shrink: 0;
+  gap: 14px;
+  padding-right: 14px;
+}
+.popular-cities--pulse {
+  animation: popularCitiesPulse 0.6s ease;
+}
+@keyframes popularCitiesPulse {
+  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.35); }
+  100% { box-shadow: 0 0 0 12px rgba(79, 70, 229, 0); }
+}
+.popular-cities .city-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -432,24 +475,40 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   border-radius: 10px;
   padding: 14px;
   box-shadow: var(--shadow-sm);
-  flex: 0 0 140px; /* fixed card width to keep single row */
+  flex: 0 0 140px;
   min-width: 120px;
   text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
-
-/* On wider screens, expand cards to fill full width in one row */
-@media (min-width: 900px) {
-  .popular-cities__list { overflow-x: hidden; }
-  .popular-cities__list .city-card { flex: 0 0 calc((100% - 84px) / 7); }
-}
-.popular-cities__list .city-card:hover,
-.popular-cities__list .city-card.is-active {
+.popular-cities .city-card:hover,
+.popular-cities .city-card.is-active {
   border-color: var(--primary);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
-.popular-cities__list .city-card img { width: 76px; height: 56px; object-fit: contain; display: block; margin: 0 auto 8px; }
-.popular-cities__list .city-name { font-size: var(--text-sm); color: var(--text-2); }
+.popular-cities .city-card img {
+  width: 76px;
+  height: 56px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 8px;
+}
+.popular-cities .city-card .city-name {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .popular-cities__viewport {
+    cursor: default;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .popular-cities--pulse {
+    animation: none;
+  }
+}
 .auth-box .sub     { margin-bottom: 24px; }
 .auth-box .footer  { text-align: center; margin-top: 16px; }
 .auth-role-title   { font-size: var(--text-sm); font-weight: var(--font-semibold); color: var(--text); }
@@ -882,22 +941,147 @@ a.dash-action-chip {
   border-color: #1d4ed8;
   color: #fff;
 }
-.role-admin .dash-action-chip--primary {
-  background: var(--danger);
-  border-color: var(--danger);
+/* ── Admin dashboard theme ──────────── */
+.role-admin {
+  --role-accent: #6366f1;
+  --role-accent-dark: #4f46e5;
+  --role-accent-light: #eef2ff;
 }
-.role-admin .dash-action-chip--primary:hover {
-  background: #b91c1c;
-  border-color: #b91c1c;
-  color: #fff;
+[data-theme="dark"] .role-admin {
+  --role-accent: #818cf8;
+  --role-accent-dark: #6366f1;
+  --role-accent-light: #312e81;
+}
+.role-admin .sidebar-avatar {
+  background: var(--role-accent-light);
+  color: var(--role-accent);
+}
+.role-admin .sidebar-role { background: var(--role-accent); }
+.role-admin .s-item.active {
+  color: var(--role-accent);
+  background: var(--role-accent-light);
+  border-left-color: var(--role-accent);
+}
+.role-admin .dash-action-chip:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent-light);
+}
+.role-admin .dash-action-chip--attention {
+  border-color: var(--warning);
+  background: var(--warning-light);
+}
+.role-admin .dash-action-chip--attention:hover {
+  border-color: #b45309;
+  background: #fde68a;
+}
+.role-admin .stat-icon--hidden {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+.role-admin .stat-icon--paused {
+  color: var(--warning);
+  background: var(--warning-light);
 }
 
-.role-admin .stats-row {
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+.admin-stats-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px 18px;
+  box-shadow: var(--shadow-sm);
 }
-.role-admin .stat-card { padding: 12px; }
-.role-admin .stat-icon { width: 30px; height: 30px; margin-bottom: 8px; }
-.role-admin .stat-val { font-size: var(--text-lg); }
+.admin-stats-section + .admin-stats-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.admin-stats-section__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: 12px;
+}
+.admin-stats-section__title .icon {
+  color: var(--role-accent);
+  opacity: 1;
+}
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.role-admin .admin-stats-grid .stat-card,
+.role-admin .admin-stats-grid .stat-card--btn {
+  min-height: 104px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+.role-admin .admin-stats-grid .stat-card--btn:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent-light);
+  box-shadow: var(--shadow-sm);
+  transform: none;
+}
+.role-admin .admin-stats-grid .stat-card--btn:focus-visible {
+  outline: 2px solid var(--role-accent);
+  outline-offset: 2px;
+}
+.role-admin .admin-stats-grid .stat-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.role-admin .admin-stats-grid .stat-val {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  color: var(--text);
+}
+.role-admin .admin-stats-grid .stat-lbl {
+  font-size: var(--text-xs);
+  color: var(--text-2);
+  margin-top: 4px;
+  line-height: var(--leading-snug);
+}
+
+.card--dash-preview table tbody tr {
+  transition: background .12s ease;
+}
+.card--dash-preview table tbody tr:hover td {
+  background: var(--role-accent-light);
+}
+[data-theme="dark"] .card--dash-preview table tbody tr:hover td {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.role-admin .list-toolbar {
+  border-bottom-color: var(--border);
+}
+
+.table-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.table-filters__bar {
+  width: 100%;
+}
+.list-toolbar .table-filters {
+  margin-bottom: 0;
+}
 
 .modal--wide { max-width: 560px; }
 
@@ -2081,6 +2265,17 @@ a.dash-action-chip {
   font-weight: var(--font-semibold);
   background: rgba(255, 255, 255, 0.2);
 }
+.role-admin .ftab:hover {
+  border-color: var(--role-accent);
+  color: var(--role-accent);
+}
+.role-admin .ftab.active,
+.role-admin .ftab[aria-selected="true"] {
+  background: var(--role-accent);
+  border-color: var(--role-accent);
+  color: #fff;
+}
+
 .ftab:not(.active) .ftab-count {
   background: var(--bg);
   color: var(--text-3);
@@ -2242,6 +2437,7 @@ a.dash-action-chip {
 }
 .detail-owner-name { font-weight: 600; font-size: var(--text-sm); }
 .detail-owner-role { font-size: var(--text-xs); color: var(--text-2); margin-top: 1px; }
+.detail-owner-role--verified { color: var(--primary); font-weight: var(--font-medium); }
 
 .detail-about .card-body { padding: 18px 20px; }
 .detail-about-text {
@@ -2718,7 +2914,6 @@ a.dash-action-chip {
 .car-loc { display: inline-flex; align-items: center; gap: 4px; }
 .role-customer .sidebar-role { background: var(--primary); }
 .role-owner .sidebar-role { background: #d97706; }
-.role-admin .sidebar-role { background: var(--danger); }
 .auth-role-card {
   border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 16px; text-align: center; cursor: pointer; transition: border-color .15s, box-shadow .15s;
@@ -2757,6 +2952,7 @@ a.dash-action-chip {
   .form-grid-2,
   .form-grid-3 { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .admin-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* Large phone */
@@ -2776,6 +2972,8 @@ a.dash-action-chip {
     gap: 12px;
   }
   .page-head .btn { width: 100%; justify-content: center; }
+
+  .admin-stats-grid { grid-template-columns: 1fr; }
 
   .results-bar,
   .sec-head {

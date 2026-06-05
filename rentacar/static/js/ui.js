@@ -43,6 +43,16 @@ const UI = {
     });
   },
 
+  adminStatsGroup(title, iconName, cardsHtml) {
+    return '<section class="admin-stats-section">'
+      + '<h3 class="admin-stats-section__title">'
+      + UI.icon(iconName, 'icon icon-sm')
+      + UI.escHtml(title)
+      + '</h3>'
+      + '<div class="admin-stats-grid">' + cardsHtml + '</div>'
+      + '</section>';
+  },
+
   statCard(variant, value, label) {
     const icons = {
       cars: 'car',
@@ -53,6 +63,8 @@ const UI = {
       revenue: 'dollar',
       owners: 'users',
       verified: 'shield',
+      hidden: 'x',
+      paused: 'edit',
     };
     const iconName = icons[variant] || 'chart';
     return '<div class="stat-card">'
@@ -72,6 +84,8 @@ const UI = {
       revenue: 'dollar',
       owners: 'users',
       verified: 'shield',
+      hidden: 'x',
+      paused: 'edit',
     };
     const iconName = icons[variant] || 'chart';
     return '<button type="button" class="stat-card stat-card--btn" onclick="' + onClickJs + '">'
@@ -257,26 +271,39 @@ const UI = {
     return { error: 'Invalid rental type.' };
   },
 
+  formatDateTimeLocal(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch (e) {
+      return String(iso);
+    }
+  },
+
+  formatDateLocal(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric',
+      });
+    } catch (e) {
+      return String(iso).slice(0, 10);
+    }
+  },
+
   formatBookingPeriod(booking) {
     if (!booking) return '—';
-    if (booking.period_display) return booking.period_display;
     const type = booking.rental_type || 'daily';
     const start = booking.start_at;
     const end = booking.end_at;
-    if (!start || !end) return '—';
+    if (!start || !end) return booking.period_display || '—';
     if (type === 'hourly') {
-      const fmt = function (iso) {
-        const d = new Date(iso);
-        return d.toLocaleString(undefined, {
-          month: 'short', day: 'numeric', year: 'numeric',
-          hour: '2-digit', minute: '2-digit',
-        });
-      };
-      return fmt(start) + ' → ' + fmt(end);
+      return UI.formatDateTimeLocal(start) + ' → ' + UI.formatDateTimeLocal(end);
     }
-    const sd = String(start).slice(0, 10);
-    const ed = String(end).slice(0, 10);
-    return sd + ' → ' + ed;
+    return UI.formatDateLocal(start) + ' → ' + UI.formatDateLocal(end);
   },
 
   bookingDurationLabel(booking) {
@@ -326,25 +353,15 @@ const UI = {
 
   bookedSlotPeriod(slot) {
     if (!slot) return '—';
-    return slot.period_display || UI.formatBookingPeriod(slot);
+    return UI.formatBookingPeriod(slot);
   },
 
   bookedSlotEndShort(slot) {
     if (!slot || !slot.end_at) return '';
-    try {
-      const d = new Date(slot.end_at);
-      if (slot.rental_type === 'hourly') {
-        return d.toLocaleString(undefined, {
-          month: 'short', day: 'numeric', year: 'numeric',
-          hour: '2-digit', minute: '2-digit',
-        });
-      }
-      return d.toLocaleDateString(undefined, {
-        month: 'short', day: 'numeric', year: 'numeric',
-      });
-    } catch (e) {
-      return String(slot.end_at).slice(0, 10);
+    if (slot.rental_type === 'hourly') {
+      return UI.formatDateTimeLocal(slot.end_at);
     }
+    return UI.formatDateLocal(slot.end_at);
   },
 
   bookedSlotsSummary(car) {
@@ -727,8 +744,8 @@ const UI = {
     modalEl.closeModal = closeModal;
   },
 
-  tdId(id) {
-    return '<td class="td-id">#' + id + '</td>';
+  tdSerial(n) {
+    return '<td class="td-serial">' + UI.escHtml(String(n)) + '</td>';
   },
 
   tdMeta(html, extraClass) {
@@ -744,24 +761,166 @@ const UI = {
     return '<span class="table-empty">—</span>';
   },
 
+  tableLoadingRow(colspan) {
+    return '<tr><td colspan="' + colspan + '">'
+      + '<div class="loading"><span class="spinner"></span></div>'
+      + '</td></tr>';
+  },
+
+  mapStatusTabToQuery(variant, filterValue) {
+    const val = filterValue || '';
+    if (variant === 'admin_cars' || variant === 'owner_cars') {
+      if (!val || val === 'all') return {};
+      if (val === 'hidden' || val === 'admin_removed') return { listing: 'admin_removed' };
+      if (val === 'unavailable' || val === 'paused') return { listing: 'paused' };
+      if (val === 'live') return { listing: 'live' };
+      return {};
+    }
+    if (variant === 'admin_owners') {
+      if (val === 'pending') return { is_verified: 'false' };
+      if (val === 'verified') return { is_verified: 'true' };
+      return {};
+    }
+    if (!val) return {};
+    return { status: val };
+  },
+
+  buildListQuery(baseUrl, state) {
+    const params = new URLSearchParams();
+    if (state.page) params.set('page', String(state.page));
+    if (state.search) params.set('search', state.search);
+    if (state.listing) params.set('listing', state.listing);
+    if (state.status) params.set('status', state.status);
+    if (state.is_verified != null && state.is_verified !== '') {
+      params.set('is_verified', String(state.is_verified));
+    }
+    if (state.is_available != null && state.is_available !== '') {
+      params.set('is_available', String(state.is_available));
+    }
+    if (state.car_type) params.set('car_type', state.car_type);
+    if (state.rental_type) params.set('rental_type', state.rental_type);
+    if (state.ordering) params.set('ordering', state.ordering);
+    const qs = params.toString();
+    if (!qs) return baseUrl;
+    return baseUrl + (baseUrl.indexOf('?') >= 0 ? '&' : '?') + qs;
+  },
+
+  async fetchListPage(url, page, pageSize) {
+    pageSize = pageSize || UI_PAGE.table;
+    page = page || 1;
+    const data = await API.get(url);
+    return UI.parseListResponse(data, page, pageSize);
+  },
+
+  getTableFilterState(toolbarId, variant) {
+    const root = document.getElementById(toolbarId);
+    if (!root) {
+      return { search: '', ordering: '', car_type: '', rental_type: '' };
+    }
+    const searchEl = document.getElementById(toolbarId + 'Search');
+    const sortEl = document.getElementById(toolbarId + 'Sort');
+    const typeEl = document.getElementById(toolbarId + 'Type');
+    const rentalEl = document.getElementById(toolbarId + 'Rental');
+    return {
+      search: searchEl ? searchEl.value.trim() : '',
+      ordering: sortEl ? sortEl.value : '',
+      car_type: typeEl ? typeEl.value : '',
+      rental_type: rentalEl ? rentalEl.value : '',
+      variant: variant || root.getAttribute('data-variant') || '',
+    };
+  },
+
+  resetTableFilters(toolbarId, statusTabsId) {
+    const searchEl = document.getElementById(toolbarId + 'Search');
+    const sortEl = document.getElementById(toolbarId + 'Sort');
+    const typeEl = document.getElementById(toolbarId + 'Type');
+    const rentalEl = document.getElementById(toolbarId + 'Rental');
+    if (searchEl) searchEl.value = '';
+    if (typeEl) typeEl.value = '';
+    if (rentalEl) rentalEl.value = '';
+    if (sortEl) {
+      const first = sortEl.querySelector('option');
+      if (first) sortEl.value = first.value;
+    }
+    if (statusTabsId) {
+      const tabs = document.getElementById(statusTabsId);
+      if (tabs) {
+        const allTab = tabs.querySelector('[data-filter=""], [data-filter="all"]');
+        if (allTab) UI.setFilterTabActive(tabs, allTab);
+      }
+    }
+  },
+
+  initTableFilters(opts) {
+    opts = opts || {};
+    const toolbarId = opts.toolbarId;
+    const variant = opts.variant;
+    const statusTabsId = opts.statusTabsId;
+    const debounceMs = opts.debounceMs || 350;
+    let timer = null;
+
+    function emitChange() {
+      if (typeof opts.onChange === 'function') opts.onChange();
+    }
+
+    const searchEl = document.getElementById(toolbarId + 'Search');
+    if (searchEl && !searchEl.dataset.tableFilterBound) {
+      searchEl.dataset.tableFilterBound = '1';
+      searchEl.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(emitChange, debounceMs);
+      });
+    }
+
+    ['Sort', 'Type', 'Rental'].forEach(function (suffix) {
+      const el = document.getElementById(toolbarId + suffix);
+      if (el && !el.dataset.tableFilterBound) {
+        el.dataset.tableFilterBound = '1';
+        el.addEventListener('change', emitChange);
+      }
+    });
+
+    const resetEl = document.getElementById(toolbarId + 'Reset');
+    if (resetEl && !resetEl.dataset.tableFilterBound) {
+      resetEl.dataset.tableFilterBound = '1';
+      resetEl.addEventListener('click', function () {
+        UI.resetTableFilters(toolbarId, statusTabsId);
+        emitChange();
+      });
+    }
+
+    if (statusTabsId && opts.onStatusChange) {
+      UI.initFilterTabs(statusTabsId, function (filterValue) {
+        opts.onStatusChange(filterValue);
+      });
+    }
+
+    return { toolbarId: toolbarId, variant: variant };
+  },
+
   parseListResponse(data, currentPage, pageSize) {
     pageSize = pageSize || UI_PAGE.catalog;
     currentPage = currentPage || 1;
     if (Array.isArray(data)) {
+      const count = data.length;
       return {
         items: data,
-        count: data.length,
+        count: count,
         page: 1,
         pageSize: data.length || pageSize,
         totalPages: 1,
         hasNext: false,
         hasPrev: false,
         isPaginated: false,
+        rangeStart: count ? 1 : 0,
+        rangeEnd: count,
       };
     }
     const items = data.results || [];
     const count = typeof data.count === 'number' ? data.count : items.length;
     const totalPages = Math.max(1, Math.ceil(count / pageSize));
+    const rangeStart = count ? (currentPage - 1) * pageSize + 1 : 0;
+    const rangeEnd = Math.min(currentPage * pageSize, count);
     return {
       items: items,
       count: count,
@@ -771,6 +930,8 @@ const UI = {
       hasNext: !!data.next,
       hasPrev: !!data.previous,
       isPaginated: count > pageSize,
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
     };
   },
 
@@ -902,19 +1063,23 @@ const UI = {
     const total = opts.total;
     const label = opts.label || 'results';
     const filterLabel = opts.filterLabel || '';
+    const searchText = opts.searchText || '';
 
-    if (total == null || total === 0) {
+    if (filtered === 0) {
+      if (searchText || filterLabel) {
+        return 'No matching ' + label;
+      }
       return 'No ' + label + ' found';
     }
-    if (filtered != null && filtered !== total && filterLabel) {
+    let parts = [];
+    if (searchText) parts.push('search: “' + UI.escHtml(searchText) + '”');
+    if (filterLabel) parts.push(UI.escHtml(filterLabel));
+    const suffix = parts.length ? ' (' + parts.join(' · ') + ')' : '';
+    if (filtered != null && total != null && filtered !== total) {
       return 'Showing <strong>' + filtered + '</strong> of <strong>' + total
-        + '</strong> ' + label + ' (' + UI.escHtml(filterLabel) + ')';
+        + '</strong> ' + label + suffix;
     }
-    if (filtered != null && filtered !== total) {
-      return 'Showing <strong>' + filtered + '</strong> of <strong>' + total
-        + '</strong> ' + label;
-    }
-    return '<strong>' + total + '</strong> ' + label;
+    return '<strong>' + (filtered != null ? filtered : total) + '</strong> ' + label + suffix;
   },
 
   updateResultsCount(elementId, opts) {
@@ -950,10 +1115,9 @@ const UI = {
     const map = {
       all: '',
       live: 'Live on marketplace',
-      hidden: 'Hidden from browse',
-      available: 'Available',
-      unavailable: 'Unavailable',
-      paused: 'Paused by you',
+      hidden: 'Removed by admin',
+      unavailable: 'Paused by owner',
+      paused: 'Paused by owner',
       admin_removed: 'Removed by admin',
     };
     return map[filter] || '';
@@ -966,9 +1130,6 @@ const UI = {
     }
     if (filter === 'hidden' || filter === 'admin_removed') {
       return cars.filter(function (c) { return !c.is_approved; });
-    }
-    if (filter === 'available') {
-      return cars.filter(function (c) { return c.is_available; });
     }
     if (filter === 'unavailable' || filter === 'paused') {
       return cars.filter(function (c) { return !c.is_available; });

@@ -1,0 +1,62 @@
+{# Dashboard table search + dropdown filters — variant: admin_cars | admin_bookings | admin_owners | customer_bookings | owner_requests | owner_cars #}
+<div class="table-filters" id="{{ toolbar_id }}" data-variant="{{ variant }}">
+  <div class="filters-bar table-filters__bar">
+    <div class="filter-field filter-field--grow">
+      <label for="{{ toolbar_id }}Search">Search</label>
+      <input type="search" class="search-input" id="{{ toolbar_id }}Search"
+        placeholder="{{ search_placeholder|default:'Search…' }}"
+        autocomplete="off"
+        aria-label="{{ search_placeholder|default:'Search table' }}"/>
+    </div>
+    {% if variant == 'admin_cars' or variant == 'owner_cars' %}
+    <div class="filter-field">
+      <label for="{{ toolbar_id }}Type">Car type</label>
+      <select id="{{ toolbar_id }}Type" aria-label="Filter by car type">
+        <option value="">All types</option>
+        <option value="sedan">Sedan</option>
+        <option value="suv">SUV</option>
+        <option value="luxury">Luxury</option>
+        <option value="hatchback">Hatchback</option>
+        <option value="truck">Truck</option>
+        <option value="van">Van</option>
+      </select>
+    </div>
+    {% endif %}
+    {% if variant == 'admin_bookings' or variant == 'customer_bookings' or variant == 'owner_requests' %}
+    <div class="filter-field">
+      <label for="{{ toolbar_id }}Rental">Rental type</label>
+      <select id="{{ toolbar_id }}Rental" aria-label="Filter by rental type">
+        <option value="">All types</option>
+        <option value="hourly">Hourly</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    {% endif %}
+    <div class="filter-field">
+      <label for="{{ toolbar_id }}Sort">Sort</label>
+      <select id="{{ toolbar_id }}Sort" aria-label="Sort results">
+        {% if variant == 'admin_cars' or variant == 'owner_cars' %}
+        <option value="-created_at">Newest first</option>
+        <option value="price_per_day">Price: low to high</option>
+        <option value="-price_per_day">Price: high to low</option>
+        <option value="-year">Newest year</option>
+        <option value="year">Oldest year</option>
+        {% elif variant == 'admin_owners' %}
+        <option value="user__username">Username A–Z</option>
+        <option value="-user__username">Username Z–A</option>
+        <option value="-created_at">Newest first</option>
+        {% else %}
+        <option value="-start_at">Newest dates</option>
+        <option value="start_at">Oldest dates</option>
+        <option value="-total_cost">Cost: high to low</option>
+        <option value="total_cost">Cost: low to high</option>
+        {% endif %}
+      </select>
+    </div>
+    <div class="filters-bar__actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="{{ toolbar_id }}Reset">Reset</button>
+    </div>
+  </div>
+</div>
