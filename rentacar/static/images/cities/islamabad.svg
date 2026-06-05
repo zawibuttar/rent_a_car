@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#eef2ff"/>
+  <g transform="translate(28,10)" fill="#0f172a">
+    <path d="M36 6 L44 36 L28 36 Z" fill="#0f172a"/>
+    <rect x="32" y="36" width="20" height="6" rx="3" fill="#64748b"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Islamabad</text>
+</svg>

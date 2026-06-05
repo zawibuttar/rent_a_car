@@ -1,113 +1,99 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
   <title>{% block title %}RentACar{% endblock %}</title>
-  {% load static %}
-  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
-  <link rel="shortcut icon" href="{% static 'favicon.svg' %}" />
-  <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
 </head>
+
 <body>
+  {% include 'includes/icons.html' %}
 
-  <!-- ── Navbar ───────────────────────────── -->
   <nav class="navbar">
-    <div class="nav-container">
-      <div class="nav-brand-wrap">
-        <a href="/" class="nav-brand">🚗 RentACar</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu">☰</button>
-      </div>
+    <div class="navbar-inner">
+      <button type="button" class="btn-icon nav-menu-btn" id="sidebarToggle" aria-label="Open menu"></button>
+      <a href="/" class="nav-brand">
+        <svg class="icon icon-brand" aria-hidden="true"><use href="#icon-logo"/></svg>
+        <span class="nav-brand-text">RentACar</span>
+      </a>
+      <a href="/" class="nav-link">Home</a>
+      <a href="/cars/" class="nav-link">Browse Cars</a>
 
-      <div class="nav-links" id="navLinks">
-        <a href="/">Home</a>
-        <a href="/cars/">Discover Cars</a>
-
-        <!-- Shown only when logged out -->
-        <span id="guestLinks">
-          <a href="/login/" class="btn btn-outline">Login</a>
-          <a href="/register/" class="btn btn-outline">Register</a>
+      <div class="nav-right">
+        <span class="nav-links-compact" aria-label="Quick navigation">
+          <a href="/" class="btn-icon" aria-label="Home">
+            <svg class="icon" aria-hidden="true"><use href="#icon-logo"/></svg>
+          </a>
+          <a href="/cars/" class="btn-icon" aria-label="Browse cars">
+            <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          </a>
         </span>
-
-        <!-- Shown only when logged in -->
-        <div id="authLinks" class="auth-links" style="display:none">
-          <span id="customerNav" style="display:none">
-            <a href="/dashboard/customer/">My Bookings</a>
-          </span>
-          <span id="ownerNav" style="display:none">
-            <a href="/dashboard/owner/">My Cars</a>
-          </span>
-          <span id="adminNav" style="display:none">
-            <a href="/dashboard/admin/">Admin Panel</a>
-          </span>
-          <span id="navUsername" class="nav-user"></span>
-          <button onclick="logout()" class="btn btn-outline">Logout</button>
-        </div>
+        <button type="button" class="btn btn-outline btn-sm location-toggle" data-location-toggle aria-label="Choose your city">Choose city</button>
+        <button type="button" class="btn-icon theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+        <span id="nav-guest" class="nav-auth-group">
+          <a href="/login/" class="btn btn-outline">Login</a>
+          <a href="/register/" class="btn btn-primary">Register</a>
+        </span>
+        <span id="nav-auth" class="nav-auth-group is-hidden">
+          <a href="/dashboard/" class="btn btn-ghost" id="nav-dash-link">Dashboard</a>
+          <span id="nav-uname" class="nav-uname"></span>
+          <div class="nav-avatar" id="nav-av"></div>
+        </span>
       </div>
     </div>
   </nav>
 
-  <!-- ── Flash messages ───────────────────── -->
-  <div id="flash" class="flash" style="display:none"></div>
+  {% include 'includes/location_picker.html' %}
 
-  <!-- ── Page content ─────────────────────── -->
-  <main class="main-content">
-    {% block content %}{% endblock %}
-  </main>
+  {% block content %}{% endblock %}
 
-  <!-- ── Footer ───────────────────────────── -->
-  <footer class="footer">
-    <p>© 2025 RentACar. All rights reserved.</p>
-  </footer>
+  <div class="footer">© <span id="footerYear"></span> RentACar. All rights reserved.</div>
 
   <script src="{% static 'js/api.js' %}"></script>
+  <script src="{% static 'js/ui.js' %}"></script>
+  <script src="{% static 'js/location.js' %}"></script>
+  <script>
+    window.STATIC_NO_IMAGE = "{% static 'images/no-image.svg' %}";
+    document.addEventListener('DOMContentLoaded', function () {
+      const y = document.getElementById('footerYear');
+      if (y) y.textContent = new Date().getFullYear();
+      const role = API.role();
+      const link = document.getElementById('nav-dash-link');
+      if (link && role) {
+        if (role === 'owner') link.href = '/dashboard/owner/';
+        else if (role === 'admin') link.href = '/dashboard/admin/';
+        else link.href = '/dashboard/customer/';
+      }
+      function markNavActive(links) {
+        links.forEach(function (a) {
+          const match = a.href === window.location.href
+            || (a.getAttribute('href') === '/cars/' && window.location.pathname.indexOf('/cars') === 0);
+          if (match) {
+            a.classList.add('active');
+            a.setAttribute('aria-current', 'page');
+          } else {
+            a.classList.remove('active');
+            a.removeAttribute('aria-current');
+          }
+        });
+      }
+      markNavActive(document.querySelectorAll('.nav-link'));
+      markNavActive(document.querySelectorAll('.nav-links-compact a'));
+      const menuBtn = document.getElementById('sidebarToggle');
+      if (menuBtn) {
+        menuBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-menu"/></svg>';
+      }
+    });
+  </script>
   {% block scripts %}{% endblock %}
 
-  <script>
-    // Run on every page — checks login state and updates navbar
-    (function() {
-      const token = localStorage.getItem('token');
-      const role  = localStorage.getItem('role');
-      const username = localStorage.getItem('username');
-
-      if (token) {
-        document.getElementById('guestLinks').style.display = 'none';
-        document.getElementById('authLinks').style.display  = 'inline-flex';
-        document.getElementById('navUsername').textContent  = '👤 ' + username;
-
-        if (role === 'customer')
-          document.getElementById('customerNav').style.display = 'inline';
-        if (role === 'owner')
-          document.getElementById('ownerNav').style.display = 'inline';
-        if (role === 'admin')
-          document.getElementById('adminNav').style.display = 'inline';
-      }
-
-      const navToggle = document.getElementById('navToggle');
-      const navLinks  = document.getElementById('navLinks');
-      navToggle?.addEventListener('click', () => navLinks.classList.toggle('open'));
-      document.addEventListener('click', (event) => {
-        if (!event.target.closest('.navbar')) navLinks.classList.remove('open');
-      });
-    })();
-
-    function logout() {
-      API.post('/api/accounts/logout/', {})
-        .then(() => {
-          localStorage.clear();
-          showFlash('Logged out successfully.', 'success');
-          setTimeout(() => window.location.href = '/', 800);
-        });
-    }
-
-    function showFlash(msg, type='success') {
-      const el = document.getElementById('flash');
-      el.textContent = msg;
-      el.className   = 'flash flash-' + type;
-      el.style.display = 'block';
-      setTimeout(() => el.style.display = 'none', 3500);
-    }
-  </script>
-
 </body>
+
 </html>

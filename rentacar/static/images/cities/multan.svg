@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#fff7ed"/>
+  <g transform="translate(26,12)" fill="#b45309">
+    <rect x="24" y="8" width="28" height="24" rx="4"/>
+    <circle cx="38" cy="8" r="6" fill="#fde68a"/>
+    <rect x="28" y="32" width="20" height="6" rx="3"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Multan</text>
+</svg>

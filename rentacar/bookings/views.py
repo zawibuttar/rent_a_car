@@ -1,22 +1,39 @@
-from django.shortcuts import render
 from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import transaction
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
+from accounts.models import OwnerProfile
 from accounts.permissions import IsCustomer, IsOwner, IsPlatformAdmin
+from rentacar.caching import (
+    ADMIN_BOOKINGS_KEY,
+    NoCacheMixin,
+    RedisListCacheMixin,
+    invalidate_booking_caches,
+)
+from rentacar.throttling import AdminRateThrottle, BookingRateThrottle
+from .filters import BookingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters as drf_filters
 
 # Create your views here.
 
 class BookingCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
+    throttle_classes = [BookingRateThrottle]
 
     def post(self, request):
         serializer = BookingCreateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             booking = serializer.save()
             booking = Booking.objects.select_related('car__owner', 'customer').prefetch_related('car__images').get(pk=booking.pk)
+            invalidate_booking_caches(
+                user_id=request.user.id,
+                owner_id=booking.car.owner_id,
+            )
             return Response({
                 "message": "Booking request submitted successfully.",
                 "booking": BookingDetailSerializer(booking, context={'request': request}).data,
@@ -24,9 +41,14 @@ class BookingCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MyBookingsView(generics.ListAPIView):
+class MyBookingsView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
+    filter_backends    = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = BookingFilter
+    search_fields      = ['car__brand', 'car__model', 'car__location']
+    ordering_fields    = ['start_at', 'total_cost', 'created_at']
+    ordering           = ['-start_at']
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -63,6 +85,10 @@ class CancelBookingView(APIView):
 
         booking.status = 'cancelled'
         booking.save()
+        invalidate_booking_caches(
+            user_id=request.user.id,
+            owner_id=booking.car.owner_id,
+        )
         return Response({
             "message": "Booking cancelled successfully.",
             "booking_id": booking.id,
@@ -70,9 +96,14 @@ class CancelBookingView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class OwnerBookingsView(generics.ListAPIView):
+class OwnerBookingsView(NoCacheMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+    filter_backends    = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = BookingFilter
+    search_fields      = ['customer__username', 'customer__email', 'car__brand', 'car__model']
+    ordering_fields    = ['start_at', 'total_cost', 'created_at']
+    ordering           = ['-start_at']
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -99,6 +130,10 @@ class BookingStatusUpdateView(APIView):
 
         if serializer.is_valid():
             serializer.save()
+            invalidate_booking_caches(
+                user_id=booking.customer_id,
+                owner_id=request.user.id,
+            )
             return Response({
                 "message" : f"Booking has been {booking.status}.",
                 "booking" : BookingDetailSerializer(booking, context={'request': request}).data,
@@ -110,22 +145,29 @@ class CompleteBookingView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def patch(self, request, pk):
-        booking = get_object_or_404(
-            Booking.objects.select_related('car__owner', 'customer').prefetch_related('car__images'),
-            pk=pk, car__owner=request.user
-        )
-
-        if booking.status != 'approved':
-            return Response(
-                {"error": "Only approved bookings can be marked as completed."},
-                status=status.HTTP_400_BAD_REQUEST
+        with transaction.atomic():
+            booking = get_object_or_404(
+                Booking.objects.select_for_update().select_related(
+                    'car__owner', 'customer'
+                ).prefetch_related('car__images'),
+                pk=pk, car__owner=request.user
             )
+            if booking.status != 'approved':
+                return Response(
+                    {"error": "Only approved bookings can be marked as completed."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            booking.status = 'completed'
+            booking.save(update_fields=['status', 'updated_at'])
+            OwnerProfile.objects.filter(user=request.user).update(
+                total_earnings=F('total_earnings') + booking.total_cost
+            )
+            owner_profile = OwnerProfile.objects.get(user=request.user)
 
-        booking.status = 'completed'
-        booking.save()
-        owner_profile = request.user.owner_profile
-        owner_profile.total_earnings += booking.total_cost
-        owner_profile.save()
+        invalidate_booking_caches(
+            user_id=booking.customer_id,
+            owner_id=request.user.id,
+        )
         return Response({
             "message"        : "Booking marked as completed.",
             "booking_id"     : booking.id,
@@ -148,17 +190,26 @@ class ReviewCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AdminBookingListView(generics.ListAPIView):
+class AdminBookingListView(RedisListCacheMixin, NoCacheMixin, generics.ListAPIView):
     serializer_class   = BookingDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes   = [AdminRateThrottle]
+    filter_backends    = [drf_filters.SearchFilter, drf_filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class    = BookingFilter
+    search_fields      = [
+        'customer__username', 'customer__email',
+        'car__brand', 'car__model', 'car__location', 'car__owner__username',
+    ]
+    ordering_fields    = ['start_at', 'total_cost', 'created_at']
+    ordering           = ['-start_at']
     queryset           = Booking.objects.all().select_related('car__owner', 'customer').prefetch_related('car__images')
+    redis_cache_key = ADMIN_BOOKINGS_KEY
 
 
 class AdminBookingActionView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
 
     def patch(self, request, pk):
-        booking    = get_object_or_404(Booking, pk=pk)
         new_status = request.data.get('status')
         allowed = ['approved', 'rejected', 'cancelled', 'completed']
         if new_status not in allowed:
@@ -166,8 +217,32 @@ class AdminBookingActionView(APIView):
                 {"error": f"Status must be one of: {', '.join(allowed)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        booking.status = new_status
-        booking.save()
+
+        with transaction.atomic():
+            booking = get_object_or_404(
+                Booking.objects.select_for_update().select_related('car__owner', 'customer'),
+                pk=pk,
+            )
+            old_status = booking.status
+            if new_status == 'completed' and old_status != 'approved':
+                return Response(
+                    {"error": "Only approved bookings can be marked as completed."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            booking.status = new_status
+            booking.save(update_fields=['status', 'updated_at'])
+            if new_status == 'completed' and old_status == 'approved':
+                OwnerProfile.objects.filter(user=booking.car.owner).update(
+                    total_earnings=F('total_earnings') + booking.total_cost
+                )
+
+        booking = Booking.objects.select_related(
+            'car__owner', 'customer'
+        ).prefetch_related('car__images').get(pk=pk)
+        invalidate_booking_caches(
+            user_id=booking.customer_id,
+            owner_id=booking.car.owner_id,
+        )
         return Response({
             "message"    : f"Booking status updated to '{new_status}'.",
             "booking_id" : booking.id,

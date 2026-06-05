@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
 from .models import User, CustomerProfile, OwnerProfile
+
+ALLOWED_REGISTER_ROLES = {User.Role.CUSTOMER, User.Role.OWNER}
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -14,7 +17,25 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email is already in use.")
-        return value 
+        return value
+
+    def validate_role(self, value):
+        if value not in ALLOWED_REGISTER_ROLES:
+            raise serializers.ValidationError(
+                "Invalid role. Registration is only allowed as customer or owner."
+            )
+        return value
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        password2 = attrs.get('password2')
+        if password != password2:
+            raise serializers.ValidationError({"password2": "Passwords do not match."})
+        validate_password(password, user=User(
+            username=attrs.get('username', ''),
+            email=attrs.get('email', ''),
+        ))
+        return attrs
 
     def create(self, validated_data):
         validated_data.pop('password2') 
@@ -50,10 +71,19 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'is_active', 'date_joined']
-        read_only_fields = ['id', 'is_active', 'date_joined']
+        fields = [
+            'id', 'username', 'display_name', 'email', 'role',
+            'is_superuser', 'is_active', 'date_joined',
+        ]
+        read_only_fields = ['id', 'is_superuser', 'is_active', 'date_joined']
+
+    def get_display_name(self, obj):
+        from rentacar.utils import format_display_name
+        return format_display_name(obj.username)
 
 
 class CustomerProfileSerializer(serializers.ModelSerializer):

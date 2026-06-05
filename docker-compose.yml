@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rentacar
+      POSTGRES_USER: rentacar_user
+      POSTGRES_PASSWORD: rentacar_pass
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate && \
+             gunicorn -c gunicorn.conf.py rentacar.wsgi:application"
+    volumes:
+      - ./rentacar:/app
+      - ./rentacar/staticfiles:/app/staticfiles
+    ports:
+      - "8002:8000"
+    environment:
+      SECRET_KEY: "django-insecure-rentacar-dev-only-change-me"
+      DEBUG: "1"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,.ngrok-free.app,.ngrok-free.dev,.ngrok.io,.ngrok.app"
+      CSRF_TRUSTED_ORIGINS: "https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io,https://*.ngrok.app"
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: rentacar
+      DB_USER: rentacar_user
+      DB_PASSWORD: rentacar_pass
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/1
+      CACHE_ENABLED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

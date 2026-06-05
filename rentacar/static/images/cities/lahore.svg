@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#e6eefc"/>
+  <g transform="translate(20,10)" fill="#3b82f6">
+    <rect x="40" y="6" width="8" height="40" rx="2"/>
+    <rect x="36" y="2" width="16" height="6" rx="3"/>
+    <rect x="32" y="46" width="24" height="6" rx="3"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Lahore</text>
+</svg>
