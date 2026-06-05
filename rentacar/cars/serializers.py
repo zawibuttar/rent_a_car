@@ -5,6 +5,7 @@ from bookings.models import Review
 from .models import Car, CarImage
 from .booking_availability import car_booking_availability
 from .review_stats import get_car_review_summary, get_car_reviews
+from accounts.models import OwnerProfile
 from accounts.serializers import UserSerializer
 from rentacar.image_validation import validate_car_image_file
 from rentacar.utils import format_display_name
@@ -178,7 +179,7 @@ class AdminCarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
 
 class CarDetailSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     images = CarImageSerializer(many=True, read_only=True)
-    owner = UserSerializer(read_only=True)
+    owner = serializers.SerializerMethodField()
     enabled_rental_types = serializers.SerializerMethodField()
     booked_slots = serializers.SerializerMethodField()
     booked_slots_total = serializers.SerializerMethodField()
@@ -200,6 +201,20 @@ class CarDetailSerializer(BookedSlotsMixin, serializers.ModelSerializer):
 
     review_summary = serializers.SerializerMethodField()
     reviews = serializers.SerializerMethodField()
+
+    def get_owner(self, obj):
+        owner = obj.owner
+        is_verified = False
+        try:
+            is_verified = owner.owner_profile.is_verified
+        except OwnerProfile.DoesNotExist:
+            pass
+        return {
+            'id': owner.id,
+            'username': owner.username,
+            'display_name': format_display_name(owner.username),
+            'is_verified': is_verified,
+        }
 
     def get_enabled_rental_types(self, obj):
         return obj.enabled_rental_types()

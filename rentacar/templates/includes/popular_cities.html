@@ -1,34 +1,7 @@
-{% load static %}
-<section class="popular-cities page-section">
+<section class="popular-cities page-section" id="popularCitiesSection">
   <h2>Popular Cities</h2>
-  <div class="popular-cities__list" role="list" aria-label="Popular rental cities">
-    <button type="button" class="city-card" data-location-city="Lahore">
-      <img src="{% static 'images/cities/lahore.svg' %}" alt="Lahore" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Lahore</div>
-    </button>
-    <button type="button" class="city-card" data-location-city="Karachi">
-      <img src="{% static 'images/cities/karachi.svg' %}" alt="Karachi" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Karachi</div>
-    </button>
-    <button type="button" class="city-card" data-location-city="Islamabad">
-      <img src="{% static 'images/cities/islamabad.svg' %}" alt="Islamabad" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Islamabad</div>
-    </button>
-    <button type="button" class="city-card" data-location-city="Peshawar">
-      <img src="{% static 'images/cities/peshawar.svg' %}" alt="Peshawar" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Peshawar</div>
-    </button>
-    <button type="button" class="city-card" data-location-city="Multan">
-      <img src="{% static 'images/cities/multan.svg' %}" alt="Multan" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Multan</div>
-    </button>
-    <button type="button" class="city-card" data-location-city="Muzaffarabad">
-      <img src="{% static 'images/cities/muzaffarabad.svg' %}" alt="Muzaffarabad" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Muzaffarabad</div>
-    </button>
-    <button type="button" class="city-card" data-location-city="Quetta">
-      <img src="{% static 'images/cities/quetta.svg' %}" alt="Quetta" onerror="this.src='{% static 'images/no-image.svg' %}'" />
-      <div class="city-name">Quetta</div>
-    </button>
+  <p class="popular-cities__lead text-small">Scroll or tap a city to see live listings below</p>
+  <div class="popular-cities__viewport" id="popularCitiesViewport" aria-label="Popular rental cities">
+    <div class="popular-cities__track" id="popularCitiesTrack" role="list"></div>
   </div>
 </section>

@@ -79,7 +79,9 @@ class CarDetailView(NoCacheMixin, generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        qs = Car.objects.filter(is_approved=True).prefetch_related('images').select_related('owner')
+        qs = Car.objects.filter(is_approved=True).prefetch_related('images').select_related(
+            'owner', 'owner__owner_profile',
+        )
         qs = prefetch_active_bookings(qs)
         return annotate_car_review_stats(qs)
 

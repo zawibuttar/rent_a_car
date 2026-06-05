@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#f1f5f9"/>
+  <g transform="translate(22,12)" fill="#475569">
+    <rect x="10" y="14" width="40" height="26" rx="4"/>
+    <path d="M10 24 H50" stroke="#94a3b8" stroke-width="2"/>
+    <rect x="22" y="18" width="16" height="16" rx="2" fill="#cbd5e1"/>
+    <rect x="30" y="40" width="8" height="8" rx="1" fill="#64748b"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Rawalpindi</text>
+</svg>
