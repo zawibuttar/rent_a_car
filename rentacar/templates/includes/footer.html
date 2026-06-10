@@ -1,0 +1,371 @@
+{% comment %}
+  Hire A Car — site footer
+  Drop this file into templates/partials/footer.html and include it with:
+    {% include "partials/footer.html" %}
+  Requires no external CSS framework — all styles are self-contained.
+  Tabler Icons CDN must be loaded in your base template:
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+{% endcomment %}
+
+<style>
+  /* ── Footer reset ─────────────────────────────────────────── */
+  .hac-footer *{box-sizing:border-box}
+
+  /* ── Outer wrapper ────────────────────────────────────────── */
+  .hac-footer{
+    background:#ffffff;
+    border-top:1px solid #e5e7eb;
+    padding:3rem 1.5rem 0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:#111827;
+  }
+
+  /* ── Inner max-width container ────────────────────────────── */
+  .hac-footer__inner{
+    max-width:1100px;
+    margin:0 auto;
+  }
+
+  /* ── 4-column grid ────────────────────────────────────────── */
+  .hac-footer__grid{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr 1.2fr;
+    gap:2.5rem;
+    padding-bottom:2.5rem;
+  }
+
+  /* ── Logo row ─────────────────────────────────────────────── */
+  .hac-footer__logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:1rem;
+    text-decoration:none;
+  }
+  .hac-footer__logo-icon{
+    width:36px;height:36px;
+    background:#1D9E75;
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .hac-footer__logo-icon i{color:#fff;font-size:18px}
+  .hac-footer__logo-text{
+    font-size:18px;font-weight:600;
+    color:#111827;letter-spacing:-0.3px;
+  }
+
+  /* ── Brand badge ──────────────────────────────────────────── */
+  .hac-footer__badge{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:11px;font-weight:500;
+    background:#E1F5EE;color:#0F6E56;
+    border-radius:6px;padding:3px 8px;
+    margin-bottom:0.9rem;
+  }
+  .hac-footer__badge i{font-size:12px}
+
+  /* ── Description ──────────────────────────────────────────── */
+  .hac-footer__desc{
+    font-size:13.5px;color:#6b7280;line-height:1.7;
+    max-width:220px;margin-bottom:1.5rem;
+  }
+
+  /* ── Social icons ─────────────────────────────────────────── */
+  .hac-footer__socials{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+  }
+  .hac-footer__social{
+    width:40px;
+    height:40px;
+    min-width:40px;
+    border-radius:12px;
+    border:1px solid #e5e7eb;
+    background:#f8fafc;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#475569;
+    text-decoration:none;
+    box-shadow:0 1px 4px rgba(15,23,42,0.08);
+    transition:transform .2s ease, border-color .2s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease;
+  }
+  .hac-footer__social:not(.hac-footer__social--disabled):hover{
+    border-color:#1d9e75;
+    color:#1d9e75;
+    background:#ecfdf5;
+    transform:translateY(-2px);
+    box-shadow:0 6px 18px rgba(15,23,42,0.12);
+  }
+  .hac-footer__social i{
+    font-size:18px;
+    line-height:1;
+    display:block;
+  }
+  .hac-footer__social--disabled{
+    width:40px;
+    height:40px;
+    min-width:40px;
+    border-radius:12px;
+    border:1px solid #e2e8f0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#94a3b8;
+    background:#f1f5f9;
+    cursor:not-allowed;
+    pointer-events:none;
+    opacity:0.85;
+  }
+  .hac-footer__social--disabled i{
+    font-size:18px;
+    line-height:1;
+  }
+
+  /* ── Column heading ───────────────────────────────────────── */
+  .hac-footer__col-title{
+    font-size:11.5px;font-weight:600;color:#374151;
+    letter-spacing:.07em;text-transform:uppercase;
+    margin-bottom:1.2rem;
+  }
+
+  /* ── Nav links ────────────────────────────────────────────── */
+  .hac-footer__links{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.65rem}
+  .hac-footer__links a{
+    font-size:13.5px;color:#6b7280;text-decoration:none;
+    display:flex;align-items:center;gap:6px;
+    transition:color .15s;
+  }
+  .hac-footer__links a:hover{color:#1D9E75}
+  .hac-footer__links a i{font-size:14px;opacity:.65}
+
+  /* ── Contact items ────────────────────────────────────────── */
+  .hac-footer__contact-item{
+    display:flex;align-items:flex-start;gap:10px;
+    margin-bottom:1rem;
+  }
+  .hac-footer__contact-icon{
+    width:32px;height:32px;border-radius:8px;
+    background:#f9fafb;border:1px solid #e5e7eb;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;margin-top:1px;
+  }
+  .hac-footer__contact-icon i{font-size:15px;color:#1D9E75}
+  .hac-footer__contact-label{
+    font-size:10.5px;color:#9ca3af;
+    text-transform:uppercase;letter-spacing:.05em;
+    margin-bottom:2px;
+  }
+  .hac-footer__contact-value{
+    font-size:13px;color:#111827;line-height:1.5;
+  }
+
+  /* ── Divider ──────────────────────────────────────────────── */
+  .hac-footer__divider{
+    border:none;border-top:1px solid #f3f4f6;
+    margin:0;
+  }
+
+  /* ── Bottom bar ───────────────────────────────────────────── */
+  .hac-footer__bottom{
+    display:flex;align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;gap:.75rem;
+    padding:1.1rem 0;
+  }
+  .hac-footer__copyright{font-size:12.5px;color:#9ca3af}
+  .hac-footer__bottom-links{display:flex;gap:1.25rem;flex-wrap:wrap}
+  .hac-footer__bottom-links a{
+    font-size:12.5px;color:#9ca3af;text-decoration:none;
+    transition:color .15s;
+  }
+  .hac-footer__bottom-links a:hover{color:#374151}
+
+  /* ── Responsive ───────────────────────────────────────────── */
+  @media(max-width:800px){
+    .hac-footer__grid{grid-template-columns:1fr 1fr;gap:2rem}
+    .hac-footer__brand{grid-column:1 / -1}
+    .hac-footer__desc{max-width:100%}
+  }
+  @media(max-width:500px){
+    .hac-footer__grid{grid-template-columns:1fr}
+    .hac-footer__brand{grid-column:1}
+    .hac-footer__bottom{flex-direction:column;align-items:flex-start}
+  }
+</style>
+
+<footer class="hac-footer" role="contentinfo" aria-label="Site footer">
+  <div class="hac-footer__inner">
+
+    <!-- 4-column grid -->
+    <div class="hac-footer__grid">
+
+      <!-- Col 1 — Brand -->
+      <div class="hac-footer__brand">
+        <a href="/" class="hac-footer__logo" aria-label="Hire A Car — home">
+          <div class="hac-footer__logo-icon">
+            <i class="ti ti-car" aria-hidden="true"></i>
+          </div>
+          <span class="hac-footer__logo-text"> A Car</span>
+        </a>
+
+        <div class="hac-footer__badge">
+          <i class="ti ti-map-pin" aria-hidden="true"></i>
+          Serving Pakistan
+        </div>
+
+        <p class="hac-footer__desc">
+          Your trusted platform to rent quality cars across Pakistan.
+          Browse, book, and ride — all in one place.
+        </p>
+
+        {# Social links — managed via Django admin → Social Links #}
+        <div class="hac-footer__socials" aria-label="Social media">
+          {% if social_links %}
+            {% for link in social_links %}
+              {% if link.is_active %}
+                <a href="{{ link.url }}"
+                   class="hac-footer__social"
+                   aria-label="{{ link.name }}"
+                   title="{{ link.name }}"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                  <i class="{{ link.icon }}" aria-hidden="true"></i>
+                </a>
+              {% else %}
+                <span class="hac-footer__social hac-footer__social--disabled"
+                      aria-label="{{ link.name }} not configured"
+                      title="{{ link.name }} coming soon"
+                      aria-disabled="true">
+                  <i class="{{ link.icon }}" aria-hidden="true"></i>
+                </span>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {# Fallback: always show 5 disabled icons before DB is loaded #}
+            <span class="hac-footer__social hac-footer__social--disabled" title="Facebook coming soon" aria-disabled="true"><i class="ti ti-brand-facebook" aria-hidden="true"></i></span>
+            <span class="hac-footer__social hac-footer__social--disabled" title="Instagram coming soon" aria-disabled="true"><i class="ti ti-brand-instagram" aria-hidden="true"></i></span>
+            <span class="hac-footer__social hac-footer__social--disabled" title="Twitter coming soon" aria-disabled="true"><i class="ti ti-brand-x" aria-hidden="true"></i></span>
+            <span class="hac-footer__social hac-footer__social--disabled" title="YouTube coming soon" aria-disabled="true"><i class="ti ti-brand-youtube" aria-hidden="true"></i></span>
+            <span class="hac-footer__social hac-footer__social--disabled" title="TikTok coming soon" aria-disabled="true"><i class="ti ti-brand-tiktok" aria-hidden="true"></i></span>
+          {% endif %}
+        </div>
+
+
+      </div>
+
+      <!-- Col 2 — Quick Links -->
+      <div>
+        <p class="hac-footer__col-title">Quick links</p>
+        <ul class="hac-footer__links">
+          <li>
+            <a href="/cars/">
+              <i class="ti ti-search" aria-hidden="true"></i>Browse cars
+            </a>
+          </li>
+          <li>
+            <a href="/register/">
+              <i class="ti ti-steering-wheel" aria-hidden="true"></i>Become a partner
+            </a>
+          </li>
+          <li>
+            <a href="/register/">
+              <i class="ti ti-user-plus" aria-hidden="true"></i>Create account
+            </a>
+          </li>
+          <li>
+            <a href="/login/">
+              <i class="ti ti-login" aria-hidden="true"></i>Sign in
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Col 3 — Company -->
+      <div>
+        <p class="hac-footer__col-title">Company</p>
+        <ul class="hac-footer__links">
+          <li>
+            <a href="/terms/">
+              <i class="ti ti-file-text" aria-hidden="true"></i>Terms &amp; conditions
+            </a>
+          </li>
+          <li>
+            <a href="/privacy/">
+              <i class="ti ti-shield-check" aria-hidden="true"></i>Privacy policy
+            </a>
+          </li>
+          <li>
+            <a href="/contact/">
+              <i class="ti ti-headset" aria-hidden="true"></i>Contact &amp; support
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="ti ti-trash" aria-hidden="true"></i>Delete account
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Col 4 — Contact -->
+      <div>
+        <p class="hac-footer__col-title">Contact us</p>
+
+        <div class="hac-footer__contact-item">
+          <div class="hac-footer__contact-icon">
+            <i class="ti ti-mail" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="hac-footer__contact-label">Email</p>
+            <p class="hac-footer__contact-value">
+              <a href="mailto:support@hireacar.pk" style="color:inherit;text-decoration:none">
+                support@car.pk
+              </a>
+            </p>
+          </div>
+        </div>
+
+        <div class="hac-footer__contact-item">
+          <div class="hac-footer__contact-icon">
+            <i class="ti ti-clock" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="hac-footer__contact-label">Support hours</p>
+            <p class="hac-footer__contact-value">Mon – Sat, 9 am – 9 pm</p>
+          </div>
+        </div>
+
+        <div class="hac-footer__contact-item">
+          <div class="hac-footer__contact-icon">
+            <i class="ti ti-map-pin" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="hac-footer__contact-label">Headquarters</p>
+            <p class="hac-footer__contact-value">Lahore, Punjab<br>Pakistan</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.hac-footer__grid -->
+
+    <hr class="hac-footer__divider">
+
+    <!-- Bottom bar -->
+    <div class="hac-footer__bottom">
+      <p class="hac-footer__copyright">
+        &copy; {% now "Y" %} A Car. All rights reserved.
+      </p>
+      <nav class="hac-footer__bottom-links" aria-label="Policy links">
+        <a href="/privacy/">Privacy policy</a>
+        <a href="/terms/">Terms of service</a>
+        <a href="/contact/">Support</a>
+        <a href="/sitemap.xml">Sitemap</a>
+      </nav>
+    </div>
+
+  </div><!-- /.hac-footer__inner -->
+</footer>

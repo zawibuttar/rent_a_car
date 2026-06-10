@@ -1,0 +1,459 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}404 — Page Not Found | RentACar{% endblock %}
+
+{% block content %}
+<style>
+  /* ── 404 Page ────────────────────────────────────────────────── */
+  .err404-wrap {
+    min-height: calc(100vh - var(--nav-h) - 120px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Radial glow blobs */
+  .err404-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    pointer-events: none;
+    animation: blobFloat 8s ease-in-out infinite;
+  }
+  .err404-blob--1 {
+    width: 520px; height: 520px;
+    background: var(--primary);
+    top: -120px; left: -160px;
+    animation-delay: 0s;
+  }
+  .err404-blob--2 {
+    width: 380px; height: 380px;
+    background: #7c3aed;
+    bottom: -80px; right: -80px;
+    animation-delay: -3s;
+  }
+  .err404-blob--3 {
+    width: 260px; height: 260px;
+    background: var(--warning);
+    top: 40%; left: 55%;
+    animation-delay: -5s;
+  }
+  @keyframes blobFloat {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50%       { transform: translateY(-24px) scale(1.04); }
+  }
+
+  /* Card */
+  .err404-card {
+    position: relative;
+    z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: 0 8px 40px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+    padding: 56px 48px 48px;
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
+  }
+  [data-theme="dark"] .err404-card {
+    box-shadow: 0 8px 40px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+  }
+
+  /* Car icon ring */
+  .err404-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px; height: 96px;
+    margin-bottom: 24px;
+  }
+  .err404-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    animation: ringPulse 2.8s ease-in-out infinite;
+  }
+  .err404-ring--outer {
+    background: linear-gradient(var(--surface), var(--surface)) padding-box,
+                linear-gradient(135deg, var(--primary), #7c3aed) border-box;
+    animation-delay: 0s;
+  }
+  .err404-ring--inner {
+    inset: 10px;
+    background: linear-gradient(var(--surface), var(--surface)) padding-box,
+                linear-gradient(135deg, #7c3aed, var(--warning)) border-box;
+    animation-delay: -1.4s;
+  }
+  @keyframes ringPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(1.08); }
+  }
+  .err404-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--primary-light), #ede9fe);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--primary);
+    position: relative;
+    z-index: 1;
+    animation: iconBounce 2.8s ease-in-out infinite;
+  }
+  .err404-icon svg { width: 26px; height: 26px; }
+  @keyframes iconBounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-5px); }
+  }
+
+  /* Big 404 number */
+  .err404-code {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    line-height: 1;
+    margin-bottom: 16px;
+    user-select: none;
+  }
+  .err404-digit {
+    font-size: clamp(5rem, 16vw, 7.5rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: digitShimmer 4s ease-in-out infinite;
+  }
+  .err404-zero {
+    font-size: clamp(5rem, 16vw, 7.5rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    background: linear-gradient(135deg, #7c3aed 0%, var(--warning) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: digitShimmer 4s ease-in-out infinite;
+    animation-delay: -2s;
+  }
+  @keyframes digitShimmer {
+    0%, 100% { filter: brightness(1); }
+    50%       { filter: brightness(1.15); }
+  }
+
+  /* Status badge */
+  .err404-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--danger-light);
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  [data-theme="dark"] .err404-badge {
+    background: var(--danger-light);
+    border-color: #7f1d1d;
+    color: #fca5a5;
+  }
+  .err404-badge__dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: dotBlink 1.4s ease-in-out infinite;
+  }
+  @keyframes dotBlink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.2; }
+  }
+
+  /* Heading + description */
+  .err404-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--text);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: 10px;
+  }
+  .err404-desc {
+    font-size: var(--text-base);
+    color: var(--text-2);
+    line-height: var(--leading-normal);
+    margin-bottom: 32px;
+    max-width: 380px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Road illustration */
+  .err404-road {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto 32px;
+    max-width: 320px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .err404-road__stripe {
+    position: absolute;
+    left: -100%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    border-radius: 999px;
+    animation: roadScroll 2s linear infinite;
+  }
+  @keyframes roadScroll {
+    from { left: -40%; }
+    to   { left: 100%; }
+  }
+
+  /* Action buttons */
+  .err404-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .err404-btn-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 28px;
+    background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform .18s, box-shadow .18s, filter .18s;
+    box-shadow: 0 4px 18px rgba(37,99,235,.35);
+    font-family: inherit;
+  }
+  .err404-btn-home:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(37,99,235,.45);
+    filter: brightness(1.06);
+    color: #fff;
+  }
+  .err404-btn-home:active { transform: translateY(0); }
+  .err404-btn-home svg { width: 18px; height: 18px; }
+
+  .err404-btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    background: transparent;
+    color: var(--text-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color .15s, color .15s, background .15s;
+    font-family: inherit;
+  }
+  .err404-btn-back:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+  }
+  .err404-btn-back svg { width: 16px; height: 16px; }
+
+  /* Quick links */
+  .err404-links {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .err404-links-label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 12px;
+  }
+  .err404-links-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .err404-link-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: var(--text-sm);
+    color: var(--text-2);
+    text-decoration: none;
+    transition: border-color .15s, color .15s, background .15s, transform .15s;
+    background: var(--surface);
+  }
+  .err404-link-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+    transform: translateY(-1px);
+  }
+  .err404-link-chip svg { width: 14px; height: 14px; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .err404-card { padding: 36px 24px 32px; }
+    .err404-digit,
+    .err404-zero  { font-size: 5.5rem; }
+    .err404-title { font-size: var(--text-xl); }
+    .err404-actions { flex-direction: column; align-items: stretch; }
+    .err404-btn-home,
+    .err404-btn-back { justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .err404-blob,
+    .err404-ring,
+    .err404-icon,
+    .err404-digit,
+    .err404-zero,
+    .err404-badge__dot,
+    .err404-road__stripe { animation: none !important; }
+  }
+</style>
+
+<div class="err404-wrap" role="main">
+
+  <!-- Ambient blobs -->
+  <div class="err404-blob err404-blob--1" aria-hidden="true"></div>
+  <div class="err404-blob err404-blob--2" aria-hidden="true"></div>
+  <div class="err404-blob err404-blob--3" aria-hidden="true"></div>
+
+  <div class="err404-card">
+
+    <!-- Animated car icon -->
+    <div class="err404-icon-wrap" aria-hidden="true">
+      <div class="err404-ring err404-ring--outer"></div>
+      <div class="err404-ring err404-ring--inner"></div>
+      <div class="err404-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M5 17h14v-5H5v5z"/>
+          <path d="M7 12l2-4h6l2 4"/>
+          <circle cx="7.5" cy="17" r="1.5"/>
+          <circle cx="16.5" cy="17" r="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Large 404 -->
+    <div class="err404-code" aria-label="Error 404">
+      <span class="err404-digit" aria-hidden="true">4</span>
+      <span class="err404-zero"  aria-hidden="true">0</span>
+      <span class="err404-digit" aria-hidden="true">4</span>
+    </div>
+
+    <!-- Badge -->
+    <div class="err404-badge" role="status">
+      <span class="err404-badge__dot"></span>
+      Page Not Found
+    </div>
+
+    <!-- Message -->
+    <h1 class="err404-title">Looks like you took a wrong turn</h1>
+    <p class="err404-desc">
+      The page you're looking for doesn't exist, may have been moved,
+      or the URL might be misspelled. Let's get you back on the road.
+    </p>
+
+    <!-- Animated road divider -->
+    <div class="err404-road" aria-hidden="true">
+      <div class="err404-road__stripe"></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="err404-actions">
+      <a href="/" class="err404-btn-home" id="err404-home-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M3 12L12 3l9 9"/>
+          <path d="M9 21V12h6v9"/>
+        </svg>
+        Back to Home
+      </a>
+      <button type="button" class="err404-btn-back" id="err404-back-btn"
+              onclick="history.length > 1 ? history.back() : window.location.href='/'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Go Back
+      </button>
+    </div>
+
+    <!-- Quick links -->
+    <div class="err404-links">
+      <p class="err404-links-label">Or explore</p>
+      <div class="err404-links-row">
+        <a href="/cars/" class="err404-link-chip" id="err404-browse-cars">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <path d="M5 17h14v-5H5v5z"/>
+            <path d="M7 12l2-4h6l2 4"/>
+            <circle cx="7.5" cy="17" r="1.5"/>
+            <circle cx="16.5" cy="17" r="1.5"/>
+          </svg>
+          Browse Cars
+        </a>
+        <a href="/login/" class="err404-link-chip" id="err404-login">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6"/>
+          </svg>
+          Login
+        </a>
+        <a href="/register/" class="err404-link-chip" id="err404-register">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Register
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /.err404-card -->
+</div><!-- /.err404-wrap -->
+{% endblock %}
+
+{% block footer %}{% include 'includes/footer.html' %}{% endblock %}

@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% block title %}Social Media Management — RentACar{% endblock %}
+
+{% block content %}
+<div class="dash-layout role-admin">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sAvatar"></div>
+      <div>
+        <div class="sidebar-name" id="sName"></div>
+        <span class="sidebar-role">Admin</span>
+      </div>
+    </div>
+
+    <div class="sidebar-menu">
+      <a href="/dashboard/admin/?tab=overview" class="s-item" id="btn-overview">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </a>
+      <a href="/dashboard/admin/?tab=cars" class="s-item" id="btn-cars">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
+      </a>
+      <a href="/dashboard/admin/?tab=owners" class="s-item" id="btn-owners">
+        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+        <span>Owner Verifications</span>
+      </a>
+      <a href="/dashboard/admin/social-media/" class="s-item active" id="btn-social">
+        <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
+        Social Media
+      </a>
+      <a href="/dashboard/admin/?tab=bookings" class="s-item" id="btn-bookings">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
+      </a>
+      <div class="s-divider"></div>
+      <button class="s-item danger" onclick="doLogout()">
+        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="dash-main">
+
+    <!-- ══ SOCIAL MEDIA PANEL ══ -->
+    <div class="tab-panel active" id="tab-social">
+
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div>
+            <h1>Social Media</h1>
+            <p>Manage footer social links shown across the site.</p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="openSocialMediaModal()">
+            <svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg>
+            Add Link
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>No.</th><th>Platform</th><th>URL</th><th>Status</th><th class="col-hide-sm">Created</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="socialMediaTable">
+              <tr><td colspan="6">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Social media add/edit modal -->
+<div class="modal-bg" id="socialMediaModal" hidden>
+  <div class="modal" role="dialog" aria-labelledby="socialMediaModalTitle" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="socialMediaModalTitle">Add Social Link</h2>
+      <button type="button" class="btn-close-modal" onclick="closeModal('socialMediaModal')" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="socialMediaForm" onsubmit="saveSocialMediaLink(event)">
+        <input type="hidden" id="socialMediaId" value="">
+        <div class="form-group">
+          <label for="socialPlatform">Platform</label>
+          <select id="socialPlatform" class="form-control" required>
+            <option value="">Select platform…</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Twitter/X">Twitter/X</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="YouTube">YouTube</option>
+            <option value="TikTok">TikTok</option>
+            <option value="Pinterest">Pinterest</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group" id="socialPlatformCustomWrap" hidden>
+          <label for="socialPlatformCustom">Custom platform name</label>
+          <input type="text" id="socialPlatformCustom" class="form-control" placeholder="e.g. Threads">
+        </div>
+        <div class="form-group">
+          <label for="socialUrl">URL</label>
+          <input type="url" id="socialUrl" class="form-control" placeholder="https://…" required>
+        </div>
+        <div class="form-group">
+          <label class="form-check-label">
+            <input type="checkbox" id="socialIsActive" checked>
+            Active (show in footer)
+          </label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('socialMediaModal')">Cancel</button>
+      <button type="submit" form="socialMediaForm" class="btn btn-primary" id="socialMediaSaveBtn">Save Link</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Guard ──────────────────────────── */
+const user = API.getUser();
+if (!API.loggedIn() || (API.role() !== 'admin' && !(user && user.is_superuser))) {
+  window.location.href = '/login/';
+}
+
+/* ── Sidebar init ───────────────────── */
+document.getElementById('sName').textContent   = user ? user.username : '';
+document.getElementById('sAvatar').textContent = initials(user ? user.username : '');
+
+/* ══ SOCIAL MEDIA ═══════════════════ */
+var allSocialMediaLinks = [];
+
+function socialPlatformIcon(name) {
+  var key = (name || '').toLowerCase().replace(/\s+/g, '');
+  if (key.indexOf('facebook') !== -1) return 'facebook';
+  if (key.indexOf('instagram') !== -1) return 'instagram';
+  if (key.indexOf('twitter') !== -1 || key === 'x') return 'twitter';
+  if (key.indexOf('linkedin') !== -1) return 'linkedin';
+  if (key.indexOf('youtube') !== -1) return 'youtube';
+  if (key.indexOf('tiktok') !== -1) return 'tiktok';
+  return 'share';
+}
+
+function resolveSocialPlatformName() {
+  var select = document.getElementById('socialPlatform');
+  if (!select) return '';
+  if (select.value === 'Other') {
+    return (document.getElementById('socialPlatformCustom').value || '').trim();
+  }
+  return select.value;
+}
+
+function toggleSocialPlatformCustom() {
+  var select = document.getElementById('socialPlatform');
+  var wrap = document.getElementById('socialPlatformCustomWrap');
+  if (!select || !wrap) return;
+  var isOther = select.value === 'Other';
+  wrap.hidden = !isOther;
+  document.getElementById('socialPlatformCustom').required = isOther;
+}
+
+async function fetchSocialMediaList() {
+  var tbody = document.getElementById('socialMediaTable');
+  tbody.innerHTML = UI.tableLoadingRow(6);
+  try {
+    var data = await API.get('/api/accounts/admin/social-media/');
+    allSocialMediaLinks = Array.isArray(data) ? data : (data.results || []);
+    renderSocialMediaTable();
+  } catch (err) {
+    toast(err.message, 'error');
+    tbody.innerHTML = UI.tableLoadingRow(6);
+  }
+}
+
+function renderSocialMediaTable() {
+  var tbody = document.getElementById('socialMediaTable');
+  if (!allSocialMediaLinks.length) {
+    tbody.innerHTML = '<tr><td colspan="6">'
+      + UI.emptyState('No social links yet', 'Add links to display them in the site footer.')
+      + '</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allSocialMediaLinks.map(function (link, i) {
+    var icon = socialPlatformIcon(link.platform_name);
+    var status = link.is_active
+      ? '<span class="badge badge-green">Active</span>'
+      : '<span class="badge badge-gray">Inactive</span>';
+    var actions = '<div class="table-actions">'
+      + '<button type="button" class="btn btn-sm btn-outline" onclick="openSocialMediaModal(' + link.id + ')">Edit</button>'
+      + '<button type="button" class="btn btn-sm btn-ghost" onclick="toggleSocialMediaActive(' + link.id + ', ' + (!link.is_active) + ')">'
+      + (link.is_active ? 'Disable' : 'Enable') + '</button>'
+      + '<button type="button" class="btn btn-sm btn-danger" onclick="deleteSocialMediaLink(' + link.id + ')">Delete</button>'
+      + '</div>';
+    return '<tr>'
+      + UI.tdSerial(i + 1)
+      + '<td><span class="social-platform-cell">'
+      + '<svg class="icon icon-sm" aria-hidden="true"><use href="#icon-' + icon + '"/></svg> '
+      + UI.escHtml(link.platform_name) + '</span></td>'
+      + '<td class="td-meta"><a href="' + UI.escHtml(link.url) + '" target="_blank" rel="noopener noreferrer">'
+      + UI.escHtml(link.url) + '</a></td>'
+      + '<td>' + status + '</td>'
+      + '<td class="td-meta col-hide-sm">' + UI.escHtml(UI.formatDateLocal(link.created_at)) + '</td>'
+      + '<td>' + actions + '</td>'
+      + '</tr>';
+  }).join('');
+  UI.refreshTableScrollHints();
+}
+
+function openSocialMediaModal(id) {
+  var form = document.getElementById('socialMediaForm');
+  var title = document.getElementById('socialMediaModalTitle');
+  var saveBtn = document.getElementById('socialMediaSaveBtn');
+  form.reset();
+  document.getElementById('socialMediaId').value = '';
+  document.getElementById('socialIsActive').checked = true;
+  toggleSocialPlatformCustom();
+
+  if (id) {
+    var link = allSocialMediaLinks.find(function (l) { return l.id === id; });
+    if (!link) return;
+    title.textContent = 'Edit Social Link';
+    saveBtn.textContent = 'Update Link';
+    document.getElementById('socialMediaId').value = String(link.id);
+    var known = ['Facebook', 'Instagram', 'Twitter/X', 'LinkedIn', 'YouTube', 'TikTok', 'Pinterest', 'WhatsApp'];
+    if (known.indexOf(link.platform_name) !== -1) {
+      document.getElementById('socialPlatform').value = link.platform_name;
+    } else {
+      document.getElementById('socialPlatform').value = 'Other';
+      document.getElementById('socialPlatformCustom').value = link.platform_name;
+    }
+    document.getElementById('socialUrl').value = link.url;
+    document.getElementById('socialIsActive').checked = !!link.is_active;
+    toggleSocialPlatformCustom();
+  } else {
+    title.textContent = 'Add Social Link';
+    saveBtn.textContent = 'Save Link';
+  }
+  openModal('socialMediaModal');
+}
+
+async function saveSocialMediaLink(event) {
+  event.preventDefault();
+  var platform = resolveSocialPlatformName();
+  if (!platform) {
+    toast('Please select or enter a platform name.', 'error');
+    return;
+  }
+  var payload = {
+    platform_name: platform,
+    url: document.getElementById('socialUrl').value.trim(),
+    is_active: document.getElementById('socialIsActive').checked,
+  };
+  var id = document.getElementById('socialMediaId').value;
+  try {
+    if (id) {
+      await API.patch('/api/accounts/admin/social-media/' + id + '/', payload);
+      toast('Social link updated.', 'success');
+    } else {
+      await API.post('/api/accounts/admin/social-media/', payload);
+      toast('Social link added.', 'success');
+    }
+    closeModal('socialMediaModal');
+    fetchSocialMediaList();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function toggleSocialMediaActive(id, isActive) {
+  try {
+    await API.patch('/api/accounts/admin/social-media/' + id + '/', { is_active: isActive });
+    toast(isActive ? 'Link enabled.' : 'Link disabled.', 'success');
+    fetchSocialMediaList();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function deleteSocialMediaLink(id) {
+  if (!confirm('Delete this social media link?')) return;
+  try {
+    await API.del('/api/accounts/admin/social-media/' + id + '/');
+    toast('Social link deleted.', 'success');
+    fetchSocialMediaList();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+document.getElementById('socialPlatform').addEventListener('change', toggleSocialPlatformCustom);
+fetchSocialMediaList();
+</script>
+{% endblock %}

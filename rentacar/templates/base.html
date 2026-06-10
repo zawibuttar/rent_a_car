@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 </head>
 
 <body>
@@ -20,7 +21,9 @@
     <div class="navbar-inner">
       <button type="button" class="btn-icon nav-menu-btn" id="sidebarToggle" aria-label="Open menu"></button>
       <a href="/" class="nav-brand">
-        <svg class="icon icon-brand" aria-hidden="true"><use href="#icon-logo"/></svg>
+        <svg class="icon icon-brand" aria-hidden="true">
+          <use href="#icon-logo" />
+        </svg>
         <span class="nav-brand-text">RentACar</span>
       </a>
       <a href="/" class="nav-link">Home</a>
@@ -29,13 +32,18 @@
       <div class="nav-right">
         <span class="nav-links-compact" aria-label="Quick navigation">
           <a href="/" class="btn-icon" aria-label="Home">
-            <svg class="icon" aria-hidden="true"><use href="#icon-logo"/></svg>
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-logo" />
+            </svg>
           </a>
           <a href="/cars/" class="btn-icon" aria-label="Browse cars">
-            <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-search" />
+            </svg>
           </a>
         </span>
-        <button type="button" class="btn btn-outline btn-sm location-toggle" data-location-toggle aria-label="Choose your city">Choose city</button>
+        <button type="button" class="btn btn-outline btn-sm location-toggle" data-location-toggle
+          aria-label="Choose your city">Choose city</button>
         <button type="button" class="btn-icon theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
         <span id="nav-guest" class="nav-auth-group">
           <a href="/login/" class="btn btn-outline">Login</a>
@@ -54,11 +62,12 @@
 
   {% block content %}{% endblock %}
 
-  <div class="footer">© <span id="footerYear"></span> RentACar. All rights reserved.</div>
+  {% block footer %}{% endblock %}
 
   <script src="{% static 'js/api.js' %}"></script>
   <script src="{% static 'js/ui.js' %}"></script>
   <script src="{% static 'js/location.js' %}"></script>
+  <script src="{% static 'js/footer.js' %}"></script>
   <script>
     window.STATIC_NO_IMAGE = "{% static 'images/no-image.svg' %}";
     document.addEventListener('DOMContentLoaded', function () {
@@ -71,10 +80,17 @@
         else if (role === 'admin') link.href = '/dashboard/admin/';
         else link.href = '/dashboard/customer/';
       }
+      // Show "My Orders" link only for logged-in customers (not admin or owner)
+      const ordersLinks = document.querySelectorAll('.nav-orders-link');
+      if (role && role === 'customer') {
+        ordersLinks.forEach(function (el) { el.style.display = ''; });
+      }
       function markNavActive(links) {
         links.forEach(function (a) {
+          const href = a.getAttribute('href');
           const match = a.href === window.location.href
-            || (a.getAttribute('href') === '/cars/' && window.location.pathname.indexOf('/cars') === 0);
+            || (href === '/cars/' && window.location.pathname.indexOf('/cars') === 0)
+            || (href === '/bookings/my-bookings/' && window.location.pathname.indexOf('/bookings') === 0);
           if (match) {
             a.classList.add('active');
             a.setAttribute('aria-current', 'page');

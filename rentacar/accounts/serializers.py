@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from .models import User, CustomerProfile, OwnerProfile
+from .models import User, CustomerProfile, OwnerProfile, SocialMediaLink
 
 ALLOWED_REGISTER_ROLES = {User.Role.CUSTOMER, User.Role.OWNER}
 
@@ -104,6 +104,25 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'is_verified', 'total_earnings', 'created_at']
 
 
+
+
+class SocialMediaLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialMediaLink
+        fields = ['id', 'platform_name', 'url', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_platform_name(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Platform name is required.')
+        return value
+
+    def validate_url(self, value):
+        value = (value or '').strip()
+        if not value.startswith(('http://', 'https://')):
+            raise serializers.ValidationError('URL must start with http:// or https://')
+        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Privacy Policy — RentACar{% endblock %}
+
+{% block content %}
+<div class="page-wrap" style="max-width: 800px; margin: 3rem auto; padding: 0 1.5rem;">
+  <div class="card" style="padding: 2.5rem; background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);">
+    <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
+      <h1 style="font-size: 2.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Privacy Policy</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Last updated: June 10, 2026</p>
+    </div>
+    
+    <div style="line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">1. Information We Collect</h2>
+      <p style="margin-bottom: 1.5rem;">We collect information that you provide directly to us when creating an account, editing your profile, listing or booking vehicles, or communicating with support. This may include your name, email, phone number, national ID, driving license, and billing information.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">2. How We Use Your Information</h2>
+      <p style="margin-bottom: 1.5rem;">We use the collected information to facilitate booking transactions, verify owner and customer profiles, handle support requests, and improve our services. Your contact details are shared with the owner or renter of a booked vehicle solely to facilitate the rental transaction.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">3. Data Sharing and Disclosure</h2>
+      <p style="margin-bottom: 1.5rem;">We do not sell your personal data. We may share information with trusted third-party service providers (e.g., payment gateways, database hosting, profile verification agencies) as necessary to perform their services on our behalf.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">4. Security</h2>
+      <p style="margin-bottom: 1.5rem;">We implement industry-standard administrative, technical, and physical security measures to protect your personal information from unauthorized access, loss, or alteration. However, no internet transmission is 100% secure.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">5. Your Rights</h2>
+      <p style="margin-bottom: 1.5rem;">You have the right to access, correct, update, or request the deletion of your personal data at any time through your dashboard settings or by contacting support.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% include 'includes/footer.html' %}{% endblock %}

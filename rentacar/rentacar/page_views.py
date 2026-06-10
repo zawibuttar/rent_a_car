@@ -26,7 +26,17 @@ def owner_dashboard(request):
 def admin_dashboard(request):
     return render(request, 'dashboards/admin_dashboard.html')
 
+def admin_social_media(request):
+    from django.shortcuts import redirect
+    from django.http import HttpResponseForbidden
+    if not request.user.is_authenticated:
+        return redirect('login-page')
+    if not (request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'):
+        return HttpResponseForbidden("You do not have permission to access this page.")
+    return render(request, 'dashboards/admin_social_media.html')
+
 def main_dashboard(request):
+
     from django.shortcuts import redirect
     if not request.user.is_authenticated:
         return redirect('login-page')
@@ -39,3 +49,12 @@ def main_dashboard(request):
         return redirect('admin-dashboard')
     
     return redirect('home')
+
+def terms(request):
+    return render(request, 'terms.html')
+
+def privacy(request):
+    return render(request, 'privacy.html')
+
+def contact(request):
+    return render(request, 'contact.html')

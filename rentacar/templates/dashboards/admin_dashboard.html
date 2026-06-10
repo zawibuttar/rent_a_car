@@ -26,6 +26,10 @@
         <span>Owner Verifications</span>
         <span class="s-badge" id="pendingOwnersBadge" hidden></span>
       </button>
+      <a class="s-item" id="btn-social" href="/dashboard/admin/social-media/" target="_blank" rel="noopener noreferrer">
+        <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
+        Social Media
+      </a>
       <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
       </button>
@@ -207,9 +211,9 @@
       <div id="adminOwnersPagination" class="pagination-wrap" hidden></div>
 
     </div>
-
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -667,7 +671,6 @@ async function updateOwnerStatus(id, isVerified) {
     loadOverview(true);
   } catch(err) { toast(err.message, 'error'); }
 }
-
 /* ── Boot ───────────────────────────── */
 UI.initTableFilters({
   toolbarId: 'adminCarsFilters',
@@ -711,6 +714,18 @@ UI.initTableFilters({
     fetchAdminOwnersList();
   },
 });
-loadOverview();
+
+const params = new URLSearchParams(window.location.search);
+const initialTab = params.get('tab');
+if (initialTab && ['overview', 'cars', 'owners', 'bookings'].includes(initialTab)) {
+  const btn = document.getElementById('btn-' + initialTab);
+  if (btn) {
+    showTab(initialTab, btn);
+  } else {
+    loadOverview();
+  }
+} else {
+  loadOverview();
+}
 </script>
 {% endblock %}

@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 
-from .models import OwnerProfile
+from .models import OwnerProfile, SocialMediaLink
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -124,4 +124,66 @@ class DashboardOwnerListFilterTests(APITestCase):
             HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=customer).key
         )
         response = self.client.get(self.url, {'search': 'verified'})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class SocialMediaLinkAPITests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='socialadmin',
+            email='socialadmin@example.com',
+            password='pass',
+            role=User.Role.ADMIN,
+        )
+        self.customer = User.objects.create_user(
+            username='socialcust',
+            email='socialcust@example.com',
+            password='pass',
+            role=User.Role.CUSTOMER,
+        )
+        self.active = SocialMediaLink.objects.create(
+            platform_name='Facebook',
+            url='https://facebook.com/rentacar',
+            is_active=True,
+        )
+        self.inactive = SocialMediaLink.objects.create(
+            platform_name='Instagram',
+            url='https://instagram.com/rentacar',
+            is_active=False,
+        )
+        self.public_url = reverse('social-media-list')
+        self.admin_list_url = reverse('admin-social-media-list')
+
+    def test_public_list_returns_only_active_links(self):
+        response = self.client.get(self.public_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['platform_name'], 'Facebook')
+
+    def test_admin_can_create_update_and_delete(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.admin).key
+        )
+        create_response = self.client.post(self.admin_list_url, {
+            'platform_name': 'LinkedIn',
+            'url': 'https://linkedin.com/company/rentacar',
+            'is_active': True,
+        }, format='json')
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        link_id = create_response.data['id']
+
+        detail_url = reverse('admin-social-media-detail', kwargs={'pk': link_id})
+        patch_response = self.client.patch(detail_url, {'is_active': False}, format='json')
+        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(patch_response.data['is_active'])
+
+        delete_response = self.client.delete(detail_url)
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SocialMediaLink.objects.filter(pk=link_id).exists())
+
+    def test_non_admin_cannot_manage_social_links(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.customer).key
+        )
+        response = self.client.get(self.admin_list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

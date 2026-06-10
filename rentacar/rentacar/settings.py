@@ -13,17 +13,17 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env', override=True)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-DEBUG = os.getenv('DEBUG', '1').lower() in ('1', 'true', 'yes')
+DEBUG = os.getenv('DEBUG', '0').lower() in ('1', 'true', 'yes')
 
 if DEBUG:
     SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-rentacar-dev-only-change-me')
@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'accounts',
     'cars',
     'bookings',
+    'core',
 
     # Third-party apps
     'rest_framework',
@@ -117,6 +118,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.social_links',
             ],
         },
     },

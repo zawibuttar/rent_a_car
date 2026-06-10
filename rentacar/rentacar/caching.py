@@ -14,8 +14,10 @@ from rest_framework.response import Response
 ADMIN_CARS_KEY = 'list:admin:cars'
 ADMIN_BOOKINGS_KEY = 'list:admin:bookings'
 ADMIN_OWNERS_KEY = 'list:admin:owners'
+ADMIN_SOCIAL_MEDIA_KEY = 'list:admin:social_media'
 ADMIN_LIST_VERSION_KEY = 'version:admin:lists'
 PUBLIC_CAR_LIST_VERSION_KEY = 'version:public:car_list'
+PUBLIC_SOCIAL_MEDIA_VERSION_KEY = 'version:public:social_media'
 
 _ADMIN_RESOURCE_KEYS = frozenset({
     ADMIN_CARS_KEY,
@@ -39,6 +41,15 @@ def admin_bookings_key():
 
 def admin_owners_key():
     return _versioned_admin_key(ADMIN_OWNERS_KEY)
+
+
+def admin_social_media_key():
+    return _versioned_admin_key(ADMIN_SOCIAL_MEDIA_KEY)
+
+
+def public_social_media_key():
+    version = cache.get(PUBLIC_SOCIAL_MEDIA_VERSION_KEY, 0)
+    return f'list:public:social_media:v{version}'
 
 
 def public_car_list_key(query_string=''):
@@ -66,6 +77,14 @@ def invalidate_admin_lists():
         cache.set(ADMIN_LIST_VERSION_KEY, int(current) + 1, timeout=None)
     except (TypeError, ValueError):
         cache.set(ADMIN_LIST_VERSION_KEY, 1, timeout=None)
+
+
+def invalidate_social_media_cache():
+    try:
+        current = cache.get(PUBLIC_SOCIAL_MEDIA_VERSION_KEY, 0)
+        cache.set(PUBLIC_SOCIAL_MEDIA_VERSION_KEY, int(current) + 1, timeout=None)
+    except (TypeError, ValueError):
+        cache.set(PUBLIC_SOCIAL_MEDIA_VERSION_KEY, 1, timeout=None)
 
 
 def invalidate_public_car_lists():

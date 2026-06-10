@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Terms &amp; Conditions — RentACar{% endblock %}
+
+{% block content %}
+<div class="page-wrap" style="max-width: 800px; margin: 3rem auto; padding: 0 1.5rem;">
+  <div class="card" style="padding: 2.5rem; background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);">
+    <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
+      <h1 style="font-size: 2.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Terms &amp; Conditions</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Last updated: June 10, 2026</p>
+    </div>
+    
+    <div style="line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">1. Acceptance of Terms</h2>
+      <p style="margin-bottom: 1.5rem;">Welcome to RentACar. By accessing or using our website and car rental marketplace, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our services.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">2. User Registration</h2>
+      <p style="margin-bottom: 1.5rem;">To book or list a vehicle, you must create a verified account. You are responsible for keeping your login credentials confidential and for all activities that occur under your account.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">3. Rental Services Marketplace</h2>
+      <p style="margin-bottom: 1.5rem;">RentACar provides a platform that connects car owners with potential renters. Any agreement for vehicle rental is formed directly between the owner and the renter. RentACar is not a party to the rental contract and does not assume liability for vehicle conditions or user behavior.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">4. Payments and Fees</h2>
+      <p style="margin-bottom: 1.5rem;">Renters agree to pay all charges related to their bookings, including rental rates, applicable taxes, and any security deposits. Owners are responsible for setting their own pricing and availability.</p>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">5. Prohibited Use</h2>
+      <p style="margin-bottom: 1.5rem;">Rental vehicles may not be used for any illegal purposes, off-road driving, sub-renting, commercial transportation of goods/passengers without explicit consent, or reckless driving.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% include 'includes/footer.html' %}{% endblock %}
