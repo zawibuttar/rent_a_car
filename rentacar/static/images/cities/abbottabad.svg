@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#f0fdf4"/>
+  <g transform="translate(18,18)" fill="#16a34a">
+    <path d="M12 32 L28 8 L40 24 L56 4 L72 32 Z" fill="#22c55e"/>
+    <path d="M0 32 H80" stroke="#86efac" stroke-width="3" stroke-linecap="round"/>
+    <rect x="34" y="22" width="10" height="10" rx="2" fill="#15803d"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Abbottabad</text>
+</svg>

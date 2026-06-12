@@ -271,26 +271,39 @@ const UI = {
     return { error: 'Invalid rental type.' };
   },
 
+  formatDateTimeLocal(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch (e) {
+      return String(iso);
+    }
+  },
+
+  formatDateLocal(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric',
+      });
+    } catch (e) {
+      return String(iso).slice(0, 10);
+    }
+  },
+
   formatBookingPeriod(booking) {
     if (!booking) return '—';
-    if (booking.period_display) return booking.period_display;
     const type = booking.rental_type || 'daily';
     const start = booking.start_at;
     const end = booking.end_at;
-    if (!start || !end) return '—';
+    if (!start || !end) return booking.period_display || '—';
     if (type === 'hourly') {
-      const fmt = function (iso) {
-        const d = new Date(iso);
-        return d.toLocaleString(undefined, {
-          month: 'short', day: 'numeric', year: 'numeric',
-          hour: '2-digit', minute: '2-digit',
-        });
-      };
-      return fmt(start) + ' → ' + fmt(end);
+      return UI.formatDateTimeLocal(start) + ' → ' + UI.formatDateTimeLocal(end);
     }
-    const sd = String(start).slice(0, 10);
-    const ed = String(end).slice(0, 10);
-    return sd + ' → ' + ed;
+    return UI.formatDateLocal(start) + ' → ' + UI.formatDateLocal(end);
   },
 
   bookingDurationLabel(booking) {
@@ -340,25 +353,15 @@ const UI = {
 
   bookedSlotPeriod(slot) {
     if (!slot) return '—';
-    return slot.period_display || UI.formatBookingPeriod(slot);
+    return UI.formatBookingPeriod(slot);
   },
 
   bookedSlotEndShort(slot) {
     if (!slot || !slot.end_at) return '';
-    try {
-      const d = new Date(slot.end_at);
-      if (slot.rental_type === 'hourly') {
-        return d.toLocaleString(undefined, {
-          month: 'short', day: 'numeric', year: 'numeric',
-          hour: '2-digit', minute: '2-digit',
-        });
-      }
-      return d.toLocaleDateString(undefined, {
-        month: 'short', day: 'numeric', year: 'numeric',
-      });
-    } catch (e) {
-      return String(slot.end_at).slice(0, 10);
+    if (slot.rental_type === 'hourly') {
+      return UI.formatDateTimeLocal(slot.end_at);
     }
+    return UI.formatDateLocal(slot.end_at);
   },
 
   bookedSlotsSummary(car) {
@@ -633,6 +636,15 @@ const UI = {
     if (opts.btn) opts.btn.classList.add('active');
     if (opts.onActivate) opts.onActivate(opts.tabId);
     UI.closeSidebarDrawer();
+  },
+
+  openDashboardTabFromHash() {
+    const hash = (location.hash || '').replace('#', '').trim();
+    if (!hash || !document.querySelector('.dash-layout')) return false;
+    const btn = document.getElementById('btn-' + hash);
+    if (!btn || typeof showTab !== 'function') return false;
+    showTab(hash, btn);
+    return true;
   },
 
   closeSidebarDrawer() {
@@ -1145,6 +1157,9 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () { UI.toggleTheme(); });
   });
   UI.initSidebarDrawer();
+  window.addEventListener('hashchange', function () {
+    UI.openDashboardTabFromHash();
+  });
   UI.refreshTableScrollHints();
   window.addEventListener('resize', function () {
     UI.refreshTableScrollHints();

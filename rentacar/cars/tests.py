@@ -659,3 +659,57 @@ class OwnerAdminRemovedCarTests(APITestCase):
         url = reverse('car-image-upload', kwargs={'pk': self.removed_car.pk})
         response = self.client.post(url, {}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CarDetailOwnerVerificationTests(APITestCase):
+    def setUp(self):
+        self.verified_owner = User.objects.create_user(
+            username='verifiedali',
+            email='verifiedali@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        self.pending_owner = User.objects.create_user(
+            username='pendingali',
+            email='pendingali@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        OwnerProfile.objects.create(user=self.verified_owner, is_verified=True)
+        OwnerProfile.objects.create(user=self.pending_owner, is_verified=False)
+        self.verified_car = Car.objects.create(
+            owner=self.verified_owner,
+            brand='Verified',
+            model='Car',
+            year=2021,
+            car_type='sedan',
+            description='',
+            location='Karachi',
+            price_per_day=50,
+            is_available=True,
+            is_approved=True,
+        )
+        self.pending_car = Car.objects.create(
+            owner=self.pending_owner,
+            brand='Pending',
+            model='Car',
+            year=2020,
+            car_type='sedan',
+            description='',
+            location='Lahore',
+            price_per_day=40,
+            is_available=True,
+            is_approved=True,
+        )
+
+    def test_detail_owner_is_verified_true(self):
+        url = reverse('car-detail', kwargs={'pk': self.verified_car.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['owner']['is_verified'])
+
+    def test_detail_owner_is_verified_false(self):
+        url = reverse('car-detail', kwargs={'pk': self.pending_car.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['owner']['is_verified'])

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+  <rect rx="10" ry="10" width="160" height="110" fill="#ffffff" stroke="#eff6ff"/>
+  <g transform="translate(28,14)" fill="#2563eb">
+    <circle cx="32" cy="22" r="14" fill="none" stroke="#2563eb" stroke-width="3"/>
+    <path d="M32 8 L36 18 L46 18 L38 24 L41 34 L32 28 L23 34 L26 24 L18 18 L28 18 Z" fill="#60a5fa"/>
+    <rect x="24" y="36" width="16" height="6" rx="3" fill="#64748b"/>
+  </g>
+  <text x="80" y="95" font-family="Inter, Arial, sans-serif" font-size="12" fill="#0f172a" text-anchor="middle">Sialkot</text>
+</svg>

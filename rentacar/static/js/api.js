@@ -150,20 +150,142 @@ function switchTab(tabId) {
 }
 
 /* ── Navbar ─────────────────────── */
+function dashboardProfileUrl(role) {
+  if (role === 'owner') return '/dashboard/owner/#profile';
+  if (role === 'admin') return '/dashboard/admin/#overview';
+  return '/dashboard/customer/#profile';
+}
+
+function updateNavProfileLink(role) {
+  const profileLink = document.getElementById('navProfileLink');
+  if (!profileLink) return;
+
+  const labelEl = profileLink.querySelector('span');
+  const iconUse = profileLink.querySelector('use');
+  const isAdmin = role === 'admin';
+
+  profileLink.href = dashboardProfileUrl(role);
+  profileLink.hidden = false;
+
+  if (labelEl) {
+    labelEl.textContent = isAdmin ? 'Admin Panel' : 'View Profile';
+  }
+  if (iconUse) {
+    iconUse.setAttribute('href', isAdmin ? '#icon-chart' : '#icon-user');
+  }
+}
+
+function closeNavProfileMenu() {
+  const menu = document.getElementById('navProfileMenu');
+  const btn = document.getElementById('navAvBtn');
+  if (!menu) return;
+  menu.hidden = true;
+  menu.classList.remove('is-open');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function openNavProfileMenu() {
+  const menu = document.getElementById('navProfileMenu');
+  const btn = document.getElementById('navAvBtn');
+  if (!menu || !btn) return;
+  menu.hidden = false;
+  menu.classList.add('is-open');
+  btn.setAttribute('aria-expanded', 'true');
+}
+
+function toggleNavProfileMenu() {
+  const menu = document.getElementById('navProfileMenu');
+  if (!menu) return;
+  if (menu.classList.contains('is-open')) {
+    closeNavProfileMenu();
+  } else {
+    openNavProfileMenu();
+  }
+}
+
+function initNavProfileMenu() {
+  const btn = document.getElementById('navAvBtn');
+  const menu = document.getElementById('navProfileMenu');
+  if (!btn || !menu || btn.dataset.navProfileInit) return;
+  btn.dataset.navProfileInit = '1';
+
+  btn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    toggleNavProfileMenu();
+  });
+
+  document.addEventListener('click', function (event) {
+    if (menu.classList.contains('is-open')
+      && !menu.contains(event.target)
+      && !btn.contains(event.target)) {
+      closeNavProfileMenu();
+    }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeNavProfileMenu();
+  });
+
+  const profileLink = document.getElementById('navProfileLink');
+  if (profileLink) {
+    profileLink.addEventListener('click', function (event) {
+      const href = profileLink.getAttribute('href') || '';
+      const hashIdx = href.indexOf('#');
+      const path = hashIdx >= 0 ? href.slice(0, hashIdx) : href;
+      const tab = hashIdx >= 0 ? href.slice(hashIdx + 1) : '';
+      const currentPath = window.location.pathname.replace(/\/$/, '');
+      const targetPath = path.replace(/\/$/, '');
+      if (tab && document.querySelector('.dash-layout') && currentPath === targetPath) {
+        event.preventDefault();
+        if (location.hash !== '#' + tab) {
+          location.hash = tab;
+        }
+        if (typeof UI !== 'undefined' && UI.openDashboardTabFromHash) {
+          UI.openDashboardTabFromHash();
+        }
+        closeNavProfileMenu();
+      }
+    });
+  }
+
+  menu.querySelectorAll('.nav-profile-item').forEach(function (item) {
+    if (item.id === 'navProfileLink') return;
+    item.addEventListener('click', function () {
+      closeNavProfileMenu();
+    });
+  });
+}
+
 function initNav() {
   const user  = API.getUser();
   const guest = document.getElementById('nav-guest');
   const auth  = document.getElementById('nav-auth');
-  const uname = document.getElementById('nav-uname');
   const avEl  = document.getElementById('nav-av');
+  const menuAv = document.getElementById('navMenuAv');
+  const menuName = document.getElementById('navMenuName');
+  const profileLink = document.getElementById('navProfileLink');
+  const dashLink = document.getElementById('nav-dash-link');
+
   if (API.loggedIn() && user) {
     if (guest) guest.classList.add('is-hidden');
     if (auth)  auth.classList.remove('is-hidden');
-    if (uname) uname.textContent   = user.username;
-    if (avEl)  avEl.textContent    = initials(user.username);
+    const label = user.username || '';
+    const avText = initials(label);
+    if (avEl) avEl.textContent = avText;
+    if (menuAv) menuAv.textContent = avText;
+    if (menuName) menuName.textContent = label;
+    const role = user.role || API.role();
+    updateNavProfileLink(role);
+    if (dashLink && role) {
+      if (role === 'owner') dashLink.href = '/dashboard/owner/';
+      else if (role === 'admin') dashLink.href = '/dashboard/admin/';
+      else dashLink.href = '/dashboard/customer/';
+    }
+    initNavProfileMenu();
   } else {
     if (guest) guest.classList.remove('is-hidden');
     if (auth)  auth.classList.add('is-hidden');
+    closeNavProfileMenu();
   }
 }
 
