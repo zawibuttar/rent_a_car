@@ -1477,6 +1477,8 @@
   initListingForm();
   initLocationAutocomplete();
   toggleRentalPriceFields('c');
-  loadOverview();
+  if (!UI.openDashboardTabFromHash()) {
+    loadOverview();
+  }
 </script>
 {% endblock %}

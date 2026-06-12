@@ -711,6 +711,8 @@ UI.initTableFilters({
     fetchAdminOwnersList();
   },
 });
-loadOverview();
+if (!UI.openDashboardTabFromHash()) {
+  loadOverview();
+}
 </script>
 {% endblock %}
