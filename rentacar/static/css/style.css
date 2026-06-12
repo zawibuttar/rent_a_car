@@ -229,6 +229,9 @@ a { color: var(--primary); text-decoration: none; }
 .nav-link:hover  { background: var(--bg); color: var(--text); }
 .nav-link.active { background: var(--primary-light); color: var(--primary); }
 .nav-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.nav-profile-wrap {
+  position: relative;
+}
 .nav-avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
@@ -239,6 +242,105 @@ a { color: var(--primary); text-decoration: none; }
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   border: 1px solid var(--border);
+  padding: 0;
+  font-family: inherit;
+}
+.nav-avatar:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.nav-profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+.nav-profile-menu.is-open {
+  display: flex;
+}
+.nav-profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.nav-profile-card--header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.nav-profile-menu-av {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: var(--font-bold);
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.nav-profile-menu-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nav-profile-menu-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text);
+  line-height: 1.3;
+  word-break: break-word;
+}
+.nav-profile-card--actions {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+.nav-profile-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+.nav-profile-item .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.nav-profile-item:hover,
+.nav-profile-item:focus-visible {
+  background: var(--bg);
+  outline: none;
+}
+.nav-profile-item--logout {
+  color: var(--danger);
+}
+.nav-profile-item--logout:hover,
+.nav-profile-item--logout:focus-visible {
+  background: var(--danger-light);
+  color: var(--danger);
 }
 
 /* ── Buttons ────────────────────────── */

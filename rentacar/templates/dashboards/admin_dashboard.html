@@ -26,7 +26,7 @@
         <span>Owner Verifications</span>
         <span class="s-badge" id="pendingOwnersBadge" hidden></span>
       </button>
-      <a class="s-item" id="btn-social" href="/dashboard/admin/social-media/" target="_blank" rel="noopener noreferrer">
+      <a class="s-item" id="btn-social" href="/dashboard/admin/social-media/">
         <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
         Social Media
       </a>
@@ -714,18 +714,16 @@ UI.initTableFilters({
     fetchAdminOwnersList();
   },
 });
-
-const params = new URLSearchParams(window.location.search);
-const initialTab = params.get('tab');
-if (initialTab && ['overview', 'cars', 'owners', 'bookings'].includes(initialTab)) {
-  const btn = document.getElementById('btn-' + initialTab);
-  if (btn) {
-    showTab(initialTab, btn);
+if (!UI.openDashboardTabFromHash()) {
+  const params = new URLSearchParams(window.location.search);
+  const initialTab = params.get('tab');
+  if (initialTab && ['overview', 'cars', 'owners', 'bookings'].includes(initialTab)) {
+    const btn = document.getElementById('btn-' + initialTab);
+    if (btn) showTab(initialTab, btn);
+    else loadOverview();
   } else {
     loadOverview();
   }
-} else {
-  loadOverview();
 }
 </script>
 {% endblock %}

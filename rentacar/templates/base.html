@@ -50,9 +50,31 @@
           <a href="/register/" class="btn btn-primary">Register</a>
         </span>
         <span id="nav-auth" class="nav-auth-group is-hidden">
-          <a href="/dashboard/" class="btn btn-ghost" id="nav-dash-link">Dashboard</a>
-          <span id="nav-uname" class="nav-uname"></span>
-          <div class="nav-avatar" id="nav-av"></div>
+          <a href="/dashboard/" class="btn btn-ghost btn-sm" id="nav-dash-link">Dashboard</a>
+          <div class="nav-profile-wrap">
+            <button type="button" class="nav-avatar" id="navAvBtn"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="navProfileMenu"
+              aria-label="Account menu">
+              <span id="nav-av"></span>
+            </button>
+            <div class="nav-profile-menu" id="navProfileMenu" role="menu" hidden>
+              <div class="nav-profile-card nav-profile-card--header">
+                <div class="nav-profile-menu-av" id="navMenuAv" aria-hidden="true"></div>
+                <div class="nav-profile-menu-name" id="navMenuName"></div>
+              </div>
+              <div class="nav-profile-card nav-profile-card--actions">
+                <a href="/dashboard/" class="nav-profile-item" id="navProfileLink" role="menuitem">
+                  <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg>
+                  <span>View Profile</span>
+                </a>
+                <button type="button" class="nav-profile-item nav-profile-item--logout" role="menuitem"
+                  onclick="doLogout()">
+                  <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </span>
       </div>
     </div>
@@ -67,7 +89,6 @@
   <script src="{% static 'js/api.js' %}"></script>
   <script src="{% static 'js/ui.js' %}"></script>
   <script src="{% static 'js/location.js' %}"></script>
-  <script src="{% static 'js/footer.js' %}"></script>
   <script>
     window.STATIC_NO_IMAGE = "{% static 'images/no-image.svg' %}";
     document.addEventListener('DOMContentLoaded', function () {

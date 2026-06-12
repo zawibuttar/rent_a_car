@@ -87,7 +87,6 @@ INSTALLED_APPS = [
     'accounts',
     'cars',
     'bookings',
-    'core',
 
     # Third-party apps
     'rest_framework',
@@ -118,7 +117,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.social_links',
+                'rentacar.context_processors.social_links',
             ],
         },
     },

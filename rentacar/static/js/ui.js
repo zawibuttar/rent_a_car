@@ -658,6 +658,15 @@ const UI = {
     UI.closeSidebarDrawer();
   },
 
+  openDashboardTabFromHash() {
+    const hash = (location.hash || '').replace('#', '').trim();
+    if (!hash || !document.querySelector('.dash-layout')) return false;
+    const btn = document.getElementById('btn-' + hash);
+    if (!btn || typeof showTab !== 'function') return false;
+    showTab(hash, btn);
+    return true;
+  },
+
   closeSidebarDrawer() {
     const sidebar = document.querySelector('.sidebar');
     const backdrop = document.querySelector('.sidebar-backdrop');
@@ -1168,6 +1177,9 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () { UI.toggleTheme(); });
   });
   UI.initSidebarDrawer();
+  window.addEventListener('hashchange', function () {
+    UI.openDashboardTabFromHash();
+  });
   UI.refreshTableScrollHints();
   window.addEventListener('resize', function () {
     UI.refreshTableScrollHints();

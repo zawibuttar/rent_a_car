@@ -652,6 +652,8 @@
       fetchCustomerBookings();
     },
   });
-  loadOverview();
+  if (!UI.openDashboardTabFromHash()) {
+    loadOverview();
+  }
 </script>
 {% endblock %}
