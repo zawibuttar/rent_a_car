@@ -240,16 +240,19 @@
                   min="1990" max="2030" />
               </div>
             </div>
-            <div class="form-grid-2 form-grid-2--narrow">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="cCategory">Category <span class="req">*</span></label>
+                <select class="form-control" id="cCategory" required>
+                  <option value="car">Car</option>
+                  <option value="luxury_car">Luxury Car</option>
+                  <option value="loader">Loader</option>
+                </select>
+              </div>
               <div class="form-group">
                 <label class="form-label" for="cType">Car type <span class="req">*</span></label>
                 <select class="form-control" id="cType" required>
-                  <option value="sedan">Sedan</option>
-                  <option value="suv">SUV</option>
-                  <option value="luxury">Luxury</option>
-                  <option value="hatchback">Hatchback</option>
-                  <option value="truck">Truck</option>
-                  <option value="van">Van</option>
+                  <!-- Populated dynamically -->
                 </select>
               </div>
             </div>
@@ -295,6 +298,17 @@
               <div class="form-group rental-price-field" id="cPriceMonthWrap" hidden>
                 <label class="form-label" for="cPriceMonth">Price per month ($)</label>
                 <input class="form-control" type="number" id="cPriceMonth" min="1" step="0.01" placeholder="900.00" />
+              </div>
+            </div>
+            
+            <div class="form-grid-2" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label class="form-label" for="cDiscountPercentage">Discount percentage (%, optional)</label>
+                <input class="form-control" type="number" id="cDiscountPercentage" min="0" max="100" placeholder="e.g., 10" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cDiscountedPrice">Discounted price ($/day, optional)</label>
+                <input class="form-control" type="number" id="cDiscountedPrice" min="0" step="0.01" placeholder="e.g., 40.00" />
               </div>
             </div>
           </section>
@@ -566,26 +580,41 @@
         </div>
       </div>
 
+      <div class="form-grid-2" style="margin-top: 10px;">
+        <div class="form-group">
+          <label class="form-label">Discount percentage (%, optional)</label>
+          <input class="form-control" type="number" id="eDiscountPercentage" min="0" max="100" placeholder="e.g., 10" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Discounted price ($/day, optional)</label>
+          <input class="form-control" type="number" id="eDiscountedPrice" min="0" step="0.01" placeholder="e.g., 40.00" />
+        </div>
+      </div>
+
       <div class="form-grid-2">
         <div class="form-group">
-          <label class="form-label">Car Type</label>
-          <select class="form-control" id="eType">
-            <option value="sedan">Sedan</option>
-            <option value="suv">SUV</option>
-            <option value="luxury">Luxury</option>
-            <option value="hatchback">Hatchback</option>
-            <option value="truck">Truck</option>
-            <option value="van">Van</option>
+          <label class="form-label">Category</label>
+          <select class="form-control" id="eCategory">
+            <option value="car">Car</option>
+            <option value="luxury_car">Luxury Car</option>
+            <option value="loader">Loader</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Location</label>
-          <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
-            <input class="form-control" type="text" id="eLocation" data-location-autocomplete
-              placeholder="Start typing any city in Pakistan" autocomplete="off"
-              aria-autocomplete="list" aria-expanded="false" />
-            <div class="location-suggestions" id="eLocationSuggestions" data-location-suggestions hidden></div>
-          </div>
+          <label class="form-label">Car Type</label>
+          <select class="form-control" id="eType">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Location</label>
+        <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
+          <input class="form-control" type="text" id="eLocation" data-location-autocomplete
+            placeholder="Start typing any city in Pakistan" autocomplete="off"
+            aria-autocomplete="list" aria-expanded="false" />
+          <div class="location-suggestions" id="eLocationSuggestions" data-location-suggestions hidden></div>
         </div>
       </div>
 
@@ -741,7 +770,8 @@
               + '<td><strong>' + UI.escHtml(c.brand + ' ' + c.model) + '</strong>'
               + '<div class="text-subline">' + UI.escHtml(c.year) + '</div></td>'
               + '<td class="col-hide-sm"><span class="badge badge-blue">'
-              + UI.escHtml(c.car_type) + '</span></td>'
+              + UI.escHtml(c.category === 'luxury_car' ? 'Luxury Car' : c.category === 'loader' ? 'Loader' : 'Car') + '</span>'
+              + '<div class="text-caption" style="margin-top:2px; text-transform:capitalize;">' + UI.escHtml(c.car_type) + '</div></td>'
               + (function () {
                 var r = UI.primaryRateDisplay(c);
                 return '<td class="td-money">$' + r.value
@@ -853,7 +883,10 @@
           + '<div class="car-body">'
           + previewLink
           + '<div class="car-title">' + UI.escHtml(car.brand + ' ' + car.model + ' (' + car.year + ')') + '</div>'
-          + '<div class="car-badges">' + carListingBadges(car) + '</div>'
+          + '<div class="car-badges">'
+          + '<span class="badge badge-blue">' + UI.escHtml(car.category === 'luxury_car' ? 'Luxury Car' : car.category === 'loader' ? 'Loader' : 'Car') + '</span>'
+          + '<span class="badge badge-gray" style="text-transform: capitalize;">' + UI.escHtml(car.car_type) + '</span>'
+          + carListingBadges(car) + '</div>'
           + (UI.bookedSlotsSummary(car)
             ? '<div class="owner-car-booked-row">' + UI.bookedSlotsSummary(car) + '</div>'
             : '')
@@ -933,7 +966,7 @@
   }
 
   function resetAddForm() {
-    ['cBrand', 'cModel', 'cYear', 'cPrice', 'cPriceHour', 'cPriceWeek', 'cPriceMonth', 'cLocation', 'cDesc'].forEach(function (id) {
+    ['cBrand', 'cModel', 'cYear', 'cPrice', 'cPriceHour', 'cPriceWeek', 'cPriceMonth', 'cLocation', 'cDesc', 'cDiscountPercentage', 'cDiscountedPrice'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -1015,11 +1048,75 @@
     previewImgs({ files: dt.files });
   }
 
+  var OWNER_CATEGORY_TYPES = {
+    car: [
+      { value: 'hatchback', label: 'Hatchback' },
+      { value: 'sedan', label: 'Sedan' },
+      { value: 'suv', label: 'SUV' },
+      { value: 'muv_mpv', label: 'MUV/MPV' },
+      { value: 'crossover', label: 'Crossover' },
+      { value: 'convertible', label: 'Convertible' },
+      { value: 'coupe', label: 'Coupe' },
+      { value: 'pickup_truck', label: 'Pickup Truck' },
+    ],
+    luxury_car: [
+      { value: 'luxury_sedan', label: 'Luxury Sedan' },
+      { value: 'luxury_suv', label: 'Luxury SUV' },
+      { value: 'sports_car', label: 'Sports Car' },
+      { value: 'luxury_convertible', label: 'Luxury Convertible' },
+      { value: 'luxury_coupe', label: 'Luxury Coupe' },
+      { value: 'limousine', label: 'Limousine' },
+      { value: 'electric_luxury', label: 'Electric Luxury' },
+      { value: 'luxury_crossover', label: 'Luxury Crossover' },
+    ],
+    loader: [
+      { value: 'mini_truck', label: 'Mini Truck' },
+      { value: 'pickup_loader', label: 'Pickup Loader' },
+      { value: 'container_truck', label: 'Container Truck' },
+      { value: 'tipper_dumper', label: 'Tipper/Dumper' },
+      { value: 'flatbed_truck', label: 'Flatbed Truck' },
+      { value: 'refrigerated_truck', label: 'Refrigerated Truck' },
+      { value: 'tanker_truck', label: 'Tanker Truck' },
+      { value: 'crane_truck', label: 'Crane Truck' },
+    ],
+  };
+
+  function populateOwnerTypeDropdown(category, typeSelectId, currentVal) {
+    var typeEl = document.getElementById(typeSelectId);
+    if (!typeEl) return;
+    typeEl.innerHTML = '';
+    var types = OWNER_CATEGORY_TYPES[category] || [];
+    types.forEach(function (t) {
+      var opt = document.createElement('option');
+      opt.value = t.value;
+      opt.textContent = t.label;
+      typeEl.appendChild(opt);
+    });
+    if (currentVal) {
+      typeEl.value = currentVal;
+    }
+  }
+
   function initListingForm() {
     var zone = document.getElementById('uploadZone');
     var input = document.getElementById('cImages');
     var desc = document.getElementById('cDesc');
     if (!zone || !input) return;
+
+    var cCategory = document.getElementById('cCategory');
+    if (cCategory) {
+      cCategory.addEventListener('change', function () {
+        populateOwnerTypeDropdown(cCategory.value, 'cType');
+      });
+      populateOwnerTypeDropdown(cCategory.value, 'cType');
+    }
+
+    var eCategory = document.getElementById('eCategory');
+    if (eCategory) {
+      eCategory.addEventListener('change', function () {
+        populateOwnerTypeDropdown(eCategory.value, 'eType');
+      });
+    }
 
     zone.addEventListener('click', function (e) {
       if (e.target.closest('.preview-rm')) return;
@@ -1085,6 +1182,7 @@
     var brand = document.getElementById('cBrand').value.trim();
     var model = document.getElementById('cModel').value.trim();
     var year = parseInt(document.getElementById('cYear').value);
+    var category = document.getElementById('cCategory').value;
     var carType = document.getElementById('cType').value;
     var locationInput = document.getElementById('cLocation');
     var location = locationInput ? locationInput.value.trim() : '';
@@ -1119,13 +1217,21 @@
     btn.textContent = 'Submitting...';
 
     try {
+      var discountPctVal = document.getElementById('cDiscountPercentage').value.trim();
+      var discountPriceVal = document.getElementById('cDiscountedPrice').value.trim();
+      var discountPct = discountPctVal ? parseInt(discountPctVal, 10) : null;
+      var discountPrice = discountPriceVal ? parseFloat(discountPriceVal) : null;
+
       var body = Object.assign({
         brand: brand,
         model: model,
         year: year,
+        category: category,
         car_type: carType,
         location: location,
         description: desc,
+        discount_percentage: discountPct,
+        discounted_price: discountPrice,
       }, rental.data);
       var resp = await API.post('/api/cars/create/', body);
 
@@ -1168,8 +1274,12 @@
     document.getElementById('ePrice').value = car.price_per_day || '';
     document.getElementById('ePriceWeek').value = car.price_per_week || '';
     document.getElementById('ePriceMonth').value = car.price_per_month || '';
+    document.getElementById('eDiscountPercentage').value = car.discount_percentage !== null && car.discount_percentage !== undefined ? car.discount_percentage : '';
+    document.getElementById('eDiscountedPrice').value = car.discounted_price !== null && car.discounted_price !== undefined ? car.discounted_price : '';
     toggleRentalPriceFields('e');
-    document.getElementById('eType').value = car.car_type;
+    var eCategoryVal = car.category || 'car';
+    document.getElementById('eCategory').value = eCategoryVal;
+    populateOwnerTypeDropdown(eCategoryVal, 'eType', car.car_type);
     LocationAutocomplete.markSelected(document.getElementById('eLocation'), car.location);
     document.getElementById('eDesc').value = car.description || '';
     document.getElementById('eAvailable').checked = car.is_available;
@@ -1201,14 +1311,22 @@
     }
 
     try {
+      var discountPctVal = document.getElementById('eDiscountPercentage').value.trim();
+      var discountPriceVal = document.getElementById('eDiscountedPrice').value.trim();
+      var discountPct = discountPctVal ? parseInt(discountPctVal, 10) : null;
+      var discountPrice = discountPriceVal ? parseFloat(discountPriceVal) : null;
+
       var patchBody = Object.assign({
         brand: document.getElementById('eBrand').value,
         model: document.getElementById('eModel').value,
         year: parseInt(document.getElementById('eYear').value),
+        category: document.getElementById('eCategory').value,
         car_type: document.getElementById('eType').value,
         location: editLocationInput.value.trim(),
         description: document.getElementById('eDesc').value,
         is_available: document.getElementById('eAvailable').checked,
+        discount_percentage: discountPct,
+        discounted_price: discountPrice,
       }, rental.data);
       await API.patch('/api/cars/' + id + '/manage/', patchBody);
 

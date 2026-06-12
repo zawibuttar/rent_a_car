@@ -277,6 +277,7 @@ function renderCar(car) {
 
   const images = car.images || [];
   const typeLabel = formatCarType(car.car_type);
+  const categoryLabel = car.category ? car.category.charAt(0).toUpperCase() + car.category.slice(1) : 'Car';
   let availBadge = '';
   if (car.is_currently_booked) {
     const activeSlot = (car.booked_slots || []).find(function (s) { return s.is_active; });
@@ -320,6 +321,7 @@ function renderCar(car) {
     + '<div class="card-body">'
     + '<div class="detail-specs-grid">'
     + '<div class="detail-spec"><div class="detail-spec-val">' + (car.year || '—') + '</div><div class="detail-spec-lbl">Year</div></div>'
+    + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(categoryLabel) + '</div><div class="detail-spec-lbl">Category</div></div>'
     + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(typeLabel) + '</div><div class="detail-spec-lbl">Type</div></div>'
     + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(car.location || '—') + '</div><div class="detail-spec-lbl">Location</div></div>'
     + '</div>'
@@ -336,7 +338,7 @@ function renderCar(car) {
     + '<p class="detail-subtitle">'
     + '<span>' + (car.year || '') + '</span>'
     + '<span class="dot">·</span>'
-    + '<span>' + UI.escHtml(typeLabel) + '</span>'
+    + '<span>' + UI.escHtml(categoryLabel) + (typeLabel ? ' · ' + UI.escHtml(typeLabel) : '') + '</span>'
     + '</p>'
     + '<div class="detail-badges">' + availBadge + '</div>'
     + '<div class="detail-rating-row">' + UI.reviewSummaryLine(car) + '</div>'
@@ -347,8 +349,13 @@ function renderCar(car) {
       }).join(' ');
       return '<div class="detail-price-block">'
         + '<div class="detail-rental-chips">' + chips + '</div>'
-        + '<div class="detail-price">$' + rate.value
-        + '<span> / ' + rate.unit + '</span></div>'
+        + (function() {
+          if (car.has_discount && rate.unit === 'day') {
+            return '<div class="detail-price"><span class="detail-price-val detail-price-val--old" style="text-decoration: line-through; opacity: 0.6; margin-right: 8px;">$' + parseFloat(car.price_per_day).toFixed(2) + '</span>'
+              + '$' + parseFloat(car.final_price).toFixed(2) + '<span> / ' + rate.unit + '</span></div>';
+          }
+          return '<div class="detail-price">$' + rate.value + '<span> / ' + rate.unit + '</span></div>';
+        })()
         + '<p class="detail-price-hint">Final total depends on rental type and schedule.</p>'
         + '</div>';
     })()
@@ -390,7 +397,12 @@ function updateMobileBookBar(car) {
   const role = API.role();
   const loggedIn = API.loggedIn();
   const rate = UI.primaryRateDisplay(car);
-  priceEl.innerHTML = '$' + rate.value + '<span>' + rate.label + '</span>';
+  if (car.has_discount && rate.unit === 'day') {
+    priceEl.innerHTML = '<span style="text-decoration: line-through; opacity: 0.6; margin-right: 8px;">$' + parseFloat(car.price_per_day).toFixed(2) + '</span>'
+      + '$' + parseFloat(car.final_price).toFixed(2) + '<span>' + rate.label + '</span>';
+  } else {
+    priceEl.innerHTML = '$' + rate.value + '<span>' + rate.label + '</span>';
+  }
 
   if (loggedIn && role === 'customer' && car.is_available) {
     bar.classList.add('is-visible');
@@ -581,17 +593,24 @@ function openBookingModal() {
   if (!carData) return;
   const title = carData.brand + ' ' + carData.model;
   const typeLabel = formatCarType(carData.car_type);
+  const categoryLabel = carData.category ? carData.category.charAt(0).toUpperCase() + carData.category.slice(1) : 'Car';
   const rate = UI.primaryRateDisplay(carData);
   const meta = document.getElementById('bookModalMeta');
   const titleEl = document.getElementById('bookModalTitle');
   if (titleEl) titleEl.textContent = title;
   if (meta) {
-    meta.textContent = [
+    var priceMetaStr = '';
+    if (carData.has_discount && rate.unit === 'day') {
+      priceMetaStr = 'from <span style="text-decoration: line-through; opacity: 0.6; margin-right: 4px;">$' + parseFloat(carData.price_per_day).toFixed(2) + '</span> $' + parseFloat(carData.final_price).toFixed(2) + '/' + rate.unit;
+    } else {
+      priceMetaStr = 'from $' + rate.value + '/' + rate.unit;
+    }
+    meta.innerHTML = [
       carData.year || '',
-      typeLabel,
+      categoryLabel + (typeLabel ? ' · ' + typeLabel : ''),
       carData.location || '',
     ].filter(Boolean).join(' · ')
-      + ' · from $' + rate.value + '/' + rate.unit;
+      + ' · ' + priceMetaStr;
   }
   document.getElementById('bookErr').style.display = 'none';
   const hint = document.getElementById('bookDateHint');

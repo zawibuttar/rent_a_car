@@ -48,5 +48,11 @@ urlpatterns = [
     # Browser requests to /favicon.ico are redirected to the static favicon asset.
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.svg', permanent=False)),
 ]
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+from django.urls import re_path
+from django.views.static import serve
+
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
+    }),
+]

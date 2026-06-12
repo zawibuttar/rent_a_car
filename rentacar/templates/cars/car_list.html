@@ -13,22 +13,25 @@
     <a href="/" class="btn btn-ghost">Back to home</a>
   </div>
 
-  <div class="list-toolbar__filters">
-    {% include 'includes/catalog_filters.html' with show_inline_search=True %}
-    <div class="active-filters" id="activeFilters" hidden></div>
-  </div>
+  <div class="browse-layout">
 
-  <div class="results-bar">
-    <h2>Results</h2>
-    <span id="carCount" class="results-bar__count text-caption"></span>
-  </div>
-
-  <div id="carsGrid" class="cars-grid">
-    <div class="loading grid-span-full">
-      <span class="spinner spinner-lg"></span> Loading cars...
+    <div class="list-toolbar__filters">
+      {% include 'includes/catalog_filters.html' with show_inline_search=True %}
+      <div class="active-filters" id="activeFilters" hidden></div>
     </div>
+
+    <div class="results-bar">
+      <h2>Results</h2>
+      <span id="carCount" class="results-bar__count text-caption"></span>
+    </div>
+
+    <div id="carsGrid" class="cars-grid">
+      <div class="loading grid-span-full">
+        <span class="spinner spinner-lg"></span> Loading cars...
+      </div>
+    </div>
+    <div id="carsPagination" class="pagination-wrap" hidden></div>
   </div>
-  <div id="carsPagination" class="pagination-wrap" hidden></div>
 
 </div>
 {% endblock %}
@@ -36,5 +39,5 @@
 {% block footer %}{% include 'includes/footer.html' %}{% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/catalog.js' %}"></script>
+<script src="{% static 'js/catalog.js' %}?v=1.2.0"></script>
 {% endblock %}

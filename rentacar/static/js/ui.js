@@ -168,8 +168,9 @@ const UI = {
 
   primaryRateDisplay(car) {
     if (!car) return { value: '0.00', unit: 'day', label: 'per day' };
+    const dailyPrice = car.has_discount ? car.final_price : car.price_per_day;
     const types = [
-      { on: car.rent_daily, price: car.price_per_day, unit: 'day', label: 'per day' },
+      { on: car.rent_daily, price: dailyPrice, unit: 'day', label: 'per day' },
       { on: car.rent_hourly, price: car.price_per_hour, unit: 'hour', label: 'per hour' },
       { on: car.rent_weekly, price: car.price_per_week, unit: 'week', label: 'per week' },
       { on: car.rent_monthly, price: car.price_per_month, unit: 'month', label: 'per month' },
@@ -238,8 +239,9 @@ const UI = {
       if (!car.rent_daily || !car.price_per_day) {
         return { error: 'Daily rental is not available for this car.' };
       }
+      const rate = car.has_discount ? parseFloat(car.final_price) : parseFloat(car.price_per_day);
       return {
-        total: (days * parseFloat(car.price_per_day)).toFixed(2),
+        total: (days * rate).toFixed(2),
         duration: days + ' day' + (days !== 1 ? 's' : ''),
         unitLabel: days + 'd',
       };
@@ -539,6 +541,12 @@ const UI = {
     const title = ((car.brand || '') + ' ' + (car.model || '')).trim() || 'Car listing';
     const year = car.year ? String(car.year) : '';
     const type = UI.formatCarType(car.car_type);
+    const category = car.category;
+    let badgeLabel = type;
+    if (category && category !== 'car') {
+      const catCap = category.charAt(0).toUpperCase() + category.slice(1);
+      badgeLabel = catCap + (type ? ' · ' + type : '');
+    }
     const rate = UI.primaryRateDisplay(car);
     const price = rate.value;
     const priceUnit = rate.label;
@@ -556,7 +564,7 @@ const UI = {
         + '</span>'
       : '';
 
-    const ariaParts = [title, year, type, location, 'from $' + price + ' ' + priceUnit];
+    const ariaParts = [title, year, badgeLabel || type, location, 'from $' + price + ' ' + priceUnit];
     if (status.label) ariaParts.push(status.label);
 
     const cardClass = 'listing-card'
@@ -566,8 +574,8 @@ const UI = {
       + ' aria-label="' + UI.escHtml(ariaParts.filter(Boolean).join(', ')) + '">'
       + '<div class="listing-card-media">'
       + '<div class="listing-card-thumb">' + img + '</div>'
-      + (type
-        ? '<span class="listing-card-badge listing-card-badge--type">' + UI.escHtml(type) + '</span>'
+      + (badgeLabel
+        ? '<span class="listing-card-badge listing-card-badge--type">' + UI.escHtml(badgeLabel) + '</span>'
         : '')
       + '<span class="listing-card-badge listing-card-badge--status ' + status.statusClass + '">'
       + '<span class="listing-card-status-dot" aria-hidden="true"></span>'
@@ -592,13 +600,25 @@ const UI = {
       + '</div>'
       + availabilityHtml
       + '<div class="listing-card-foot">'
-      + '<div class="listing-card-price">'
-      + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
-      + '<span class="listing-card-price-line">'
-      + '<span class="listing-card-price-val">$' + price + '</span>'
-      + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
-      + '</span>'
-      + '</div>'
+      + (function () {
+        if (car.has_discount && rate.unit === 'day') {
+          return '<div class="listing-card-price">'
+            + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+            + '<span class="listing-card-price-line">'
+            + '<span class="listing-card-price-val listing-card-price-val--old" style="text-decoration: line-through; opacity: 0.6; margin-right: 8px;">$' + parseFloat(car.price_per_day).toFixed(2) + '</span>'
+            + '<span class="listing-card-price-val">$' + parseFloat(car.final_price).toFixed(2) + '</span>'
+            + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
+            + '</span>'
+            + '</div>';
+        }
+        return '<div class="listing-card-price">'
+          + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+          + '<span class="listing-card-price-line">'
+          + '<span class="listing-card-price-val">$' + price + '</span>'
+          + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
+          + '</span>'
+          + '</div>';
+      })()
       + '<span class="listing-card-cta">'
       + '<span class="listing-card-cta-text">' + UI.escHtml(ctaLabel) + '</span>'
       + UI.icon('arrow-left', 'icon icon-cta')

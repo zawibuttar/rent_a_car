@@ -1,7 +1,7 @@
 import json
 from urllib.error import HTTPError, URLError
 
-from django.db.models import OuterRef, Subquery
+from django.db.models import OuterRef, Subquery, Q
 from rest_framework import status, generics, permissions, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -63,6 +63,7 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
         location = self.request.query_params.get('location') or self.request.query_params.get('city')
+        category = self.request.query_params.get('category')
 
         if min_price:
             queryset = queryset.filter(price_per_day__gte=min_price)
@@ -70,6 +71,8 @@ class CarListView(NoCacheMixin, generics.ListAPIView):
             queryset = queryset.filter(price_per_day__lte=max_price)
         if location:
             queryset = queryset.filter(location__icontains=location)
+        if category and category != 'all':
+            queryset = queryset.filter(category=category)
         queryset = prefetch_active_bookings(queryset)
         return annotate_car_review_stats(queryset)
 

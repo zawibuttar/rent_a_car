@@ -143,7 +143,8 @@ def compute_total(car, rental_type, start_at, end_at):
     days = max(days, 1)
 
     if rental_type == RENTAL_DAILY:
-        return _money(days * car.price_per_day)
+        price = car.get_final_price() if hasattr(car, 'get_final_price') else car.price_per_day
+        return _money(days * price)
     if rental_type == RENTAL_WEEKLY:
         weeks = ceil(days / 7)
         return _money(weeks * car.price_per_week)

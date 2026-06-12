@@ -713,3 +713,205 @@ class CarDetailOwnerVerificationTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data['owner']['is_verified'])
+
+
+class CarCategoryTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='owner_cat',
+            email='owner_cat@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        self.car = Car.objects.create(
+            owner=self.owner,
+            brand='Toyota',
+            model='Corolla',
+            year=2022,
+            category='car',
+            car_type='sedan',
+            description='Standard sedan',
+            location='NYC',
+            price_per_day=50,
+            is_available=True,
+            is_approved=True,
+        )
+        self.loader = Car.objects.create(
+            owner=self.owner,
+            brand='CAT',
+            model='950M',
+            year=2021,
+            category='loader',
+            car_type='mini_truck',
+            description='Heavy loader',
+            location='Houston',
+            price_per_day=250,
+            is_available=True,
+            is_approved=True,
+        )
+        self.dumper = Car.objects.create(
+            owner=self.owner,
+            brand='Volvo',
+            model='A60H',
+            year=2020,
+            category='loader',
+            car_type='tipper_dumper',
+            description='Volvo dumper',
+            location='Dallas',
+            price_per_day=300,
+            is_available=True,
+            is_approved=True,
+        )
+        self.url = reverse('car-list')
+
+    def test_listing_api_returns_category(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items = response.data['results']
+        toyota = next(x for x in items if x['brand'] == 'Toyota')
+        self.assertEqual(toyota['category'], 'car')
+        cat = next(x for x in items if x['brand'] == 'CAT')
+        self.assertEqual(cat['category'], 'loader')
+
+    def test_filter_by_category_car(self):
+        response = self.client.get(self.url, {'category': 'car'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        brands = [x['brand'] for x in response.data['results']]
+        self.assertIn('Toyota', brands)
+        self.assertNotIn('CAT', brands)
+        self.assertNotIn('Volvo', brands)
+
+    def test_filter_by_category_loader(self):
+        response = self.client.get(self.url, {'category': 'loader'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        brands = [x['brand'] for x in response.data['results']]
+        self.assertNotIn('Toyota', brands)
+        self.assertIn('CAT', brands)
+        self.assertIn('Volvo', brands)
+
+    def test_create_loader_listing(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key
+        )
+        create_url = reverse('car-create')
+        response = self.client.post(create_url, {
+            'brand': 'Komatsu',
+            'model': 'HD785',
+            'year': 2022,
+            'category': 'loader',
+            'car_type': 'tipper_dumper',
+            'description': 'Heavy loader',
+            'location': 'Denver',
+            'rent_daily': True,
+            'price_per_day': '400.00',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['car']['category'], 'loader')
+
+
+class CarDiscountTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='owner_discount',
+            email='owner_discount@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+
+    def test_get_final_price_percentage(self):
+        car = Car.objects.create(
+            owner=self.owner,
+            brand='Toyota',
+            model='Camry',
+            year=2020,
+            category='car',
+            car_type='sedan',
+            price_per_day=Decimal('100.00'),
+            discount_percentage=15,
+        )
+        self.assertTrue(car.has_discount)
+        self.assertEqual(car.final_price, Decimal('85.00'))
+
+    def test_get_final_price_fixed(self):
+        car = Car.objects.create(
+            owner=self.owner,
+            brand='Toyota',
+            model='Camry',
+            year=2020,
+            category='car',
+            car_type='sedan',
+            price_per_day=Decimal('100.00'),
+            discounted_price=Decimal('75.00'),
+        )
+        self.assertTrue(car.has_discount)
+        self.assertEqual(car.final_price, Decimal('75.00'))
+
+    def test_get_final_price_both_prioritized(self):
+        car = Car.objects.create(
+            owner=self.owner,
+            brand='Toyota',
+            model='Camry',
+            year=2020,
+            category='car',
+            car_type='sedan',
+            price_per_day=Decimal('100.00'),
+            discount_percentage=10,
+            discounted_price=Decimal('80.00'),
+        )
+        self.assertEqual(car.final_price, Decimal('80.00'))
+
+    def test_create_listing_with_valid_discount(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key
+        )
+        url = reverse('car-create')
+        response = self.client.post(url, {
+            'brand': 'Toyota',
+            'model': 'Yaris',
+            'year': 2021,
+            'category': 'car',
+            'car_type': 'sedan',
+            'location': 'Lahore',
+            'rent_daily': True,
+            'price_per_day': '50.00',
+            'discount_percentage': 10,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Decimal(response.data['car']['final_price']), Decimal('45.00'))
+        self.assertTrue(response.data['car']['has_discount'])
+
+    def test_create_listing_invalid_discount_percentage(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key
+        )
+        url = reverse('car-create')
+        response = self.client.post(url, {
+            'brand': 'Toyota',
+            'model': 'Yaris',
+            'year': 2021,
+            'category': 'car',
+            'car_type': 'sedan',
+            'location': 'Lahore',
+            'rent_daily': True,
+            'price_per_day': '50.00',
+            'discount_percentage': 110,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_listing_invalid_discounted_price(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key
+        )
+        url = reverse('car-create')
+        response = self.client.post(url, {
+            'brand': 'Toyota',
+            'model': 'Yaris',
+            'year': 2021,
+            'category': 'car',
+            'car_type': 'sedan',
+            'location': 'Lahore',
+            'rent_daily': True,
+            'price_per_day': '50.00',
+            'discounted_price': '60.00',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -103,17 +103,20 @@ class CarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     booked_slots_total = serializers.SerializerMethodField()
     is_currently_booked = serializers.SerializerMethodField()
     booked_slots_limit = 3
+    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    has_discount = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model', 'year', 'car_type', 'location', 'is_available',
+            'id', 'brand', 'model', 'year', 'category', 'car_type', 'location', 'is_available',
             'primary_image', 'owner_name',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'price_per_hour', 'price_per_day', 'price_per_week', 'price_per_month',
             'enabled_rental_types',
             'review_count', 'average_rating',
             'booked_slots', 'booked_slots_total', 'is_currently_booked',
+            'discount_percentage', 'discounted_price', 'final_price', 'has_discount',
         ]
 
     def get_primary_image(self, obj):
@@ -160,14 +163,17 @@ class AdminCarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     booked_slots_total = serializers.SerializerMethodField()
     is_currently_booked = serializers.SerializerMethodField()
     booked_slots_limit = 3
+    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    has_discount = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model', 'year', 'car_type', 'price_per_day',
+            'id', 'brand', 'model', 'year', 'category', 'car_type', 'price_per_day',
             'location', 'is_available', 'is_approved', 'owner',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'booked_slots', 'booked_slots_total', 'is_currently_booked',
+            'discount_percentage', 'discounted_price', 'final_price', 'has_discount',
         ]
 
     def get_owner(self, obj):
@@ -185,17 +191,20 @@ class CarDetailSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     booked_slots_total = serializers.SerializerMethodField()
     is_currently_booked = serializers.SerializerMethodField()
     booked_slots_limit = 15
+    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    has_discount = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Car
         fields = [
-            'id', 'owner', 'brand', 'model', 'year', 'car_type', 'description', 'location',
+            'id', 'owner', 'brand', 'model', 'year', 'category', 'car_type', 'description', 'location',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'price_per_hour', 'price_per_day', 'price_per_week', 'price_per_month',
             'enabled_rental_types', 'is_available', 'is_approved', 'images',
             'review_summary', 'reviews',
             'booked_slots', 'booked_slots_total', 'is_currently_booked',
             'created_at', 'updated_at',
+            'discount_percentage', 'discounted_price', 'final_price', 'has_discount',
         ]
         read_only_fields = ['id', 'owner', 'is_approved', 'created_at', 'updated_at']
 
@@ -231,10 +240,11 @@ class CarCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model', 'year', 'car_type', 'description', 'location',
+            'id', 'brand', 'model', 'year', 'category', 'car_type', 'description', 'location',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'price_per_hour', 'price_per_day', 'price_per_week', 'price_per_month',
             'is_available',
+            'discount_percentage', 'discounted_price',
         ]
         read_only_fields = ['id']
 
@@ -256,6 +266,22 @@ class CarCreateUpdateSerializer(serializers.ModelSerializer):
                 getattr(instance, price_field, None) if instance else None,
             )
         validate_car_rental_options(merged)
+
+        # Discount validation
+        discount_percentage = data.get('discount_percentage', getattr(instance, 'discount_percentage', None) if instance else None)
+        discounted_price = data.get('discounted_price', getattr(instance, 'discounted_price', None) if instance else None)
+        price_per_day = merged.get('price_per_day')
+
+        if discount_percentage is not None:
+            if discount_percentage < 0 or discount_percentage > 100:
+                raise serializers.ValidationError({'discount_percentage': 'Discount percentage must be between 0 and 100.'})
+
+        if discounted_price is not None:
+            if discounted_price < 0:
+                raise serializers.ValidationError({'discounted_price': 'Discounted price cannot be negative.'})
+            if price_per_day is not None and discounted_price >= price_per_day:
+                raise serializers.ValidationError({'discounted_price': 'Discounted price must be less than the regular price per day.'})
+
         return data
 
     def create(self, validated_data):
