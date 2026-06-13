@@ -136,6 +136,7 @@ function buildGallery(images, car) {
   let mainHtml =
     '<div class="detail-gallery-main" id="galleryMain">'
     + (count > 1 ? '<span class="detail-gallery-badge" id="galleryBadge">1 / ' + count + '</span>' : '')
+    + UI.detailGalleryDiscountBadgeHtml(car)
     + '<img id="mainImg" src="' + UI.escHtml(mainSrc) + '" alt="' + title + '"'
     + (count ? '' : ' class="thumb-placeholder"')
     + '/>'
@@ -345,13 +346,7 @@ function renderCar(car) {
       }).join(' ');
       return '<div class="detail-price-block">'
         + '<div class="detail-rental-chips">' + chips + '</div>'
-        + (function() {
-          if (car.has_discount && rate.unit === 'day') {
-            return '<div class="detail-price"><span class="detail-price-val detail-price-val--old" style="text-decoration: line-through; opacity: 0.6; margin-right: 8px;">$' + parseFloat(car.price_per_day).toFixed(2) + '</span>'
-              + '$' + parseFloat(car.final_price).toFixed(2) + '<span> / ' + rate.unit + '</span></div>';
-          }
-          return '<div class="detail-price">$' + rate.value + '<span> / ' + rate.unit + '</span></div>';
-        })()
+        + UI.detailDiscountPriceHtml(car, rate)
         + '<p class="detail-price-hint">Final total depends on rental type and schedule.</p>'
         + '</div>';
     })()
@@ -393,9 +388,12 @@ function updateMobileBookBar(car) {
   const role = API.role();
   const loggedIn = API.loggedIn();
   const rate = UI.primaryRateDisplay(car);
-  if (car.has_discount && rate.unit === 'day') {
-    priceEl.innerHTML = '<span style="text-decoration: line-through; opacity: 0.6; margin-right: 8px;">$' + parseFloat(car.price_per_day).toFixed(2) + '</span>'
-      + '$' + parseFloat(car.final_price).toFixed(2) + '<span>' + rate.label + '</span>';
+  const discount = UI.discountMeta(car);
+  if (discount && rate.unit === 'day') {
+    priceEl.innerHTML = '<span class="detail-price-val detail-price-val--old" aria-hidden="true">$'
+      + discount.original.toFixed(2) + '</span>'
+      + '<span class="detail-price-val detail-price-val--sale">$'
+      + discount.final.toFixed(2) + '</span><span>' + rate.label + '</span>';
   } else {
     priceEl.innerHTML = '$' + rate.value + '<span>' + rate.label + '</span>';
   }
@@ -596,8 +594,11 @@ function openBookingModal() {
   if (titleEl) titleEl.textContent = title;
   if (meta) {
     var priceMetaStr = '';
-    if (carData.has_discount && rate.unit === 'day') {
-      priceMetaStr = 'from <span style="text-decoration: line-through; opacity: 0.6; margin-right: 4px;">$' + parseFloat(carData.price_per_day).toFixed(2) + '</span> $' + parseFloat(carData.final_price).toFixed(2) + '/' + rate.unit;
+    var discount = UI.discountMeta(carData);
+    if (discount && rate.unit === 'day') {
+      priceMetaStr = 'from <span class="listing-card-price-val listing-card-price-val--old">$'
+        + discount.original.toFixed(2) + '</span> <span class="listing-card-price-val listing-card-price-val--sale">$'
+        + discount.final.toFixed(2) + '</span>/' + rate.unit;
     } else {
       priceMetaStr = 'from $' + rate.value + '/' + rate.unit;
     }

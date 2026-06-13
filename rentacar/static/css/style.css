@@ -773,9 +773,35 @@ input[type="datetime-local"].form-control {
 .s-divider { height: 1px; background: var(--border); margin: 6px 0; }
 
 /* ── Dash main ──────────────────────── */
-.dash-main { display: flex; flex-direction: column; gap: 16px; }
-.tab-panel  { display: none; flex-direction: column; gap: 16px; }
+.dash-main { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.tab-panel  { display: none; flex-direction: column; gap: 16px; min-height: 0; }
 .tab-panel.active { display: flex; }
+
+/* Messaging tab: fill viewport so compose bar stays visible */
+.dash-layout.dash-layout--messages-tab {
+  height: calc(100vh - var(--nav-h) - 48px);
+  max-height: calc(100vh - var(--nav-h) - 48px);
+  overflow: hidden;
+}
+.dash-layout--messages-tab .dash-main {
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+#tab-messages.active {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+#tab-messages.active .page-head {
+  flex-shrink: 0;
+}
+#tab-messages.active .messages-layout {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+}
 
 /* ── Stat cards ─────────────────────── */
 .stats-row {
@@ -1734,6 +1760,129 @@ a.dash-action-chip {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.65; transform: scale(0.92); }
 }
+@keyframes discount-badge-pop {
+  0% { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+  65% { transform: scale(1.08) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-3deg); }
+}
+@keyframes discount-price-pop {
+  0% { opacity: 0; transform: translateY(6px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes discount-strike-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes discount-badge-glow {
+  0%, 100% { box-shadow: 0 2px 10px rgba(239, 68, 68, 0.45), 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.55), 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+.listing-card-badge--discount {
+  bottom: 12px;
+  left: 12px;
+  top: auto;
+  right: auto;
+  padding: 6px 11px;
+  background: linear-gradient(135deg, #ef4444 0%, #f97316 55%, #fb923c 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  transform-origin: left bottom;
+  overflow: hidden;
+  animation: discount-badge-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both,
+    discount-badge-glow 2.4s ease-in-out 0.6s infinite;
+}
+.listing-card-badge--discount::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%) skewX(-12deg);
+  animation: listing-shine-sweep 2.8s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+.listing-card-discount-pct {
+  position: relative;
+  z-index: 1;
+}
+.listing-card:hover .listing-card-badge--discount {
+  transform: rotate(-2deg) scale(1.04);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.listing-card--discounted .listing-card-media::before {
+  background: linear-gradient(
+    180deg,
+    transparent 55%,
+    rgba(239, 68, 68, 0.08) 100%
+  );
+}
+
+.listing-card-price--discounted .listing-card-price-val--old {
+  position: relative;
+  font-size: 0.95rem;
+  font-weight: var(--font-medium);
+  color: var(--text-3);
+  text-decoration: none;
+}
+.listing-card-price--discounted .listing-card-price-val--old::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 2px;
+  background: var(--text-3);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: discount-strike-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+}
+.listing-card-price-val--sale {
+  color: #16a34a;
+  animation: discount-price-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+[data-theme="dark"] .listing-card-price-val--sale {
+  color: #4ade80;
+}
+.listing-card-price-save {
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ea580c;
+  line-height: 1;
+  animation: discount-price-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+}
+[data-theme="dark"] .listing-card-price-save {
+  color: #fb923c;
+}
+.cars-grid--reveal .listing-card--discounted .listing-card-badge--discount {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listing-card-badge--discount,
+  .listing-card-price-val--sale,
+  .listing-card-price-save,
+  .listing-card-price--discounted .listing-card-price-val--old::after,
+  .detail-discount-badge,
+  .detail-price-val--sale {
+    animation: none !important;
+  }
+  .listing-card-price--discounted .listing-card-price-val--old::after {
+    transform: scaleX(1);
+  }
+}
 
 .listing-card-body {
   display: flex;
@@ -1913,6 +2062,59 @@ a.dash-action-chip {
   font-weight: var(--font-medium);
   color: var(--text-3);
 }
+
+/* Owner dashboard discount preview + inline badges */
+.listing-card-badge--inline {
+  position: static;
+  transform: none;
+  animation: none;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+  flex-shrink: 0;
+}
+.discount-preview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(249, 115, 22, 0.08) 100%);
+  border: 1px dashed rgba(239, 68, 68, 0.35);
+}
+.discount-preview-label {
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.discount-preview-price {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.car-price--discounted {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.car-price-old {
+  font-size: 0.9rem;
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.car-price-sale {
+  font-size: 1.25rem;
+  font-weight: var(--font-bold);
+  color: #16a34a;
+}
+[data-theme="dark"] .car-price-sale {
+  color: #4ade80;
+}
+
 .listing-card-cta {
   display: inline-flex;
   align-items: center;
@@ -2624,6 +2826,95 @@ a.dash-action-chip {
   font-size: var(--text-base); font-weight: 500; color: var(--text-2);
 }
 .detail-price-hint { font-size: var(--text-xs); color: var(--text-3); margin-top: 4px; }
+
+.detail-price-wrap--discounted {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-discount-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: var(--font-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444 0%, #f97316 55%, #fb923c 100%);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
+  animation: discount-badge-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.detail-price--discounted {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.detail-price-val--old {
+  position: relative;
+  font-size: 1.25rem;
+  font-weight: var(--font-medium);
+  color: var(--text-3);
+}
+.detail-price-val--old::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 2px;
+  background: var(--text-3);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: discount-strike-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+}
+.detail-price-val--sale {
+  font-size: 2rem;
+  font-weight: var(--font-bold);
+  color: #16a34a;
+  animation: discount-price-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+[data-theme="dark"] .detail-price-val--sale {
+  color: #4ade80;
+}
+.detail-price-unit {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-2);
+}
+.detail-price-save {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: #ea580c;
+  margin: 0;
+}
+[data-theme="dark"] .detail-price-save {
+  color: #fb923c;
+}
+.detail-gallery-discount {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 3;
+  padding: 7px 13px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444 0%, #f97316 55%, #fb923c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.45);
+  transform: rotate(-3deg);
+  animation: discount-badge-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both,
+    discount-badge-glow 2.4s ease-in-out 0.6s infinite;
+}
+
 .detail-cta { margin-bottom: 4px; }
 .detail-notice {
   padding: 12px 14px; border-radius: var(--radius);
@@ -4018,12 +4309,15 @@ a.dash-action-chip {
   display: grid;
   grid-template-columns: minmax(280px, 340px) 1fr;
   gap: 0;
-  min-height: 560px;
+  min-height: 360px;
   height: min(72vh, 720px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--surface);
+}
+.messages-layout > * {
+  min-height: 0;
 }
 .messages-inbox {
   border-right: 1px solid var(--border);
@@ -4078,6 +4372,7 @@ a.dash-action-chip {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
   background: var(--surface);
 }
 .messages-thread__head {
@@ -4287,6 +4582,9 @@ a.dash-action-chip {
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
 }
 .messages-thread__compose[hidden],
 .messages-thread--closed .messages-thread__compose {
@@ -4521,7 +4819,23 @@ a.dash-action-chip {
   font-size: 11px;
   font-weight: var(--font-semibold);
   margin-bottom: 4px;
-  color: var(--text-2);
+  color: var(--text);
+}
+.messages-bubble--other .messages-bubble__sender {
+  color: var(--primary);
+}
+.messages-bubble--location .messages-bubble__sender,
+.messages-bubble--attachment .messages-bubble__sender {
+  display: block;
+  padding: 8px 12px 6px;
+  margin-bottom: 0;
+  color: var(--text);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.messages-bubble--other.messages-bubble--location .messages-bubble__sender,
+.messages-bubble--other.messages-bubble--attachment .messages-bubble__sender {
+  color: var(--primary);
 }
 .messages-bubble__text {
   white-space: pre-wrap;
@@ -4785,6 +5099,11 @@ a.dash-action-chip {
     grid-template-columns: 1fr;
     height: min(78vh, 680px);
     position: relative;
+  }
+  #tab-messages.active .messages-layout {
+    height: auto;
+    flex: 1;
+    min-height: 0;
   }
   .messages-inbox {
     border-right: none;

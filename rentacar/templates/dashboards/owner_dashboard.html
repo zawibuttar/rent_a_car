@@ -16,38 +16,38 @@
     </div>
 
     <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+      <button type="button" class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
       </button>
-      <button class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">
+      <button type="button" class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> My Cars
       </button>
-      <button class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">
+      <button type="button" class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add Listing
       </button>
-      <button class="s-item" id="btn-requests" onclick="showTab('requests', this)">
+      <button type="button" class="s-item" id="btn-requests" onclick="showTab('requests', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
         <span>Booking Requests</span>
         <span class="s-badge" id="pendingReqBadge" hidden></span>
       </button>
-      <button class="s-item" id="btn-messages" onclick="showTab('messages', this)">
+      <button type="button" class="s-item" id="btn-messages" onclick="showTab('messages', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
         <span>Messages</span>
         <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
       </button>
-      <button class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
+      <button type="button" class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg>
         <span>Announcements</span>
         <span class="s-badge" id="annUnreadBadge" data-ann-unread-badge hidden></span>
       </button>
-      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
+      <button type="button" class="s-item" id="btn-profile" onclick="showTab('profile', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
-      <button class="s-item" id="btn-password" onclick="showTab('password', this)">
+      <button type="button" class="s-item" id="btn-password" onclick="showTab('password', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
       </button>
       <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">
+      <button type="button" class="s-item danger" onclick="doLogout()">
         <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
       </button>
     </div>
@@ -322,6 +322,7 @@
                 <input class="form-control" type="number" id="cDiscountedPrice" min="0" step="0.01" placeholder="e.g., 40.00" />
               </div>
             </div>
+            <div class="discount-preview" id="cDiscountPreview" hidden aria-live="polite"></div>
           </section>
 
           <section class="form-section" aria-labelledby="addSectionDesc">
@@ -645,6 +646,7 @@
               <input class="form-control" type="number" id="eDiscountedPrice" min="0" step="0.01" placeholder="e.g. 250" />
             </div>
           </div>
+          <div class="discount-preview" id="eDiscountPreview" hidden aria-live="polite"></div>
         </section>
 
         <section class="form-section" aria-labelledby="editSectionLocation">
@@ -966,6 +968,15 @@
           + '<div class="car-footer">'
           + (function () {
             var r = UI.primaryRateDisplay(car);
+            var d = UI.discountMeta(car);
+            if (d && r.unit === 'day') {
+              return '<div class="car-price car-price--discounted">'
+                + '<span class="listing-card-badge listing-card-badge--discount listing-card-badge--inline">'
+                + UI.escHtml(d.shortLabel) + '</span>'
+                + '<span class="car-price-old">$' + d.original.toFixed(2) + '</span>'
+                + '<span class="car-price-sale">$' + d.final.toFixed(2) + '</span>'
+                + '<span>/' + UI.escHtml(r.unit) + '</span></div>';
+            }
             return '<div class="car-price">$' + r.value
               + '<span>/' + UI.escHtml(r.unit) + '</span></div>';
           })()
@@ -1001,6 +1012,60 @@
       var on = document.getElementById(prefix + 'Rent' + label).checked;
       var wrap = document.getElementById(prefix + 'Price' + map[label] + 'Wrap');
       if (wrap) wrap.hidden = !on;
+    });
+    updateDiscountPreview(prefix);
+  }
+
+  function updateDiscountPreview(prefix) {
+    var preview = document.getElementById(prefix + 'DiscountPreview');
+    if (!preview) return;
+    var dailyOn = document.getElementById(prefix + 'RentDaily').checked;
+    var priceEl = document.getElementById(prefix === 'c' ? 'cPrice' : 'ePrice');
+    var pctEl = document.getElementById(prefix + 'DiscountPercentage');
+    var fixedEl = document.getElementById(prefix + 'DiscountedPrice');
+    var original = priceEl ? parseFloat(priceEl.value) : NaN;
+    var pct = pctEl && pctEl.value.trim() ? parseInt(pctEl.value, 10) : null;
+    var fixed = fixedEl && fixedEl.value.trim() ? parseFloat(fixedEl.value) : null;
+    if (!dailyOn || isNaN(original) || original <= 0) {
+      preview.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+    var final = null;
+    var labelPct = null;
+    if (fixed != null && !isNaN(fixed) && fixed < original) {
+      final = fixed;
+      labelPct = Math.round((1 - final / original) * 100);
+    } else if (pct != null && !isNaN(pct) && pct > 0 && pct <= 100) {
+      final = +(original * (1 - pct / 100)).toFixed(2);
+      labelPct = pct;
+    }
+    if (final == null || !labelPct) {
+      preview.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+    preview.hidden = false;
+    preview.innerHTML = '<span class="discount-preview-label">Listing preview</span>'
+      + '<span class="listing-card-badge listing-card-badge--discount listing-card-badge--inline">-'
+      + labelPct + '%</span>'
+      + '<span class="discount-preview-price">'
+      + '<span class="listing-card-price-val listing-card-price-val--old">$' + original.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-val listing-card-price-val--sale">$' + final.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-unit">per day</span>'
+      + '</span>';
+  }
+
+  function initDiscountPreview(prefix) {
+    ['DiscountPercentage', 'DiscountedPrice'].forEach(function (suffix) {
+      var el = document.getElementById(prefix + suffix);
+      if (el) el.addEventListener('input', function () { updateDiscountPreview(prefix); });
+    });
+    var priceEl = document.getElementById(prefix === 'c' ? 'cPrice' : 'ePrice');
+    if (priceEl) priceEl.addEventListener('input', function () { updateDiscountPreview(prefix); });
+    ['RentHourly', 'RentDaily', 'RentWeekly', 'RentMonthly'].forEach(function (suffix) {
+      var el = document.getElementById(prefix + suffix);
+      if (el) el.addEventListener('change', function () { updateDiscountPreview(prefix); });
     });
   }
 
@@ -1213,6 +1278,8 @@
       desc.addEventListener('input', updateDescCount);
       updateDescCount();
     }
+    initDiscountPreview('c');
+    initDiscountPreview('e');
   }
 
   async function addCar() {
@@ -1667,7 +1734,7 @@
   });
   Messaging.mount();
   Announcements.mount();
-  if (!UI.openDashboardTabFromHash()) {
+  if (!UI.bootDashboardTab()) {
     loadOverview();
   }
 </script>

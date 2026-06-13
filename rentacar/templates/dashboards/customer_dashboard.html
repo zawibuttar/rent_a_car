@@ -16,33 +16,33 @@
     </div>
 
     <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+      <button type="button" class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
       </button>
-      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
+      <button type="button" class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> My Bookings
       </button>
-      <button class="s-item" id="btn-messages" onclick="showTab('messages', this)">
+      <button type="button" class="s-item" id="btn-messages" onclick="showTab('messages', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
         <span>Messages</span>
         <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
       </button>
-      <button class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
+      <button type="button" class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg>
         <span>Announcements</span>
         <span class="s-badge" id="annUnreadBadge" data-ann-unread-badge hidden></span>
       </button>
-      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
+      <button type="button" class="s-item" id="btn-profile" onclick="showTab('profile', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
-      <button class="s-item" id="btn-password" onclick="showTab('password', this)">
+      <button type="button" class="s-item" id="btn-password" onclick="showTab('password', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
       </button>
       <div class="s-divider"></div>
       <a href="/cars/" class="s-item">
         <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg> Browse Cars
       </a>
-      <button class="s-item danger" onclick="doLogout()">
+      <button type="button" class="s-item danger" onclick="doLogout()">
         <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
       </button>
     </div>
@@ -696,7 +696,7 @@
       fetchCustomerBookings();
     },
   });
-  if (!UI.openDashboardTabFromHash()) {
+  if (!UI.bootDashboardTab()) {
     loadOverview();
   }
   Messaging.mount();

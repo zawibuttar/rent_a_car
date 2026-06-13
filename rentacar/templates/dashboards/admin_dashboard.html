@@ -790,16 +790,8 @@ UI.initTableFilters({
     fetchAdminOwnersList();
   },
 });
-if (!UI.openDashboardTabFromHash()) {
-  const params = new URLSearchParams(window.location.search);
-  const initialTab = params.get('tab');
-  if (initialTab && ['overview', 'cars', 'owners', 'bookings', 'announcements', 'messages'].includes(initialTab)) {
-    const btn = document.getElementById('btn-' + initialTab);
-    if (btn) showTab(initialTab, btn);
-    else loadOverview();
-  } else {
-    loadOverview();
-  }
+if (!UI.bootDashboardTab()) {
+  loadOverview();
 }
 Messaging.mount();
 AnnouncementsAdmin.mount();

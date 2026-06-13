@@ -113,6 +113,33 @@ const Messaging = {
     return (res.data && res.data.count) || 0;
   },
 
+  threadUnreadTotal() {
+    return Messaging.threads.reduce(function (sum, t) {
+      return sum + (t.unread_count > 0 ? t.unread_count : 0);
+    }, 0);
+  },
+
+  applyUnreadBadge(count) {
+    document.querySelectorAll('[data-msg-unread-badge]').forEach(function (el) {
+      if (count > 0) {
+        el.textContent = count > 99 ? '99+' : String(count);
+        el.hidden = false;
+      } else {
+        el.hidden = true;
+      }
+    });
+  },
+
+  syncUnreadBadgeLocal() {
+    Messaging.applyUnreadBadge(Messaging.threadUnreadTotal());
+  },
+
+  async refreshThreads() {
+    await Messaging.fetchThreads();
+    if (Messaging.isActive) Messaging.syncUnreadBadgeLocal();
+    return Messaging.threads;
+  },
+
   filteredThreads() {
     var q = Messaging.searchQuery.trim().toLowerCase();
     return Messaging.threads.filter(function (t) {
@@ -620,7 +647,7 @@ const Messaging = {
         if (ctx) ctx.hidden = true;
       }
       if (!silent) Messaging.updateUnreadBadge();
-      await Messaging.fetchThreads();
+      await Messaging.refreshThreads();
       Messaging.renderThreadList();
     } catch (err) {
       var bodyEl = document.getElementById('msgThreadBody');
@@ -667,7 +694,7 @@ const Messaging = {
       await API.post('/api/messaging/threads/' + Messaging.activeBookingId + '/messages/', pending._payload);
       Messaging.pendingMessages = Messaging.pendingMessages.filter(function (m) { return String(m.id) !== String(tempId); });
       await Messaging.loadThread(Messaging.activeBookingId, true);
-      await Messaging.fetchThreads();
+      await Messaging.refreshThreads();
       Messaging.renderThreadList();
       Messaging.updateUnreadBadge();
     } catch (err) {
@@ -702,7 +729,7 @@ const Messaging = {
       await API.post('/api/messaging/threads/' + Messaging.activeBookingId + '/messages/', payload);
       Messaging.pendingMessages = Messaging.pendingMessages.filter(function (m) { return m.id !== pending.id; });
       await Messaging.loadThread(Messaging.activeBookingId, true);
-      await Messaging.fetchThreads();
+      await Messaging.refreshThreads();
       Messaging.renderThreadList();
       Messaging.updateUnreadBadge();
     } catch (err) {
@@ -747,7 +774,7 @@ const Messaging = {
             return Messaging.loadThread(Messaging.activeBookingId, true);
           })
           .then(function () {
-            return Messaging.fetchThreads();
+            return Messaging.refreshThreads();
           })
           .then(function () {
             Messaging.renderThreadList();
@@ -826,7 +853,7 @@ const Messaging = {
         return Messaging.loadThread(Messaging.activeBookingId, true);
       })
       .then(function () {
-        return Messaging.fetchThreads();
+        return Messaging.refreshThreads();
       })
       .then(function () {
         Messaging.renderThreadList();
@@ -868,18 +895,16 @@ const Messaging = {
   async updateUnreadBadge() {
     var badges = document.querySelectorAll('[data-msg-unread-badge]');
     if (!badges.length) return;
+    if (Messaging.isActive && Messaging.threads.length) {
+      Messaging.syncUnreadBadgeLocal();
+    }
     try {
       var count = await Messaging.fetchUnreadCount();
-      badges.forEach(function (el) {
-        if (count > 0) {
-          el.textContent = count > 99 ? '99+' : String(count);
-          el.hidden = false;
-        } else {
-          el.hidden = true;
-        }
-      });
+      Messaging.applyUnreadBadge(count);
     } catch (err) {
-      /* ignore */
+      if (Messaging.isActive && Messaging.threads.length) {
+        Messaging.syncUnreadBadgeLocal();
+      }
     }
   },
 
@@ -887,7 +912,7 @@ const Messaging = {
     Messaging.stopPolling();
     Messaging.pollThreadsTimer = setInterval(function () {
       if (!Messaging.isActive) return;
-      Messaging.fetchThreads().then(function () {
+      Messaging.refreshThreads().then(function () {
         Messaging.renderThreadList();
       }).catch(function () {});
     }, Messaging.THREAD_POLL_MS);
@@ -914,15 +939,18 @@ const Messaging = {
   activate() {
     Messaging.isActive = true;
     Messaging.renderInboxSkeleton();
-    Messaging.fetchThreads().then(function (threads) {
+    Messaging.refreshThreads().then(function (threads) {
       Messaging.renderThreadList();
       var params = new URLSearchParams(window.location.search);
       var threadParam = params.get('thread');
+      var hasUnread = threads.some(function (t) { return t.unread_count > 0; });
       if (threadParam) {
         Messaging.loadThread(parseInt(threadParam, 10), false);
-      } else if (!Messaging.activeBookingId && threads.length && !Messaging.isMobile()) {
+      } else if (!Messaging.activeBookingId && threads.length && !Messaging.isMobile() && !hasUnread) {
         Messaging.loadThread(threads[0].booking_id, false);
       } else if (!Messaging.activeBookingId && Messaging.isMobile()) {
+        Messaging.showInbox();
+      } else if (!Messaging.activeBookingId && hasUnread) {
         Messaging.showInbox();
       }
     }).catch(function (err) {

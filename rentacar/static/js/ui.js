@@ -588,6 +588,84 @@ const UI = {
     el.classList.add('results-bar__count--pop');
   },
 
+  discountMeta(car) {
+    if (!car || !car.has_discount || !car.price_per_day) return null;
+    const original = parseFloat(car.price_per_day);
+    const final = parseFloat(car.final_price);
+    if (isNaN(original) || isNaN(final) || final >= original) return null;
+    let pct = null;
+    if (car.discount_percentage != null && car.discount_percentage > 0) {
+      pct = car.discount_percentage;
+    } else {
+      pct = Math.round((1 - final / original) * 100);
+    }
+    if (!pct || pct <= 0) return null;
+    return {
+      pct: pct,
+      original: original,
+      final: final,
+      label: pct + '% OFF',
+      shortLabel: '-' + pct + '%',
+    };
+  },
+
+  listingDiscountBadgeHtml(car) {
+    const d = UI.discountMeta(car);
+    if (!d) return '';
+    return '<span class="listing-card-badge listing-card-badge--discount" aria-label="'
+      + UI.escHtml(d.label) + '">'
+      + '<span class="listing-card-discount-pct">' + UI.escHtml(d.shortLabel) + '</span>'
+      + '</span>';
+  },
+
+  listingDiscountPriceHtml(car, rate, showFrom) {
+    const d = UI.discountMeta(car);
+    if (!d || rate.unit !== 'day') {
+      return '<div class="listing-card-price">'
+        + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+        + '<span class="listing-card-price-line">'
+        + '<span class="listing-card-price-val">$' + rate.value + '</span>'
+        + '<span class="listing-card-price-unit">' + UI.escHtml(rate.label) + '</span>'
+        + '</span></div>';
+    }
+    return '<div class="listing-card-price listing-card-price--discounted">'
+      + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+      + '<span class="listing-card-price-line">'
+      + '<span class="listing-card-price-val listing-card-price-val--old" aria-hidden="true">$'
+      + d.original.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-val listing-card-price-val--sale">$'
+      + d.final.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-unit">' + UI.escHtml(rate.label) + '</span>'
+      + '</span>'
+      + '<span class="listing-card-price-save">Save ' + d.pct + '%</span>'
+      + '</div>';
+  },
+
+  detailDiscountPriceHtml(car, rate) {
+    const d = UI.discountMeta(car);
+    if (!d || rate.unit !== 'day') {
+      return '<div class="detail-price">$' + rate.value + '<span> / ' + rate.unit + '</span></div>';
+    }
+    return '<div class="detail-price-wrap detail-price-wrap--discounted">'
+      + '<span class="detail-discount-badge">' + UI.escHtml(d.label) + '</span>'
+      + '<div class="detail-price detail-price--discounted">'
+      + '<span class="detail-price-val detail-price-val--old" aria-hidden="true">$'
+      + d.original.toFixed(2) + '</span>'
+      + '<span class="detail-price-val detail-price-val--sale">$'
+      + d.final.toFixed(2) + '</span>'
+      + '<span class="detail-price-unit">/ ' + rate.unit + '</span>'
+      + '</div>'
+      + '<p class="detail-price-save">You save ' + d.pct + '% on the daily rate</p>'
+      + '</div>';
+  },
+
+  detailGalleryDiscountBadgeHtml(car) {
+    const d = UI.discountMeta(car);
+    if (!d) return '';
+    return '<span class="detail-gallery-discount" aria-label="' + UI.escHtml(d.label) + '">'
+      + UI.escHtml(d.shortLabel) + '</span>';
+  },
+
   listingCard(car, opts) {
     opts = opts || {};
     const ctaLabel = opts.ctaLabel || 'View details';
@@ -619,9 +697,11 @@ const UI = {
 
     const ariaParts = [title, year, badgeLabel || type, location, 'from $' + price + ' ' + priceUnit];
     if (status.label) ariaParts.push(status.label);
+    const discount = UI.discountMeta(car);
 
     const cardClass = 'listing-card'
-      + (status.modifier ? ' listing-card--' + status.modifier : '');
+      + (status.modifier ? ' listing-card--' + status.modifier : '')
+      + (discount && rate.unit === 'day' ? ' listing-card--discounted' : '');
 
     return '<a class="' + cardClass + '" href="/cars/' + encodeURIComponent(car.id) + '/"'
       + ' aria-label="' + UI.escHtml(ariaParts.filter(Boolean).join(', ')) + '">'
@@ -630,6 +710,7 @@ const UI = {
       + (badgeLabel
         ? '<span class="listing-card-badge listing-card-badge--type">' + UI.escHtml(badgeLabel) + '</span>'
         : '')
+      + (discount && rate.unit === 'day' ? UI.listingDiscountBadgeHtml(car) : '')
       + '<span class="listing-card-badge listing-card-badge--status ' + status.statusClass + '">'
       + '<span class="listing-card-status-dot" aria-hidden="true"></span>'
       + '<span>' + UI.escHtml(status.label) + '</span>'
@@ -653,25 +734,7 @@ const UI = {
       + '</div>'
       + availabilityHtml
       + '<div class="listing-card-foot">'
-      + (function () {
-        if (car.has_discount && rate.unit === 'day') {
-          return '<div class="listing-card-price">'
-            + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
-            + '<span class="listing-card-price-line">'
-            + '<span class="listing-card-price-val listing-card-price-val--old" style="text-decoration: line-through; opacity: 0.6; margin-right: 8px;">$' + parseFloat(car.price_per_day).toFixed(2) + '</span>'
-            + '<span class="listing-card-price-val">$' + parseFloat(car.final_price).toFixed(2) + '</span>'
-            + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
-            + '</span>'
-            + '</div>';
-        }
-        return '<div class="listing-card-price">'
-          + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
-          + '<span class="listing-card-price-line">'
-          + '<span class="listing-card-price-val">$' + price + '</span>'
-          + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
-          + '</span>'
-          + '</div>';
-      })()
+      + UI.listingDiscountPriceHtml(car, rate, showFrom)
       + '<span class="listing-card-cta">'
       + '<span class="listing-card-cta-text">' + UI.escHtml(ctaLabel) + '</span>'
       + UI.icon('arrow-left', 'icon icon-cta')
@@ -707,17 +770,86 @@ const UI = {
     const panel = document.getElementById(opts.panelPrefix + opts.tabId);
     if (panel) panel.classList.add('active');
     if (opts.btn) opts.btn.classList.add('active');
+    UI.syncDashboardTabUrl(opts.tabId);
+    UI.setDashboardMessagesLayout(opts.tabId === 'messages');
     if (opts.onActivate) opts.onActivate(opts.tabId);
     UI.closeSidebarDrawer();
+  },
+
+  getActiveDashboardTab() {
+    const panel = document.querySelector('.tab-panel.active');
+    if (!panel || !panel.id || panel.id.indexOf('tab-') !== 0) return '';
+    return panel.id.replace(/^tab-/, '');
+  },
+
+  syncDashboardTabUrl(tabId) {
+    if (!tabId || !document.querySelector('.dash-layout')) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tab');
+    url.hash = tabId;
+    const next = url.pathname + url.search + url.hash;
+    const current = window.location.pathname + window.location.search + window.location.hash;
+    if (next !== current) {
+      history.replaceState(null, '', next);
+    }
+  },
+
+  setDashboardMessagesLayout(isMessagesTab) {
+    document.querySelectorAll('.dash-layout').forEach(function (layout) {
+      layout.classList.toggle('dash-layout--messages-tab', !!isMessagesTab);
+    });
   },
 
   openDashboardTabFromHash() {
     const hash = (location.hash || '').replace('#', '').trim();
     if (!hash || !document.querySelector('.dash-layout')) return false;
+    if (UI.getActiveDashboardTab() === hash) return true;
     const btn = document.getElementById('btn-' + hash);
     if (!btn || typeof showTab !== 'function') return false;
     showTab(hash, btn);
     return true;
+  },
+
+  bootDashboardTab(fallbackTab) {
+    if (UI.openDashboardTabFromHash()) return true;
+    const tab = new URLSearchParams(window.location.search).get('tab') || fallbackTab || '';
+    if (tab && document.getElementById('btn-' + tab) && typeof showTab === 'function') {
+      showTab(tab, document.getElementById('btn-' + tab));
+      return true;
+    }
+    return false;
+  },
+
+  initDashboardTabRouting() {
+    if (UI._dashboardTabRoutingInit) return;
+    UI._dashboardTabRoutingInit = true;
+    window.addEventListener('hashchange', function () {
+      UI.openDashboardTabFromHash();
+    });
+  },
+
+  interceptDashboardNavLinks() {
+    const currentPath = window.location.pathname.replace(/\/$/, '');
+    const isDashboard = /^\/dashboard\/(admin|owner|customer)$/.test(currentPath);
+    if (!isDashboard || !document.querySelector('.dash-layout')) return;
+
+    function handleInPlaceNav(event, tabId) {
+      event.preventDefault();
+      const btn = document.getElementById('btn-' + tabId);
+      if (btn && typeof showTab === 'function') {
+        showTab(tabId, btn);
+      }
+    }
+
+    const dashLink = document.getElementById('nav-dash-link');
+    if (dashLink) {
+      dashLink.addEventListener('click', function (event) {
+        const targetPath = (dashLink.getAttribute('href') || '').replace(/\/$/, '').split('#')[0];
+        if (targetPath && currentPath === targetPath.replace(/\/$/, '')) {
+          handleInPlaceNav(event, 'overview');
+        }
+      });
+    }
   },
 
   closeSidebarDrawer() {
@@ -1230,9 +1362,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () { UI.toggleTheme(); });
   });
   UI.initSidebarDrawer();
-  window.addEventListener('hashchange', function () {
-    UI.openDashboardTabFromHash();
-  });
+  UI.initDashboardTabRouting();
   UI.refreshTableScrollHints();
   window.addEventListener('resize', function () {
     UI.refreshTableScrollHints();

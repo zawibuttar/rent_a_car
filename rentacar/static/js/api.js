@@ -294,6 +294,7 @@ function initNav() {
       else dashLink.href = '/dashboard/customer/';
     }
     initNavProfileMenu();
+    UI.interceptDashboardNavLinks();
   } else {
     if (guest) guest.classList.remove('is-hidden');
     if (auth)  auth.classList.add('is-hidden');
