@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Home Hero Banners — RentACar{% endblock %}
+
+{% block content %}
+<div class="dash-layout role-admin">
+
+  {% include 'includes/admin_sidebar.html' with nav_mode='links' active_nav='hero' %}
+
+  <div class="dash-main">
+    <div class="tab-panel active" id="tab-hero">
+
+      <div class="list-toolbar">
+        <div class="page-head">
+          <div>
+            <h1>Home Hero Banners</h1>
+            <p>Upload landscape photos for the homepage hero. One active image is chosen at random for each visit.</p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="openHeroBannerModal()">
+            <svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg>
+            Upload Banner
+          </button>
+        </div>
+      </div>
+
+      <div class="card hero-upload-guide">
+        <div class="card-body">
+          <h2 class="hero-upload-guide__title">Image requirements</h2>
+          <ul class="hero-upload-guide__list">
+            <li><strong>Orientation:</strong> Landscape only (width must be greater than height)</li>
+            <li><strong>Recommended size:</strong> 1920×1080 px (16:9) or 1920×1280 px (3:2)</li>
+            <li><strong>Minimum width:</strong> 1200 px</li>
+            <li><strong>Formats:</strong> JPEG, PNG, or WebP — max 8 MB</li>
+            <li><strong>Tip:</strong> Use wide road, car, or city photos with open space in the center for headline text</li>
+          </ul>
+          <p class="text-caption">If no active banners exist, the default fallback image is shown on the homepage.</p>
+        </div>
+      </div>
+
+      <div class="hero-banner-grid" id="heroBannerGrid">
+        <div class="loading grid-span-full"><span class="spinner"></span> Loading banners…</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="heroBannerModal" hidden>
+  <div class="modal modal--md" role="dialog" aria-labelledby="heroBannerModalTitle" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="heroBannerModalTitle">Upload Hero Banner</h2>
+      <button type="button" class="btn-close-modal" onclick="closeModal('heroBannerModal')" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="heroBannerForm" onsubmit="saveHeroBanner(event)">
+        <div class="hero-upload-guide hero-upload-guide--compact">
+          <p class="hero-upload-guide__badge">Landscape required</p>
+          <p class="text-caption">Recommended <strong>1920×1080</strong> or <strong>1920×1280</strong> · Min width <strong>1200px</strong></p>
+        </div>
+        <div class="form-group">
+          <label for="heroBannerTitle">Label <span class="text-caption">(optional, admin only)</span></label>
+          <input type="text" id="heroBannerTitle" class="form-control" maxlength="120" placeholder="e.g. Sunset highway">
+        </div>
+        <div class="form-group">
+          <label for="heroBannerImage">Image <span class="text-danger">*</span></label>
+          <input type="file" id="heroBannerImage" class="form-control" accept="image/jpeg,image/png,image/webp,image/jpg" required>
+          <p class="form-hint" id="heroBannerImageHint">Select a wide landscape photo before uploading.</p>
+        </div>
+        <div class="form-group form-check-row">
+          <label class="form-check">
+            <input type="checkbox" id="heroBannerActive" checked>
+            <span>Active on homepage rotation</span>
+          </label>
+        </div>
+        <div id="heroBannerPreview" class="hero-banner-preview" hidden></div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('heroBannerModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="heroBannerSaveBtn">Upload</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var allHeroBanners = [];
+
+function esc(s) {
+  return UI.escHtml(s == null ? '' : String(s));
+}
+
+function heroOrientationHint(file, callback) {
+  if (!file || !window.createImageBitmap) {
+    callback('');
+    return;
+  }
+  createImageBitmap(file).then(function (bitmap) {
+    var w = bitmap.width;
+    var h = bitmap.height;
+    bitmap.close();
+    if (w <= h) {
+      callback('This image is portrait or square. Upload a landscape photo (width greater than height).');
+      return;
+    }
+    if (w < 1200) {
+      callback('Width is ' + w + 'px. Minimum 1200px width recommended for a sharp hero display.');
+      return;
+    }
+    callback('Looks good: ' + w + '×' + h + ' landscape.');
+  }).catch(function () {
+    callback('');
+  });
+}
+
+function bindHeroBannerImageInput() {
+  var input = document.getElementById('heroBannerImage');
+  var hint = document.getElementById('heroBannerImageHint');
+  var preview = document.getElementById('heroBannerPreview');
+  if (!input) return;
+  input.addEventListener('change', function () {
+    var file = input.files && input.files[0];
+    if (!file) {
+      hint.textContent = 'Select a wide landscape photo before uploading.';
+      preview.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+    heroOrientationHint(file, function (msg) {
+      hint.textContent = msg || 'Checking image…';
+      hint.classList.toggle('form-hint--warn', !!(msg && msg.indexOf('Looks good') !== 0));
+      hint.classList.toggle('form-hint--ok', msg.indexOf('Looks good') === 0);
+    });
+    preview.hidden = false;
+    preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '" alt="Preview">';
+  });
+}
+
+async function fetchHeroBanners() {
+  var grid = document.getElementById('heroBannerGrid');
+  try {
+    var data = await API.get('/api/accounts/admin/hero-banners/');
+    allHeroBanners = Array.isArray(data) ? data : (data.results || []);
+    renderHeroBannerGrid();
+  } catch (err) {
+    grid.innerHTML = '<div class="grid-span-full">' + UI.emptyState('Could not load banners', err.message) + '</div>';
+  }
+}
+
+function renderHeroBannerGrid() {
+  var grid = document.getElementById('heroBannerGrid');
+  if (!allHeroBanners.length) {
+    grid.innerHTML = '<div class="grid-span-full">' + UI.emptyState(
+      'No hero banners yet',
+      'Upload landscape photos to rotate on the homepage hero.',
+      '<button type="button" class="btn btn-primary btn-sm" onclick="openHeroBannerModal()">Upload Banner</button>'
+    ) + '</div>';
+    return;
+  }
+  grid.innerHTML = allHeroBanners.map(function (banner) {
+    return '<article class="hero-banner-card">'
+      + '<div class="hero-banner-card__media">'
+      + '<img src="' + esc(banner.image_url) + '" alt="" loading="lazy">'
+      + (banner.is_active
+        ? '<span class="hero-banner-card__badge">Active</span>'
+        : '<span class="hero-banner-card__badge hero-banner-card__badge--off">Inactive</span>')
+      + '</div>'
+      + '<div class="hero-banner-card__body">'
+      + '<div class="hero-banner-card__title">' + esc(banner.title || ('Banner #' + banner.id)) + '</div>'
+      + '<div class="hero-banner-card__meta">' + esc(banner.orientation_label || '') + '</div>'
+      + '<div class="hero-banner-card__actions">'
+      + '<button type="button" class="btn btn-sm btn-ghost" onclick="toggleHeroBannerActive(' + banner.id + ', ' + (!banner.is_active) + ')">'
+      + (banner.is_active ? 'Deactivate' : 'Activate') + '</button>'
+      + '<button type="button" class="btn btn-sm btn-danger" onclick="deleteHeroBanner(' + banner.id + ')">Delete</button>'
+      + '</div>'
+      + '</div>'
+      + '</article>';
+  }).join('');
+}
+
+function openHeroBannerModal() {
+  document.getElementById('heroBannerTitle').value = '';
+  document.getElementById('heroBannerImage').value = '';
+  document.getElementById('heroBannerActive').checked = true;
+  document.getElementById('heroBannerImageHint').textContent = 'Select a wide landscape photo before uploading.';
+  document.getElementById('heroBannerImageHint').className = 'form-hint';
+  document.getElementById('heroBannerPreview').hidden = true;
+  document.getElementById('heroBannerPreview').innerHTML = '';
+  openModal('heroBannerModal');
+}
+
+async function saveHeroBanner(event) {
+  event.preventDefault();
+  var fileInput = document.getElementById('heroBannerImage');
+  var file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    toast('Please choose an image file.', 'error');
+    return;
+  }
+  var fd = new FormData();
+  fd.append('title', document.getElementById('heroBannerTitle').value.trim());
+  fd.append('image', file);
+  fd.append('is_active', document.getElementById('heroBannerActive').checked ? 'true' : 'false');
+  var btn = document.getElementById('heroBannerSaveBtn');
+  btn.disabled = true;
+  try {
+    await API.req('POST', '/api/accounts/admin/hero-banners/', fd, true);
+    toast('Hero banner uploaded.', 'success');
+    closeModal('heroBannerModal');
+    fetchHeroBanners();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function toggleHeroBannerActive(id, isActive) {
+  try {
+    await API.patch('/api/accounts/admin/hero-banners/' + id + '/', { is_active: isActive });
+    toast(isActive ? 'Banner activated.' : 'Banner deactivated.', 'success');
+    fetchHeroBanners();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function deleteHeroBanner(id) {
+  if (!confirm('Delete this hero banner?')) return;
+  try {
+    await API.del('/api/accounts/admin/hero-banners/' + id + '/');
+    toast('Banner deleted.', 'success');
+    fetchHeroBanners();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+document.getElementById('sName').textContent = (API.getUser() || {}).username || '';
+document.getElementById('sAvatar').textContent = initials((API.getUser() || {}).username || '');
+bindHeroBannerImageInput();
+fetchHeroBanners();
+Messaging.updateUnreadBadge();
+</script>
+{% endblock %}

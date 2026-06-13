@@ -47,6 +47,8 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 # Upload limits (car images)
 CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(10 * 1024 * 1024)))
 CAR_IMAGE_MAX_COUNT = int(os.getenv('CAR_IMAGE_MAX_COUNT', '10'))
+HERO_BANNER_MAX_BYTES = int(os.getenv('HERO_BANNER_MAX_BYTES', str(8 * 1024 * 1024)))
+HERO_BANNER_MIN_WIDTH = int(os.getenv('HERO_BANNER_MIN_WIDTH', '1200'))
 MESSAGE_ATTACHMENT_MAX_BYTES = int(os.getenv('MESSAGE_ATTACHMENT_MAX_BYTES', str(10 * 1024 * 1024)))
 
 # Cache (Redis when CACHE_ENABLED=1, else in-memory for local dev)

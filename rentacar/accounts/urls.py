@@ -13,5 +13,7 @@ urlpatterns = [
     path('social-media/', views.PublicSocialMediaLinkListView.as_view(), name='social-media-list'),
     path('admin/social-media/', views.AdminSocialMediaLinkListCreateView.as_view(), name='admin-social-media-list'),
     path('admin/social-media/<int:pk>/', views.AdminSocialMediaLinkDetailView.as_view(), name='admin-social-media-detail'),
+    path('admin/hero-banners/', views.AdminHeroBannerListCreateView.as_view(), name='admin-hero-banner-list'),
+    path('admin/hero-banners/<int:pk>/', views.AdminHeroBannerDetailView.as_view(), name='admin-hero-banner-detail'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change-password'),
 ]

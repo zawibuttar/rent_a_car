@@ -5,19 +5,28 @@
 {% block content %}
 <div class="page-wrap">
 
-  <div class="hero">
-    <h1>Find Your Perfect Rental Car</h1>
-    <p>Browse verified cars from trusted owners. Instant booking, transparent pricing.</p>
-    <div class="hero-search">
-      <input type="search" class="search-input" id="heroInput"
-        placeholder="Search by brand, model or city..."
-        autocomplete="off"
-        aria-label="Search cars"/>
-      <button type="button" class="btn btn-primary" id="heroSearchBtn">Search</button>
+  <div class="hero hero--rental">
+    {% include 'includes/hero_scene.html' %}
+    <div class="hero-content">
+      <p class="hero-eyebrow">Trusted peer-to-peer rentals</p>
+      <h1>Find Your Perfect Rental Car</h1>
+      <p>Browse verified cars from trusted owners. Instant booking, transparent pricing.</p>
+      <div class="hero-search">
+        <input type="search" class="search-input" id="heroInput"
+          placeholder="Search by brand, model or city..."
+          autocomplete="off"
+          aria-label="Search cars"/>
+        <button type="button" class="btn btn-primary" id="heroSearchBtn">Search</button>
+      </div>
+      <p class="hero-cta">
+        <a href="/cars/" class="btn btn-ghost btn-sm hero-cta-link">Browse all cars</a>
+      </p>
+      <ul class="hero-trust" aria-label="Platform highlights">
+        <li><svg class="icon" aria-hidden="true"><use href="#icon-shield"/></svg> Verified owners</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> Instant booking</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#icon-dollar"/></svg> Clear pricing</li>
+      </ul>
     </div>
-    <p class="hero-cta">
-      <a href="/cars/" class="btn btn-ghost btn-sm">Browse all cars</a>
-    </p>
   </div>
 
   {% include 'includes/popular_cities.html' %}

@@ -100,4 +100,20 @@ class SocialMediaLink(models.Model):
         elif 'whatsapp' in key:
             return 'ti ti-brand-whatsapp'
         else:
-            return 'ti ti-share'  # Fallback icon
+            return 'ti ti-share'  # Fallback icon
+
+
+class HeroBanner(models.Model):
+    title = models.CharField(max_length=120, blank=True)
+    image = models.ImageField(upload_to='hero_banners/%Y/%m/')
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        label = self.title or f'Hero #{self.pk}'
+        return f'{label} ({self.width}x{self.height})' if self.width and self.height else label

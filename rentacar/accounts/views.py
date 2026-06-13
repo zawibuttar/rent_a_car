@@ -217,6 +217,21 @@ class AdminSocialMediaLinkDetailView(NoCacheMixin, generics.RetrieveUpdateDestro
         invalidate_social_media_cache()
 
 
+class AdminHeroBannerListCreateView(NoCacheMixin, generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    serializer_class = HeroBannerSerializer
+    queryset = HeroBanner.objects.all()
+    pagination_class = None
+
+
+class AdminHeroBannerDetailView(NoCacheMixin, generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    serializer_class = HeroBannerSerializer
+    queryset = HeroBanner.objects.all()
+
+
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

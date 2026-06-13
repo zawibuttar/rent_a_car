@@ -1,7 +1,11 @@
 from django.shortcuts import render
 
 def home(request):
-    return render(request, 'home.html')
+    from accounts.hero_banners import get_random_hero_banner_url, get_hero_banner_fallback_url
+    return render(request, 'home.html', {
+        'hero_banner_url': get_random_hero_banner_url(request),
+        'hero_banner_fallback': get_hero_banner_fallback_url(),
+    })
 
 def car_list(request):
     return render(request, 'cars/car_list.html')
@@ -35,6 +39,15 @@ def admin_social_media(request):
         return HttpResponseForbidden("You do not have permission to access this page.")
     return render(request, 'dashboards/admin_social_media.html')
 
+def admin_hero_banners(request):
+    from django.shortcuts import redirect
+    from django.http import HttpResponseForbidden
+    if not request.user.is_authenticated:
+        return redirect('login-page')
+    if not (request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'):
+        return HttpResponseForbidden("You do not have permission to access this page.")
+    return render(request, 'dashboards/admin_hero_banners.html')
+
 def main_dashboard(request):
 
     from django.shortcuts import redirect
@@ -57,4 +70,4 @@ def privacy(request):
     return render(request, 'privacy.html')
 
 def contact(request):
-    return render(request, 'contact.html')
+    return render(request, 'contact.html')

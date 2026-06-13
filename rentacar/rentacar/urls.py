@@ -42,6 +42,7 @@ urlpatterns = [
     path('dashboard/owner/', page_views.owner_dashboard, name='owner-dashboard'),
     path('dashboard/admin/', page_views.admin_dashboard, name='admin-dashboard'),
     path('dashboard/admin/social-media/', page_views.admin_social_media, name='admin-social-media-page'),
+    path('dashboard/admin/hero-banners/', page_views.admin_hero_banners, name='admin-hero-banners-page'),
     path('terms/', page_views.terms, name='terms'),
     path('privacy/', page_views.privacy, name='privacy'),
     path('contact/', page_views.contact, name='contact-support'),
