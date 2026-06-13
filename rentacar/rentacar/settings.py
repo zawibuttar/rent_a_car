@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'accounts',
     'cars',
     'bookings',
+    'messaging',
 
     # Third-party apps
     'rest_framework',

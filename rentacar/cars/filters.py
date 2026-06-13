@@ -1,5 +1,6 @@
 import django_filters
 
+from .enums import CarCategory, CarType
 from .models import Car
 
 
@@ -23,8 +24,8 @@ def _filter_listing(queryset, value):
 
 
 class AdminCarFilter(django_filters.FilterSet):
-    car_type = django_filters.CharFilter(field_name='car_type')
-    category = django_filters.CharFilter(field_name='category')
+    car_type = django_filters.ChoiceFilter(choices=CarType.choices)
+    category = django_filters.ChoiceFilter(choices=CarCategory.choices)
     is_approved = django_filters.BooleanFilter(field_name='is_approved')
     is_available = django_filters.BooleanFilter(field_name='is_available')
     listing = django_filters.ChoiceFilter(choices=LISTING_CHOICES, method='filter_listing')
@@ -38,8 +39,8 @@ class AdminCarFilter(django_filters.FilterSet):
 
 
 class OwnerCarFilter(django_filters.FilterSet):
-    car_type = django_filters.CharFilter(field_name='car_type')
-    category = django_filters.CharFilter(field_name='category')
+    car_type = django_filters.ChoiceFilter(choices=CarType.choices)
+    category = django_filters.ChoiceFilter(choices=CarCategory.choices)
     listing = django_filters.ChoiceFilter(choices=LISTING_CHOICES, method='filter_listing')
 
     class Meta:

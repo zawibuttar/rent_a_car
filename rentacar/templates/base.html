@@ -87,6 +87,7 @@
   {% block footer %}{% endblock %}
 
   <script src="{% static 'js/api.js' %}"></script>
+  <script src="{% static 'js/car_taxonomy.js' %}"></script>
   <script src="{% static 'js/ui.js' %}"></script>
   <script src="{% static 'js/location.js' %}"></script>
   <script>
@@ -94,7 +95,8 @@
     document.addEventListener('DOMContentLoaded', function () {
       const y = document.getElementById('footerYear');
       if (y) y.textContent = new Date().getFullYear();
-      const role = API.role();
+      const user = API.getUser();
+      const role = typeof navRole === 'function' ? navRole(user) : API.role();
       const link = document.getElementById('nav-dash-link');
       if (link && role) {
         if (role === 'owner') link.href = '/dashboard/owner/';
@@ -103,7 +105,7 @@
       }
       // Show "My Orders" link only for logged-in customers (not admin or owner)
       const ordersLinks = document.querySelectorAll('.nav-orders-link');
-      if (role && role === 'customer') {
+      if (role && role === 'customer' && !isAdminUser(user)) {
         ordersLinks.forEach(function (el) { el.style.display = ''; });
       }
       function markNavActive(links) {

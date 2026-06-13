@@ -83,9 +83,10 @@ const API = {
   uploadPatch(url,fd) { return this.req('PATCH',  url, fd, true); },
 
   save(token, user) {
+    const role = (user.role === 'admin' || user.is_superuser) ? 'admin' : user.role;
     localStorage.setItem('token', token);
-    localStorage.setItem('role',  user.role);
-    localStorage.setItem('user',  JSON.stringify(user));
+    localStorage.setItem('role', role);
+    localStorage.setItem('user', JSON.stringify(user));
   },
   clear() {
     ['token','role','user'].forEach(k => localStorage.removeItem(k));
@@ -150,18 +151,29 @@ function switchTab(tabId) {
 }
 
 /* ── Navbar ─────────────────────── */
+function isAdminUser(user) {
+  if (!user) return false;
+  return user.role === 'admin' || !!user.is_superuser;
+}
+
+function navRole(user) {
+  if (isAdminUser(user)) return 'admin';
+  return (user && user.role) || API.role() || '';
+}
+
 function dashboardProfileUrl(role) {
   if (role === 'owner') return '/dashboard/owner/#profile';
   if (role === 'admin') return '/dashboard/admin/#overview';
   return '/dashboard/customer/#profile';
 }
 
-function updateNavProfileLink(role) {
+function updateNavProfileLink(user) {
   const profileLink = document.getElementById('navProfileLink');
   if (!profileLink) return;
 
   const labelEl = profileLink.querySelector('span');
   const iconUse = profileLink.querySelector('use');
+  const role = navRole(user);
   const isAdmin = role === 'admin';
 
   profileLink.href = dashboardProfileUrl(role);
@@ -274,8 +286,8 @@ function initNav() {
     if (avEl) avEl.textContent = avText;
     if (menuAv) menuAv.textContent = avText;
     if (menuName) menuName.textContent = label;
-    const role = user.role || API.role();
-    updateNavProfileLink(role);
+    const role = navRole(user);
+    updateNavProfileLink(user);
     if (dashLink && role) {
       if (role === 'owner') dashLink.href = '/dashboard/owner/';
       else if (role === 'admin') dashLink.href = '/dashboard/admin/';

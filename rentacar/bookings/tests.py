@@ -15,12 +15,14 @@ from .pricing import (
     RENTAL_DAILY,
     RENTAL_HOURLY,
     RENTAL_MONTHLY,
+    RENTAL_TYPE_CHOICES,
     RENTAL_WEEKLY,
     compute_total,
     day_end,
     day_start,
     normalize_booking_window,
 )
+from .enums import RentalDuration
 
 User = get_user_model()
 
@@ -412,3 +414,21 @@ class DashboardBookingListFilterTests(APITestCase):
         response = self.client.get(self.owner_url, {'search': 'affan', 'status': 'approved'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
+
+
+class RentalDurationEnumTests(APITestCase):
+    def test_rental_duration_matches_pricing_constants(self):
+        self.assertEqual(RENTAL_HOURLY, RentalDuration.HOURLY)
+        self.assertEqual(RENTAL_DAILY, RentalDuration.DAILY)
+        self.assertEqual(RENTAL_WEEKLY, RentalDuration.WEEKLY)
+        self.assertEqual(RENTAL_MONTHLY, RentalDuration.MONTHLY)
+        self.assertEqual(RENTAL_TYPE_CHOICES, RentalDuration.choices)
+
+
+class RentalDurationEnumTests(APITestCase):
+    def test_rental_duration_matches_pricing_constants(self):
+        self.assertEqual(RENTAL_HOURLY, RentalDuration.HOURLY)
+        self.assertEqual(RENTAL_DAILY, RentalDuration.DAILY)
+        self.assertEqual(RENTAL_WEEKLY, RentalDuration.WEEKLY)
+        self.assertEqual(RENTAL_MONTHLY, RentalDuration.MONTHLY)
+        self.assertEqual(RENTAL_TYPE_CHOICES, RentalDuration.choices)

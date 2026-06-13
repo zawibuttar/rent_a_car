@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Admin Panel — RentACar{% endblock %}
 
 {% block content %}
@@ -32,6 +33,11 @@
       </a>
       <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
+      </button>
+      <button class="s-item" id="btn-messages" onclick="showTab('messages', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
+        <span>Messages</span>
+        <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
       </button>
       <div class="s-divider"></div>
       <button class="s-item danger" onclick="doLogout()">
@@ -126,12 +132,13 @@
           <table>
             <thead>
               <tr>
-                <th>No.</th><th>Car</th><th>Owner</th><th class="col-hide-sm">Type</th>
+                <th>No.</th><th>Car</th><th>Owner</th>
+                <th class="col-hide-sm">Category</th><th class="col-hide-sm">Type</th>
                 <th>Price/day</th><th class="col-hide-sm">Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="allCarsTable">
-              <tr><td colspan="9">
+              <tr><td colspan="10">
                 <div class="loading"><span class="spinner"></span></div>
               </td></tr>
             </tbody>
@@ -163,11 +170,11 @@
               <tr>
                 <th>No.</th><th>Customer</th><th>Car</th><th class="col-hide-sm">Owner</th>
                 <th>Period</th><th class="col-hide-sm">Duration</th>
-                <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th>
+                <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="allBookingsTable">
-              <tr><td colspan="9">
+              <tr><td colspan="10">
                 <div class="loading"><span class="spinner"></span></div>
               </td></tr>
             </tbody>
@@ -176,6 +183,17 @@
       </div>
       <div id="adminBookingsPagination" class="pagination-wrap" hidden></div>
 
+    </div>
+
+    <!-- ══ MESSAGES TAB ══ -->
+    <div class="tab-panel" id="tab-messages">
+      <div class="page-head">
+        <div>
+          <h1>Messages</h1>
+          <p>View and moderate booking conversations across the platform</p>
+        </div>
+      </div>
+      {% include 'includes/messages_panel.html' %}
     </div>
 
     <!-- ══ OWNER APPROVALS TAB ══ -->
@@ -217,6 +235,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/messaging.js' %}"></script>
 <script>
 /* ── Guard ──────────────────────────── */
 const user = API.getUser();
@@ -248,6 +267,11 @@ function showTab(name, btn) {
       if (n === 'cars') fetchAdminCarsList();
       if (n === 'owners') fetchAdminOwnersList();
       if (n === 'bookings') fetchAdminBookingsList();
+      if (n === 'messages') {
+        Messaging.activate();
+      } else {
+        Messaging.deactivate();
+      }
     },
   });
 }
@@ -482,7 +506,7 @@ function renderCarsTable(meta) {
   });
 
   if (!meta.items.length) {
-    tbody.innerHTML = '<tr><td colspan="9">'
+    tbody.innerHTML = '<tr><td colspan="10">'
       + tableFilterEmptyHtml('No cars found', 'adminCarsFilters', adminCarsState.statusTab,
         "UI.resetTableFilters('adminCarsFilters','adminCarsFilterTabs');adminCarsState.page=1;adminCarsState.statusTab='all';fetchAdminCarsList();")
       + '</td></tr>';
@@ -510,7 +534,10 @@ function renderCarsTable(meta) {
         : '')
       + '</td>'
       + '<td class="text-small">' + UI.escHtml(UI.ownerDisplayName(c.owner || c)) + '</td>'
-      + '<td class="col-hide-sm"><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
+      + '<td class="col-hide-sm"><span class="badge badge-blue">'
+      + UI.escHtml(c.category_display || UI.formatCategoryLabel(c.category)) + '</span></td>'
+      + '<td class="col-hide-sm"><span class="badge badge-gray">'
+      + UI.escHtml(c.car_type_display || UI.formatCarType(c.car_type)) + '</span></td>'
       + '<td class="td-money">$'
       + parseFloat(c.price_per_day).toFixed(2) + '</td>'
       + '<td class="td-meta col-hide-sm">' + UI.escHtml(c.location) + '</td>'
@@ -535,8 +562,9 @@ function renderCarsTable(meta) {
 /* ══ ALL BOOKINGS ═══════════════════ */
 async function fetchAdminBookingsList() {
   var tbody = document.getElementById('allBookingsTable');
-  tbody.innerHTML = UI.tableLoadingRow(9);
+  tbody.innerHTML = UI.tableLoadingRow(10);
   try {
+    await Messaging.fetchThreads().catch(function () {});
     var url = adminListQuery('/api/bookings/admin/all/', adminBookingsState, 'adminBookingsFilters', 'bookings');
     var meta = await UI.fetchListPage(url, adminBookingsState.page, UI_PAGE.table);
     adminBookingsState.page = meta.page;
@@ -557,7 +585,7 @@ function renderBookingsTable(meta) {
   });
 
   if (!meta.items.length) {
-    tbody.innerHTML = '<tr><td colspan="9">'
+    tbody.innerHTML = '<tr><td colspan="10">'
       + tableFilterEmptyHtml('No bookings found', 'adminBookingsFilters', adminBookingsState.statusTab,
         "UI.resetTableFilters('adminBookingsFilters','adminBookingsFilterTabs');adminBookingsState.page=1;adminBookingsState.statusTab='';fetchAdminBookingsList();")
       + '</td></tr>';
@@ -566,7 +594,7 @@ function renderBookingsTable(meta) {
   }
 
   tbody.innerHTML = meta.items.map(function(b, i) {
-    return '<tr>'
+    return '<tr data-booking-row="' + b.id + '">'
       + UI.tdSerial(meta.rangeStart + i)
       + '<td>'
       + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
@@ -587,6 +615,8 @@ function renderBookingsTable(meta) {
       + '<td class="td-money">$'
       + parseFloat(b.total_cost).toFixed(2) + '</td>'
       + '<td>' + statusBadge(b.status) + '</td>'
+      + '<td><button type="button" class="btn btn-ghost btn-sm" '
+      + 'onclick="Messaging.openThread(' + b.id + ')">Message</button></td>'
       + '</tr>';
   }).join('');
 
@@ -717,7 +747,7 @@ UI.initTableFilters({
 if (!UI.openDashboardTabFromHash()) {
   const params = new URLSearchParams(window.location.search);
   const initialTab = params.get('tab');
-  if (initialTab && ['overview', 'cars', 'owners', 'bookings'].includes(initialTab)) {
+  if (initialTab && ['overview', 'cars', 'owners', 'bookings', 'messages'].includes(initialTab)) {
     const btn = document.getElementById('btn-' + initialTab);
     if (btn) showTab(initialTab, btn);
     else loadOverview();
@@ -725,5 +755,6 @@ if (!UI.openDashboardTabFromHash()) {
     loadOverview();
   }
 }
+Messaging.mount();
 </script>
 {% endblock %}

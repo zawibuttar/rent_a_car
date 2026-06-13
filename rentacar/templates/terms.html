@@ -2,30 +2,111 @@
 {% block title %}Terms &amp; Conditions — RentACar{% endblock %}
 
 {% block content %}
-<div class="page-wrap" style="max-width: 800px; margin: 3rem auto; padding: 0 1.5rem;">
-  <div class="card" style="padding: 2.5rem; background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);">
-    <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
-      <h1 style="font-size: 2.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Terms &amp; Conditions</h1>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Last updated: June 10, 2026</p>
+<div class="static-page">
+  <header class="static-page__hero">
+    <span class="static-page__eyebrow">
+      <i class="ti ti-file-text" aria-hidden="true"></i> Legal
+    </span>
+    <h1>Terms &amp; Conditions</h1>
+    <p>Please read these terms carefully before using RentACar. They govern your access to our marketplace and your relationship with other users on the platform.</p>
+    <p class="static-page__meta">Effective date: June 13, 2026</p>
+  </header>
+
+  <article class="static-page__card">
+    <div class="static-page__card-head">
+      <div>
+        <h2>Agreement overview</h2>
+        <p>RentACar connects vehicle owners with customers across Pakistan.</p>
+      </div>
+      <nav class="static-page__toc" aria-label="On this page">
+        <a href="#acceptance">Acceptance</a>
+        <a href="#accounts">Accounts</a>
+        <a href="#marketplace">Marketplace</a>
+        <a href="#bookings">Bookings</a>
+        <a href="#payments">Payments</a>
+        <a href="#conduct">Conduct</a>
+        <a href="#liability">Liability</a>
+        <a href="#contact">Contact</a>
+      </nav>
     </div>
-    
-    <div style="line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">1. Acceptance of Terms</h2>
-      <p style="margin-bottom: 1.5rem;">Welcome to RentACar. By accessing or using our website and car rental marketplace, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our services.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">2. User Registration</h2>
-      <p style="margin-bottom: 1.5rem;">To book or list a vehicle, you must create a verified account. You are responsible for keeping your login credentials confidential and for all activities that occur under your account.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">3. Rental Services Marketplace</h2>
-      <p style="margin-bottom: 1.5rem;">RentACar provides a platform that connects car owners with potential renters. Any agreement for vehicle rental is formed directly between the owner and the renter. RentACar is not a party to the rental contract and does not assume liability for vehicle conditions or user behavior.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">4. Payments and Fees</h2>
-      <p style="margin-bottom: 1.5rem;">Renters agree to pay all charges related to their bookings, including rental rates, applicable taxes, and any security deposits. Owners are responsible for setting their own pricing and availability.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">5. Prohibited Use</h2>
-      <p style="margin-bottom: 1.5rem;">Rental vehicles may not be used for any illegal purposes, off-road driving, sub-renting, commercial transportation of goods/passengers without explicit consent, or reckless driving.</p>
+
+    <div class="static-page__prose">
+      <section class="static-page__section" id="acceptance">
+        <h3>1. Acceptance of terms</h3>
+        <p>By accessing or using the RentACar website, mobile experience, or related services (collectively, the “Platform”), you agree to be bound by these Terms &amp; Conditions (“Terms”). If you do not agree, you must not use the Platform.</p>
+        <p>We may update these Terms from time to time. Material changes will be reflected on this page with a revised effective date. Continued use of the Platform after changes are posted constitutes acceptance of the updated Terms.</p>
+      </section>
+
+      <section class="static-page__section" id="accounts">
+        <h3>2. Eligibility and accounts</h3>
+        <p>You must be at least 18 years old and legally capable of entering into binding contracts to create an account. When registering, you agree to provide accurate, current, and complete information.</p>
+        <ul>
+          <li><strong>Customers</strong> may browse listings, submit booking requests, and manage reservations through the customer dashboard.</li>
+          <li><strong>Owners</strong> may list vehicles, set availability and pricing, and respond to booking requests through the owner dashboard.</li>
+          <li><strong>Administrators</strong> manage platform operations, listing approval, and owner verification in accordance with internal policies.</li>
+        </ul>
+        <p>You are responsible for safeguarding your login credentials and for all activity conducted under your account. Notify us immediately if you suspect unauthorized access.</p>
+      </section>
+
+      <section class="static-page__section" id="marketplace">
+        <h3>3. Marketplace role</h3>
+        <p>RentACar operates as an online marketplace that facilitates introductions and booking coordination between independent vehicle owners and renters. We are not a car rental company, insurer, broker, or agent for either party.</p>
+        <p>Unless expressly stated otherwise, RentACar does not own, control, inspect, maintain, or insure listed vehicles. Owners are solely responsible for the accuracy of listing details, including make, model, condition, location, pricing, and availability.</p>
+        <div class="static-page__note">
+          Any rental agreement for use of a vehicle is formed directly between the owner and the customer. RentACar is not a party to that agreement.
+        </div>
+      </section>
+
+      <section class="static-page__section" id="bookings">
+        <h3>4. Listings, bookings, and cancellations</h3>
+        <p>Booking requests submitted through the Platform are subject to owner approval. A booking is not confirmed until the owner accepts the request and the booking status reflects confirmation in the system.</p>
+        <ul>
+          <li>Customers must provide valid pick-up and return dates/times and comply with the rental type selected (hourly, daily, weekly, or monthly).</li>
+          <li>Owners may decline requests that conflict with availability, verification status, or platform policies.</li>
+          <li>Either party should communicate promptly regarding changes, delays, or disputes related to a confirmed booking.</li>
+        </ul>
+        <p>Cancellation and refund arrangements, where applicable, are determined by the owner’s stated policies and mutual agreement between the parties, except where required by applicable law.</p>
+      </section>
+
+      <section class="static-page__section" id="payments">
+        <h3>5. Pricing and payments</h3>
+        <p>Owners set rental rates, discounts, and enabled rental periods for their listings. Displayed prices may exclude taxes, fuel, tolls, security deposits, insurance, or other charges unless explicitly stated in the listing.</p>
+        <p>Unless a future payment feature is introduced and accepted by both parties, payment for confirmed bookings is handled directly between the customer and owner. RentACar does not guarantee payment collection on behalf of owners.</p>
+      </section>
+
+      <section class="static-page__section" id="conduct">
+        <h3>6. Acceptable use</h3>
+        <p>You agree not to misuse the Platform. Prohibited conduct includes, without limitation:</p>
+        <ol>
+          <li>Providing false, misleading, or fraudulent listing or profile information.</li>
+          <li>Using a rented vehicle for unlawful activity, racing, off-road use (unless permitted), or unauthorized commercial transport.</li>
+          <li>Sub-leasing, transferring, or allowing an unapproved driver to operate a booked vehicle.</li>
+          <li>Harassing, threatening, or discriminating against other users.</li>
+          <li>Attempting to bypass the Platform to avoid fees, policies, or safety measures.</li>
+          <li>Uploading malicious code, scraping data without permission, or interfering with Platform security.</li>
+        </ol>
+        <p>We may suspend or terminate accounts that violate these Terms or pose a risk to users or the Platform.</p>
+      </section>
+
+      <section class="static-page__section" id="liability">
+        <h3>7. Disclaimers and limitation of liability</h3>
+        <p>The Platform is provided on an “as is” and “as available” basis. To the fullest extent permitted by law, RentACar disclaims warranties regarding uninterrupted access, listing accuracy, vehicle fitness, or outcomes of any rental arrangement.</p>
+        <p>RentACar is not liable for indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform or any transaction between users. Our total liability for any claim relating to the Platform shall not exceed the amount you paid to RentACar for Platform services in the twelve (12) months preceding the claim, if any.</p>
+      </section>
+
+      <section class="static-page__section" id="contact">
+        <h3>8. Governing law and contact</h3>
+        <p>These Terms are governed by the laws of Pakistan, without regard to conflict-of-law principles. Disputes should first be raised with our support team so we can attempt good-faith resolution.</p>
+        <p>Questions about these Terms may be directed to <a href="mailto:support@rentacar.pk">support@rentacar.pk</a> or through our <a href="/contact/">contact page</a>.</p>
+      </section>
+
+      <nav class="static-page__links" aria-label="Related pages">
+        <a href="/privacy/"><i class="ti ti-shield-check" aria-hidden="true"></i> Privacy Policy</a>
+        <a href="/contact/"><i class="ti ti-headset" aria-hidden="true"></i> Contact Support</a>
+        <a href="/cars/"><i class="ti ti-search" aria-hidden="true"></i> Browse Cars</a>
+      </nav>
     </div>
-  </div>
+  </article>
 </div>
 {% endblock %}
 

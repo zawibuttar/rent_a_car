@@ -5,23 +5,20 @@ from math import ceil
 
 from django.utils import timezone
 
-RENTAL_HOURLY = 'hourly'
-RENTAL_DAILY = 'daily'
-RENTAL_WEEKLY = 'weekly'
-RENTAL_MONTHLY = 'monthly'
+from .enums import RentalDuration
 
-RENTAL_TYPE_CHOICES = (
-    (RENTAL_HOURLY, 'Hourly'),
-    (RENTAL_DAILY, 'Daily'),
-    (RENTAL_WEEKLY, 'Weekly'),
-    (RENTAL_MONTHLY, 'Monthly'),
-)
+RENTAL_HOURLY = RentalDuration.HOURLY
+RENTAL_DAILY = RentalDuration.DAILY
+RENTAL_WEEKLY = RentalDuration.WEEKLY
+RENTAL_MONTHLY = RentalDuration.MONTHLY
+
+RENTAL_TYPE_CHOICES = RentalDuration.choices
 
 CAR_RENTAL_FIELDS = {
-    RENTAL_HOURLY: ('rent_hourly', 'price_per_hour'),
-    RENTAL_DAILY: ('rent_daily', 'price_per_day'),
-    RENTAL_WEEKLY: ('rent_weekly', 'price_per_week'),
-    RENTAL_MONTHLY: ('rent_monthly', 'price_per_month'),
+    RentalDuration.HOURLY: ('rent_hourly', 'price_per_hour'),
+    RentalDuration.DAILY: ('rent_daily', 'price_per_day'),
+    RentalDuration.WEEKLY: ('rent_weekly', 'price_per_week'),
+    RentalDuration.MONTHLY: ('rent_monthly', 'price_per_month'),
 }
 
 

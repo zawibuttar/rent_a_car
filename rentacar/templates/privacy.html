@@ -2,30 +2,123 @@
 {% block title %}Privacy Policy — RentACar{% endblock %}
 
 {% block content %}
-<div class="page-wrap" style="max-width: 800px; margin: 3rem auto; padding: 0 1.5rem;">
-  <div class="card" style="padding: 2.5rem; background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);">
-    <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
-      <h1 style="font-size: 2.25rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.5rem 0;">Privacy Policy</h1>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Last updated: June 10, 2026</p>
+<div class="static-page">
+  <header class="static-page__hero">
+    <span class="static-page__eyebrow">
+      <i class="ti ti-shield-check" aria-hidden="true"></i> Privacy
+    </span>
+    <h1>Privacy Policy</h1>
+    <p>Your privacy matters to us. This policy explains what information RentACar collects, how we use it, and the choices available to you.</p>
+    <p class="static-page__meta">Effective date: June 13, 2026</p>
+  </header>
+
+  <article class="static-page__card">
+    <div class="static-page__card-head">
+      <div>
+        <h2>How we handle your data</h2>
+        <p>Transparent practices for customers, owners, and visitors.</p>
+      </div>
+      <nav class="static-page__toc" aria-label="On this page">
+        <a href="#collect">Collection</a>
+        <a href="#use">Use</a>
+        <a href="#sharing">Sharing</a>
+        <a href="#cookies">Cookies</a>
+        <a href="#security">Security</a>
+        <a href="#rights">Your rights</a>
+        <a href="#retention">Retention</a>
+        <a href="#contact">Contact</a>
+      </nav>
     </div>
-    
-    <div style="line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">1. Information We Collect</h2>
-      <p style="margin-bottom: 1.5rem;">We collect information that you provide directly to us when creating an account, editing your profile, listing or booking vehicles, or communicating with support. This may include your name, email, phone number, national ID, driving license, and billing information.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">2. How We Use Your Information</h2>
-      <p style="margin-bottom: 1.5rem;">We use the collected information to facilitate booking transactions, verify owner and customer profiles, handle support requests, and improve our services. Your contact details are shared with the owner or renter of a booked vehicle solely to facilitate the rental transaction.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">3. Data Sharing and Disclosure</h2>
-      <p style="margin-bottom: 1.5rem;">We do not sell your personal data. We may share information with trusted third-party service providers (e.g., payment gateways, database hosting, profile verification agencies) as necessary to perform their services on our behalf.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">4. Security</h2>
-      <p style="margin-bottom: 1.5rem;">We implement industry-standard administrative, technical, and physical security measures to protect your personal information from unauthorized access, loss, or alteration. However, no internet transmission is 100% secure.</p>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;">5. Your Rights</h2>
-      <p style="margin-bottom: 1.5rem;">You have the right to access, correct, update, or request the deletion of your personal data at any time through your dashboard settings or by contacting support.</p>
+
+    <div class="static-page__prose">
+      <section class="static-page__section" id="collect">
+        <h3>1. Information we collect</h3>
+        <p>We collect information in three main ways: information you provide, information generated through your use of the Platform, and limited technical data from your device.</p>
+        <p><strong>Information you provide</strong></p>
+        <ul>
+          <li>Account details such as name, username, email address, password (stored securely), and selected role (customer or owner).</li>
+          <li>Profile and verification information for owners, which may include contact details and documents submitted for administrative review.</li>
+          <li>Listing content including vehicle descriptions, photos, location, pricing, and availability.</li>
+          <li>Booking details such as rental dates, rental type, and messages related to reservations.</li>
+          <li>Support communications when you contact us by email or through the contact page.</li>
+        </ul>
+        <p><strong>Information collected automatically</strong></p>
+        <ul>
+          <li>Log and usage data, including pages visited, actions taken, timestamps, and referring URLs.</li>
+          <li>Device and browser information, IP address, and general location inferred from city selection or listing searches.</li>
+          <li>Theme preference and locally stored session tokens required for authentication.</li>
+        </ul>
+      </section>
+
+      <section class="static-page__section" id="use">
+        <h3>2. How we use information</h3>
+        <p>We use personal information for legitimate business purposes, including to:</p>
+        <ul>
+          <li>Create and manage user accounts and authenticate access to dashboards.</li>
+          <li>Display listings, process booking requests, and show availability to customers.</li>
+          <li>Verify owner profiles and enforce marketplace safety standards.</li>
+          <li>Respond to support requests and communicate important service updates.</li>
+          <li>Monitor performance, prevent fraud, and improve Platform reliability and design.</li>
+          <li>Comply with legal obligations and enforce our Terms &amp; Conditions.</li>
+        </ul>
+        <div class="static-page__note">
+          Contact details necessary to complete a booking may be shared between the customer and owner involved in that transaction.
+        </div>
+      </section>
+
+      <section class="static-page__section" id="sharing">
+        <h3>3. When we share information</h3>
+        <p>We do not sell your personal information. We may share data only in the following circumstances:</p>
+        <ul>
+          <li><strong>Between users:</strong> To facilitate a booking or rental coordination between a customer and owner.</li>
+          <li><strong>Service providers:</strong> With trusted vendors that help us host infrastructure, send email, store media, or operate security and analytics tools—bound by confidentiality obligations.</li>
+          <li><strong>Legal requirements:</strong> When required by law, regulation, court order, or to protect the rights, safety, and integrity of RentACar and its users.</li>
+          <li><strong>Business transfers:</strong> In connection with a merger, acquisition, or asset sale, subject to continued protection of personal data.</li>
+        </ul>
+      </section>
+
+      <section class="static-page__section" id="cookies">
+        <h3>4. Cookies and local storage</h3>
+        <p>RentACar uses browser local storage and similar technologies to keep you signed in, remember theme preferences, and store selected city filters. These technologies are essential for core Platform functionality.</p>
+        <p>You can clear local storage through your browser settings, but doing so may sign you out and reset non-account preferences.</p>
+      </section>
+
+      <section class="static-page__section" id="security">
+        <h3>5. Data security</h3>
+        <p>We implement administrative, technical, and organizational safeguards designed to protect personal information against unauthorized access, disclosure, alteration, or destruction. Measures include access controls, authenticated APIs, and secure hosting practices.</p>
+        <p>No method of transmission or storage is completely secure. You are responsible for maintaining the confidentiality of your account credentials and for using a strong, unique password.</p>
+      </section>
+
+      <section class="static-page__section" id="rights">
+        <h3>6. Your choices and rights</h3>
+        <p>Depending on your location and applicable law, you may have the right to:</p>
+        <ul>
+          <li>Access and review personal information associated with your account.</li>
+          <li>Correct inaccurate profile or listing information through your dashboard.</li>
+          <li>Request deletion of your account or certain data, subject to legal retention requirements.</li>
+          <li>Withdraw consent where processing is based on consent, without affecting prior lawful processing.</li>
+        </ul>
+        <p>To exercise these rights, contact <a href="mailto:support@rentacar.pk">support@rentacar.pk</a>. We may need to verify your identity before fulfilling a request.</p>
+      </section>
+
+      <section class="static-page__section" id="retention">
+        <h3>7. Data retention</h3>
+        <p>We retain personal information for as long as your account is active or as needed to provide services, resolve disputes, enforce agreements, and meet legal obligations. Booking records and administrative logs may be retained for a reasonable period after account closure where required for compliance or fraud prevention.</p>
+      </section>
+
+      <section class="static-page__section" id="contact">
+        <h3>8. Children and contact information</h3>
+        <p>RentACar is not intended for individuals under 18 years of age. We do not knowingly collect personal information from children.</p>
+        <p>For privacy-related questions or complaints, contact our support team at <a href="mailto:support@rentacar.pk">support@rentacar.pk</a> or visit the <a href="/contact/">Contact Support</a> page.</p>
+      </section>
+
+      <nav class="static-page__links" aria-label="Related pages">
+        <a href="/terms/"><i class="ti ti-file-text" aria-hidden="true"></i> Terms &amp; Conditions</a>
+        <a href="/contact/"><i class="ti ti-headset" aria-hidden="true"></i> Contact Support</a>
+        <a href="/register/"><i class="ti ti-user-plus" aria-hidden="true"></i> Create Account</a>
+      </nav>
     </div>
-  </div>
+  </article>
 </div>
 {% endblock %}
 

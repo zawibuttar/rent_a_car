@@ -125,7 +125,18 @@ const UI = {
 
   formatCarType(type) {
     if (!type) return '';
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getTypeLabel) {
+      return CarTaxonomy.getTypeLabel(type);
+    }
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+  },
+
+  formatCategoryLabel(category) {
+    if (!category) return '';
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getCategoryLabel) {
+      return CarTaxonomy.getCategoryLabel(category);
+    }
+    return category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ');
   },
 
   formatDisplayName(name) {
@@ -157,6 +168,9 @@ const UI = {
   },
 
   rentalTypeLabel(type) {
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getRentalDurationLabel) {
+      return CarTaxonomy.getRentalDurationLabel(type) || type || '—';
+    }
     const labels = {
       hourly: 'Hourly',
       daily: 'Daily',
@@ -224,6 +238,8 @@ const UI = {
         total: (exactHours * rate).toFixed(2),
         duration: UI.formatHourlyDuration(end - start),
         unitLabel: UI.formatHourlyDuration(end - start),
+        rate: rate,
+        originalRate: null,
       };
     }
 
@@ -239,11 +255,14 @@ const UI = {
       if (!car.rent_daily || !car.price_per_day) {
         return { error: 'Daily rental is not available for this car.' };
       }
-      const rate = car.has_discount ? parseFloat(car.final_price) : parseFloat(car.price_per_day);
+      const originalRate = parseFloat(car.price_per_day);
+      const rate = car.has_discount ? parseFloat(car.final_price) : originalRate;
       return {
         total: (days * rate).toFixed(2),
         duration: days + ' day' + (days !== 1 ? 's' : ''),
         unitLabel: days + 'd',
+        rate: rate,
+        originalRate: car.has_discount ? originalRate : null,
       };
     }
     if (rentalType === 'weekly') {
@@ -252,10 +271,13 @@ const UI = {
       }
       if (days < 7) return { error: 'Minimum weekly rental is 7 days.' };
       const weeks = Math.ceil(days / 7);
+      const rate = parseFloat(car.price_per_week);
       return {
-        total: (weeks * parseFloat(car.price_per_week)).toFixed(2),
+        total: (weeks * rate).toFixed(2),
         duration: weeks + ' week' + (weeks !== 1 ? 's' : ''),
         unitLabel: weeks + 'w',
+        rate: rate,
+        originalRate: null,
       };
     }
     if (rentalType === 'monthly') {
@@ -264,10 +286,13 @@ const UI = {
       }
       if (days < 30) return { error: 'Minimum monthly rental is 30 days.' };
       const months = Math.ceil(days / 30);
+      const rate = parseFloat(car.price_per_month);
       return {
-        total: (months * parseFloat(car.price_per_month)).toFixed(2),
+        total: (months * rate).toFixed(2),
         duration: months + ' month' + (months !== 1 ? 's' : ''),
         unitLabel: months + 'mo',
+        rate: rate,
+        originalRate: null,
       };
     }
     return { error: 'Invalid rental type.' };
@@ -540,12 +565,12 @@ const UI = {
     const ctaLabel = opts.ctaLabel || 'View details';
     const title = ((car.brand || '') + ' ' + (car.model || '')).trim() || 'Car listing';
     const year = car.year ? String(car.year) : '';
-    const type = UI.formatCarType(car.car_type);
+    const type = car.car_type_display || UI.formatCarType(car.car_type);
     const category = car.category;
     let badgeLabel = type;
     if (category && category !== 'car') {
-      const catCap = category.charAt(0).toUpperCase() + category.slice(1);
-      badgeLabel = catCap + (type ? ' · ' + type : '');
+      const catLabel = car.category_display || UI.formatCategoryLabel(category);
+      badgeLabel = catLabel + (type ? ' · ' + type : '');
     }
     const rate = UI.primaryRateDisplay(car);
     const price = rate.value;

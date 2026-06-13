@@ -50,9 +50,9 @@
 
       <section class="book-section" aria-labelledby="bookTypeHeading">
         <h4 class="book-section-title" id="bookTypeHeading">
-          <span class="book-section-num">1</span> Rental type
+          <span class="book-section-num">1</span> Booking period
         </h4>
-        <div class="rental-type-pills" id="bookRentalTypes" role="group" aria-label="Rental type"></div>
+        <div class="rental-type-pills" id="bookRentalTypes" role="group" aria-label="Booking period"></div>
       </section>
 
       <section class="book-section" aria-labelledby="bookDatesHeading">
@@ -89,8 +89,9 @@
 
       <section class="book-section" aria-labelledby="bookMessageHeading">
         <h4 class="book-section-title" id="bookMessageHeading">
-          <span class="book-section-num">4</span> Message <span class="text-caption">(optional)</span>
+          <span class="book-section-num">4</span> Start conversation <span class="text-caption">(optional)</span>
         </h4>
+        <p class="form-hint form-hint--compact">This message starts a booking thread with the owner. You can continue chatting in Messages on your dashboard.</p>
         <div class="form-group book-section-field">
           <label class="visually-hidden" for="bookNote">Message for owner</label>
           <textarea class="form-control" id="bookNote" rows="3" maxlength="500"
@@ -123,11 +124,6 @@
 const CAR_ID = {{ car_id }};
 let carData = null;
 let selectedRentalType = 'daily';
-
-function formatCarType(t) {
-  if (!t) return '';
-  return t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ');
-}
 
 function buildGallery(images, car) {
   const noImg = window.STATIC_NO_IMAGE;
@@ -276,8 +272,8 @@ function renderCar(car) {
   }
 
   const images = car.images || [];
-  const typeLabel = formatCarType(car.car_type);
-  const categoryLabel = car.category ? car.category.charAt(0).toUpperCase() + car.category.slice(1) : 'Car';
+  const typeLabel = car.car_type_display || UI.formatCarType(car.car_type);
+  const categoryLabel = car.category_display || UI.formatCategoryLabel(car.category || 'car');
   let availBadge = '';
   if (car.is_currently_booked) {
     const activeSlot = (car.booked_slots || []).find(function (s) { return s.is_active; });
@@ -592,8 +588,8 @@ function getBookingPayload() {
 function openBookingModal() {
   if (!carData) return;
   const title = carData.brand + ' ' + carData.model;
-  const typeLabel = formatCarType(carData.car_type);
-  const categoryLabel = carData.category ? carData.category.charAt(0).toUpperCase() + carData.category.slice(1) : 'Car';
+  const typeLabel = carData.car_type_display || UI.formatCarType(carData.car_type);
+  const categoryLabel = carData.category_display || UI.formatCategoryLabel(carData.category || 'car');
   const rate = UI.primaryRateDisplay(carData);
   const meta = document.getElementById('bookModalMeta');
   const titleEl = document.getElementById('bookModalTitle');
@@ -701,16 +697,17 @@ function calcCost() {
     weekly: 'Price per week',
     monthly: 'Price per month',
   };
-  const ratePrices = {
-    hourly: carData.price_per_hour,
-    daily: carData.price_per_day,
-    weekly: carData.price_per_week,
-    monthly: carData.price_per_month,
-  };
 
   document.getElementById('costDays').textContent = result.duration;
   if (rateLabel) rateLabel.textContent = rateNames[win.rental_type] || 'Rate';
-  document.getElementById('costPpd').textContent = '$' + parseFloat(ratePrices[win.rental_type] || 0).toFixed(2);
+  const costPpd = document.getElementById('costPpd');
+  if (costPpd) {
+    if (result.originalRate != null && result.originalRate > result.rate) {
+      costPpd.innerHTML = '<span class="cost-rate-old">$' + result.originalRate.toFixed(2) + '</span> $' + result.rate.toFixed(2);
+    } else {
+      costPpd.textContent = '$' + parseFloat(result.rate || 0).toFixed(2);
+    }
+  }
   document.getElementById('costTotal').textContent = totalStr;
 
   if (box) {
@@ -757,9 +754,9 @@ async function confirmBooking() {
     });
 
     closeModal('bookModal');
-    toast('Booking request sent. The owner will review it soon.', 'success');
+    toast('Booking request sent. Continue the conversation in Messages on your dashboard.', 'success');
     setTimeout(function () {
-      window.location.href = '/dashboard/customer/';
+      window.location.href = '/dashboard/customer/#messages';
     }, 1200);
 
   } catch (err) {

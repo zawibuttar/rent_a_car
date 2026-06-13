@@ -2,7 +2,9 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 from bookings.models import Review
+from bookings.enums import RentalDuration
 from .models import Car, CarImage
+from .enums import validate_category_type_pair
 from .booking_availability import car_booking_availability
 from .review_stats import get_car_review_summary, get_car_reviews
 from accounts.models import OwnerProfile
@@ -25,10 +27,10 @@ class CarReviewPublicSerializer(serializers.ModelSerializer):
         return format_display_name(obj.reviewer.username)
 
 RENTAL_TYPE_META = (
-    ('hourly', 'rent_hourly', 'price_per_hour'),
-    ('daily', 'rent_daily', 'price_per_day'),
-    ('weekly', 'rent_weekly', 'price_per_week'),
-    ('monthly', 'rent_monthly', 'price_per_month'),
+    (RentalDuration.HOURLY, 'rent_hourly', 'price_per_hour'),
+    (RentalDuration.DAILY, 'rent_daily', 'price_per_day'),
+    (RentalDuration.WEEKLY, 'rent_weekly', 'price_per_week'),
+    (RentalDuration.MONTHLY, 'rent_monthly', 'price_per_month'),
 )
 
 
@@ -93,7 +95,13 @@ class CarImageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uploaded_at']
 
 
-class CarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
+class CarTaxonomyDisplayMixin(serializers.Serializer):
+    """Must subclass Serializer so DRF registers declared fields on child ModelSerializers."""
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    car_type_display = serializers.CharField(source='get_car_type_display', read_only=True)
+
+
+class CarListSerializer(CarTaxonomyDisplayMixin, BookedSlotsMixin, serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
     owner_name = serializers.SerializerMethodField()
     enabled_rental_types = serializers.SerializerMethodField()
@@ -109,7 +117,8 @@ class CarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model', 'year', 'category', 'car_type', 'location', 'is_available',
+            'id', 'brand', 'model', 'year', 'category', 'category_display',
+            'car_type', 'car_type_display', 'location', 'is_available',
             'primary_image', 'owner_name',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'price_per_hour', 'price_per_day', 'price_per_week', 'price_per_month',
@@ -157,7 +166,7 @@ class CarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
         return round(float(avg), 1)
 
 
-class AdminCarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
+class AdminCarListSerializer(CarTaxonomyDisplayMixin, BookedSlotsMixin, serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
     booked_slots = serializers.SerializerMethodField()
     booked_slots_total = serializers.SerializerMethodField()
@@ -169,7 +178,8 @@ class AdminCarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model', 'year', 'category', 'car_type', 'price_per_day',
+            'id', 'brand', 'model', 'year', 'category', 'category_display',
+            'car_type', 'car_type_display', 'price_per_day',
             'location', 'is_available', 'is_approved', 'owner',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'booked_slots', 'booked_slots_total', 'is_currently_booked',
@@ -183,7 +193,7 @@ class AdminCarListSerializer(BookedSlotsMixin, serializers.ModelSerializer):
         }
 
 
-class CarDetailSerializer(BookedSlotsMixin, serializers.ModelSerializer):
+class CarDetailSerializer(CarTaxonomyDisplayMixin, BookedSlotsMixin, serializers.ModelSerializer):
     images = CarImageSerializer(many=True, read_only=True)
     owner = serializers.SerializerMethodField()
     enabled_rental_types = serializers.SerializerMethodField()
@@ -197,7 +207,8 @@ class CarDetailSerializer(BookedSlotsMixin, serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-            'id', 'owner', 'brand', 'model', 'year', 'category', 'car_type', 'description', 'location',
+            'id', 'owner', 'brand', 'model', 'year', 'category', 'category_display',
+            'car_type', 'car_type_display', 'description', 'location',
             'rent_hourly', 'rent_daily', 'rent_weekly', 'rent_monthly',
             'price_per_hour', 'price_per_day', 'price_per_week', 'price_per_month',
             'enabled_rental_types', 'is_available', 'is_approved', 'images',
@@ -266,6 +277,13 @@ class CarCreateUpdateSerializer(serializers.ModelSerializer):
                 getattr(instance, price_field, None) if instance else None,
             )
         validate_car_rental_options(merged)
+
+        category = data.get('category', getattr(instance, 'category', None) if instance else None)
+        car_type = data.get('car_type', getattr(instance, 'car_type', None) if instance else None)
+        if category is not None and car_type is not None:
+            err = validate_category_type_pair(category, car_type)
+            if err:
+                raise serializers.ValidationError({'car_type': err})
 
         # Discount validation
         discount_percentage = data.get('discount_percentage', getattr(instance, 'discount_percentage', None) if instance else None)

@@ -18,6 +18,7 @@ from bookings.models import Booking, Review
 from bookings.pricing import RENTAL_DAILY, day_end, day_start, normalize_booking_window
 from rentacar.utils import format_display_name
 from .geocoding import search_cities
+from .enums import CarCategory, CarType, taxonomy_payload
 from .models import Car
 
 
@@ -807,6 +808,115 @@ class CarCategoryTests(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['car']['category'], 'loader')
+
+
+class CarTaxonomyApiTests(APITestCase):
+    def test_taxonomy_endpoint_shape(self):
+        url = reverse('car-taxonomy')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data
+        self.assertEqual(len(data['categories']), 3)
+        self.assertEqual(data['default_category'], CarCategory.CAR)
+        type_count = sum(len(cat['types']) for cat in data['categories'])
+        self.assertEqual(type_count, 24)
+        self.assertEqual(len(data['rental_durations']), 4)
+        self.assertIn('label', data['categories'][0])
+        self.assertIn('description', data['categories'][0])
+        self.assertIn('types', data['categories'][0])
+
+    def test_taxonomy_payload_matches_enums(self):
+        payload = taxonomy_payload()
+        self.assertEqual(
+            [c['value'] for c in payload['categories']],
+            [c.value for c in CarCategory],
+        )
+        all_types = [t.value for t in CarType]
+        payload_types = []
+        for cat in payload['categories']:
+            payload_types.extend(t['value'] for t in cat['types'])
+        self.assertEqual(sorted(payload_types), sorted(all_types))
+
+
+class CarCategoryTypeValidationTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='pair_owner',
+            email='pair_owner@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key
+        )
+        self.create_url = reverse('car-create')
+
+    def test_reject_mismatched_category_and_type(self):
+        response = self.client.post(self.create_url, {
+            'brand': 'Bad',
+            'model': 'Pair',
+            'year': 2022,
+            'category': 'loader',
+            'car_type': 'sedan',
+            'description': '',
+            'location': 'Lahore',
+            'rent_daily': True,
+            'price_per_day': '100.00',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('car_type', response.data)
+
+    def test_accept_matching_category_and_type(self):
+        response = self.client.post(self.create_url, {
+            'brand': 'Good',
+            'model': 'Pair',
+            'year': 2022,
+            'category': 'loader',
+            'car_type': 'tipper_dumper',
+            'description': '',
+            'location': 'Lahore',
+            'rent_daily': True,
+            'price_per_day': '300.00',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
+class CarDisplayFieldTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='display_owner',
+            email='display_owner@example.com',
+            password='pass',
+            role=User.Role.OWNER,
+        )
+        self.car = Car.objects.create(
+            owner=self.owner,
+            brand='Mercedes',
+            model='S-Class',
+            year=2023,
+            category='luxury_car',
+            car_type='luxury_sedan',
+            description='',
+            location='Karachi',
+            price_per_day=500,
+            is_available=True,
+            is_approved=True,
+        )
+
+    def test_list_includes_display_fields(self):
+        url = reverse('car-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = next(c for c in response.data['results'] if c['brand'] == 'Mercedes')
+        self.assertEqual(row['category_display'], 'Luxury')
+        self.assertEqual(row['car_type_display'], 'Luxury Sedan')
+
+    def test_detail_includes_display_fields(self):
+        url = reverse('car-detail', kwargs={'pk': self.car.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['category_display'], 'Luxury')
+        self.assertEqual(response.data['car_type_display'], 'Luxury Sedan')
 
 
 class CarDiscountTests(APITestCase):
