@@ -170,6 +170,17 @@
             <label class="form-label" for="annBody">Body</label>
             <textarea id="annBody" class="form-control" rows="5" placeholder="Message for your audience"></textarea>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="annImage">Image (optional)</label>
+            <div class="announcement-image-field">
+              <div class="announcement-image-field__preview" id="annImagePreview" hidden>
+                <img id="annImagePreviewImg" src="" alt="">
+                <button type="button" class="btn btn-ghost btn-sm" id="annImageRemoveBtn">Remove image</button>
+              </div>
+              <input type="file" id="annImage" class="form-control" accept="image/*">
+            </div>
+            <p class="form-hint">JPG, PNG, GIF, or WebP up to 10 MB. Shown in the banner and announcement detail.</p>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="annAudience">Audience</label>

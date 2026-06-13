@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -127,3 +128,48 @@ class AnnouncementAdminTests(AnnouncementSetupMixin, APITestCase):
         _auth(self.client, self.customer)
         listed = self.client.get(reverse('announcement-list'))
         self.assertEqual(len(listed.data['data']), 0)
+
+    def test_admin_can_create_with_image(self):
+        _auth(self.client, self.admin)
+        png = SimpleUploadedFile('promo.png', b'\x89PNG\r\n\x1a\n' + b'0' * 128, content_type='image/png')
+        response = self.client.post(reverse('announcement-admin-list'), {
+            'title': 'Photo update',
+            'body': 'See the attached image.',
+            'audience': 'all',
+            'is_active': 'true',
+            'image': png,
+        }, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('image_url', response.data['data'])
+        self.assertIsNotNone(response.data['data']['image_url'])
+
+    def test_admin_rejects_non_image(self):
+        _auth(self.client, self.admin)
+        exe = SimpleUploadedFile('bad.exe', b'MZ', content_type='application/octet-stream')
+        response = self.client.post(reverse('announcement-admin-list'), {
+            'title': 'Bad file',
+            'body': 'Should fail.',
+            'audience': 'all',
+            'image': exe,
+        }, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_customer_sees_image_url(self):
+        _auth(self.client, self.admin)
+        png = SimpleUploadedFile('banner.png', b'\x89PNG\r\n\x1a\n' + b'1' * 128, content_type='image/png')
+        created = self.client.post(reverse('announcement-admin-list'), {
+            'title': 'Visual notice',
+            'body': 'With image.',
+            'audience': 'all',
+            'is_active': 'true',
+            'image': png,
+        }, format='multipart')
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED, created.data)
+        self.assertTrue(created.data['data']['is_active'])
+        _auth(self.client, self.customer)
+        response = self.client.get(reverse('announcement-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [item['title'] for item in response.data['data']]
+        self.assertIn('Visual notice', titles)
+        visual = next(item for item in response.data['data'] if item['title'] == 'Visual notice')
+        self.assertIsNotNone(visual['image_url'])

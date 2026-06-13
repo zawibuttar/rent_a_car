@@ -1,4 +1,5 @@
 from rest_framework import permissions, status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -85,6 +86,7 @@ class AnnouncementDismissBannerView(APIView):
 
 class AdminAnnouncementListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
         items = Announcement.objects.select_related('created_by').order_by('-published_at')
@@ -102,6 +104,7 @@ class AdminAnnouncementListCreateView(APIView):
 
 class AdminAnnouncementDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_object(self, pk):
         return Announcement.objects.filter(pk=pk).first()

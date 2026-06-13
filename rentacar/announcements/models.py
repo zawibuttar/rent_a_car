@@ -11,6 +11,7 @@ class Announcement(models.Model):
 
     title = models.CharField(max_length=200)
     body = models.TextField()
+    image = models.FileField(upload_to='announcements/%Y/%m/', blank=True, null=True)
     audience = models.CharField(max_length=20, choices=Audience.choices, default=Audience.ALL)
     is_active = models.BooleanField(default=True, db_index=True)
     published_at = models.DateTimeField(auto_now_add=True, db_index=True)

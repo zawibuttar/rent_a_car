@@ -101,11 +101,17 @@ const Announcements = {
   renderDetail(item) {
     var detail = document.getElementById('announcementsDetail');
     if (!detail || !item) return;
+    var imageHtml = item.image_url
+      ? '<a class="announcements-detail__image" href="' + UI.escHtml(item.image_url) + '" target="_blank" rel="noopener noreferrer">'
+        + '<img src="' + UI.escHtml(item.image_url) + '" alt="" loading="lazy" />'
+        + '</a>'
+      : '';
     detail.innerHTML = '<article class="announcements-detail__article">'
       + '<header class="announcements-detail__head">'
       + '<h3>' + UI.escHtml(item.title) + '</h3>'
       + '<time class="announcements-detail__time">' + UI.escHtml(Announcements.formatDate(item.published_at)) + '</time>'
       + '</header>'
+      + imageHtml
       + '<div class="announcements-detail__body">' + UI.escHtml(item.body).replace(/\n/g, '<br>') + '</div>'
       + '</article>';
   },

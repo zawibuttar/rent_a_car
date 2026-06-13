@@ -4,6 +4,8 @@
 const AnnouncementsAdmin = {
   items: [],
   editingId: null,
+  removeImage: false,
+  pendingPreviewUrl: null,
 
   audienceLabel(value) {
     var map = { all: 'All users', customers: 'Customers', owners: 'Owners' };
@@ -83,6 +85,74 @@ const AnnouncementsAdmin = {
     return UI.isoFromLocalDateTime(dateEl.value, timeEl ? timeEl.value : '', '23:59');
   },
 
+  resetImageField() {
+    AnnouncementsAdmin.removeImage = false;
+    var input = document.getElementById('annImage');
+    if (input) input.value = '';
+    if (AnnouncementsAdmin.pendingPreviewUrl) {
+      URL.revokeObjectURL(AnnouncementsAdmin.pendingPreviewUrl);
+      AnnouncementsAdmin.pendingPreviewUrl = null;
+    }
+    AnnouncementsAdmin.setImagePreview('');
+  },
+
+  setImagePreview(url) {
+    var wrap = document.getElementById('annImagePreview');
+    var img = document.getElementById('annImagePreviewImg');
+    if (!wrap || !img) return;
+    if (url) {
+      img.src = url;
+      wrap.hidden = false;
+    } else {
+      img.removeAttribute('src');
+      wrap.hidden = true;
+    }
+  },
+
+  onImageSelected() {
+    var input = document.getElementById('annImage');
+    if (!input || !input.files || !input.files[0]) return;
+    AnnouncementsAdmin.removeImage = false;
+    if (AnnouncementsAdmin.pendingPreviewUrl) {
+      URL.revokeObjectURL(AnnouncementsAdmin.pendingPreviewUrl);
+    }
+    AnnouncementsAdmin.pendingPreviewUrl = URL.createObjectURL(input.files[0]);
+    AnnouncementsAdmin.setImagePreview(AnnouncementsAdmin.pendingPreviewUrl);
+  },
+
+  markImageForRemoval() {
+    AnnouncementsAdmin.removeImage = true;
+    var input = document.getElementById('annImage');
+    if (input) input.value = '';
+    if (AnnouncementsAdmin.pendingPreviewUrl) {
+      URL.revokeObjectURL(AnnouncementsAdmin.pendingPreviewUrl);
+      AnnouncementsAdmin.pendingPreviewUrl = null;
+    }
+    AnnouncementsAdmin.setImagePreview('');
+  },
+
+  buildFormData() {
+    var title = document.getElementById('annTitle').value.trim();
+    var body = document.getElementById('annBody').value.trim();
+    var audience = document.getElementById('annAudience').value;
+    var isActive = document.getElementById('annActive').checked;
+    var expiresAt = AnnouncementsAdmin.getExpiresValue();
+    var fd = new FormData();
+    fd.append('title', title);
+    fd.append('body', body);
+    fd.append('audience', audience);
+    fd.append('is_active', isActive ? 'true' : 'false');
+    if (expiresAt) fd.append('expires_at', expiresAt);
+    var imageInput = document.getElementById('annImage');
+    if (imageInput && imageInput.files && imageInput.files[0]) {
+      fd.append('image', imageInput.files[0]);
+    }
+    if (AnnouncementsAdmin.removeImage) {
+      fd.append('remove_image', 'true');
+    }
+    return fd;
+  },
+
   resetForm() {
     AnnouncementsAdmin.editingId = null;
     document.getElementById('annTitle').value = '';
@@ -90,6 +160,7 @@ const AnnouncementsAdmin = {
     document.getElementById('annAudience').value = 'all';
     document.getElementById('annActive').checked = true;
     AnnouncementsAdmin.resetExpiresFields();
+    AnnouncementsAdmin.resetImageField();
     var label = document.getElementById('annFormTitle');
     if (label) label.textContent = 'New announcement';
   },
@@ -109,6 +180,14 @@ const AnnouncementsAdmin = {
     document.getElementById('annAudience').value = item.audience;
     document.getElementById('annActive').checked = !!item.is_active;
     AnnouncementsAdmin.setExpiresFields(item.expires_at || '');
+    AnnouncementsAdmin.removeImage = false;
+    var imageInput = document.getElementById('annImage');
+    if (imageInput) imageInput.value = '';
+    if (AnnouncementsAdmin.pendingPreviewUrl) {
+      URL.revokeObjectURL(AnnouncementsAdmin.pendingPreviewUrl);
+      AnnouncementsAdmin.pendingPreviewUrl = null;
+    }
+    AnnouncementsAdmin.setImagePreview(item.image_url || '');
     var label = document.getElementById('annFormTitle');
     if (label) label.textContent = 'Edit announcement';
     AnnouncementsAdmin.showForm(true);
@@ -122,28 +201,19 @@ const AnnouncementsAdmin = {
   async save() {
     var title = document.getElementById('annTitle').value.trim();
     var body = document.getElementById('annBody').value.trim();
-    var audience = document.getElementById('annAudience').value;
-    var isActive = document.getElementById('annActive').checked;
-    var expiresAt = AnnouncementsAdmin.getExpiresValue();
     if (!title || !body) {
       toast('Title and body are required.', 'error');
       return;
     }
-    var payload = {
-      title: title,
-      body: body,
-      audience: audience,
-      is_active: isActive,
-      expires_at: expiresAt,
-    };
+    var fd = AnnouncementsAdmin.buildFormData();
     var btn = document.getElementById('annSaveBtn');
     if (btn) btn.disabled = true;
     try {
       if (AnnouncementsAdmin.editingId) {
-        await API.patch('/api/announcements/admin/' + AnnouncementsAdmin.editingId + '/', payload);
+        await API.uploadPatch('/api/announcements/admin/' + AnnouncementsAdmin.editingId + '/', fd);
         toast('Announcement updated.', 'success');
       } else {
-        await API.post('/api/announcements/admin/', payload);
+        await API.upload('/api/announcements/admin/', fd);
         toast('Announcement published.', 'success');
       }
       AnnouncementsAdmin.cancelForm();
@@ -188,6 +258,10 @@ const AnnouncementsAdmin = {
     if (cancelBtn) cancelBtn.addEventListener('click', AnnouncementsAdmin.cancelForm);
     var createBtn = document.getElementById('annCreateBtn');
     if (createBtn) createBtn.addEventListener('click', AnnouncementsAdmin.startCreate);
+    var imageInput = document.getElementById('annImage');
+    if (imageInput) imageInput.addEventListener('change', AnnouncementsAdmin.onImageSelected);
+    var imageRemoveBtn = document.getElementById('annImageRemoveBtn');
+    if (imageRemoveBtn) imageRemoveBtn.addEventListener('click', AnnouncementsAdmin.markImageForRemoval);
   },
 };
 
