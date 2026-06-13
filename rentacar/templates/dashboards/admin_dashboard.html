@@ -6,45 +6,7 @@
 <div class="dash-layout role-admin">
 
   <!-- ── Sidebar ── -->
-  <aside class="sidebar">
-    <div class="sidebar-user">
-      <div class="sidebar-avatar" id="sAvatar"></div>
-      <div>
-        <div class="sidebar-name" id="sName"></div>
-        <span class="sidebar-role">Admin</span>
-      </div>
-    </div>
-
-    <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
-      </button>
-      <button class="s-item" id="btn-cars" onclick="showTab('cars', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
-      </button>
-      <button class="s-item" id="btn-owners" onclick="showTab('owners', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
-        <span>Owner Verifications</span>
-        <span class="s-badge" id="pendingOwnersBadge" hidden></span>
-      </button>
-      <a class="s-item" id="btn-social" href="/dashboard/admin/social-media/">
-        <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
-        Social Media
-      </a>
-      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
-      </button>
-      <button class="s-item" id="btn-messages" onclick="showTab('messages', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
-        <span>Messages</span>
-        <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
-      </button>
-      <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">
-        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
-      </button>
-    </div>
-  </aside>
+  {% include 'includes/admin_sidebar.html' with nav_mode='spa' %}
 
   <!-- ── Main ── -->
   <div class="dash-main">
@@ -185,6 +147,77 @@
 
     </div>
 
+    <!-- ══ ANNOUNCEMENTS TAB ══ -->
+    <div class="tab-panel" id="tab-announcements">
+      <div class="page-head">
+        <div>
+          <h1>Announcements</h1>
+          <p>Broadcast platform updates to customers and owners</p>
+        </div>
+        <button type="button" class="btn btn-primary" id="annCreateBtn">+ New announcement</button>
+      </div>
+
+      <div class="card" id="annAdminForm" hidden>
+        <div class="card-head">
+          <h2 id="annFormTitle">New announcement</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="annTitle">Title</label>
+            <input type="text" id="annTitle" class="form-control" maxlength="200" placeholder="Announcement title">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="annBody">Body</label>
+            <textarea id="annBody" class="form-control" rows="5" placeholder="Message for your audience"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="annAudience">Audience</label>
+              <select id="annAudience" class="form-control">
+                <option value="all">All users</option>
+                <option value="customers">Customers only</option>
+                <option value="owners">Owners only</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="annExpiresDate">Expires (optional)</label>
+              <div class="datetime-picker">
+                <input type="date" id="annExpiresDate" class="form-control datetime-picker__date" aria-label="Expiry date">
+                <input type="time" id="annExpiresTime" class="form-control datetime-picker__time" aria-label="Expiry time">
+              </div>
+              <p class="form-hint">Leave blank to keep visible until deactivated. If only a date is set, expiry defaults to 11:59 PM.</p>
+            </div>
+          </div>
+          <label class="form-check">
+            <input type="checkbox" id="annActive" checked>
+            <span>Active (visible to audience)</span>
+          </label>
+          <div class="form-actions">
+            <button type="button" class="btn btn-primary" id="annSaveBtn">Save</button>
+            <button type="button" class="btn btn-ghost" id="annCancelBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>No.</th><th>Title</th><th>Audience</th><th>Status</th>
+                <th>Published</th><th class="col-hide-sm">Expires</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="annAdminTable">
+              <tr><td colspan="7">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ MESSAGES TAB ══ -->
     <div class="tab-panel" id="tab-messages">
       <div class="page-head">
@@ -236,6 +269,7 @@
 
 {% block scripts %}
 <script src="{% static 'js/messaging.js' %}"></script>
+<script src="{% static 'js/announcements_admin.js' %}"></script>
 <script>
 /* ── Guard ──────────────────────────── */
 const user = API.getUser();
@@ -267,6 +301,7 @@ function showTab(name, btn) {
       if (n === 'cars') fetchAdminCarsList();
       if (n === 'owners') fetchAdminOwnersList();
       if (n === 'bookings') fetchAdminBookingsList();
+      if (n === 'announcements') AnnouncementsAdmin.load();
       if (n === 'messages') {
         Messaging.activate();
       } else {
@@ -747,7 +782,7 @@ UI.initTableFilters({
 if (!UI.openDashboardTabFromHash()) {
   const params = new URLSearchParams(window.location.search);
   const initialTab = params.get('tab');
-  if (initialTab && ['overview', 'cars', 'owners', 'bookings', 'messages'].includes(initialTab)) {
+  if (initialTab && ['overview', 'cars', 'owners', 'bookings', 'announcements', 'messages'].includes(initialTab)) {
     const btn = document.getElementById('btn-' + initialTab);
     if (btn) showTab(initialTab, btn);
     else loadOverview();
@@ -756,5 +791,6 @@ if (!UI.openDashboardTabFromHash()) {
   }
 }
 Messaging.mount();
+AnnouncementsAdmin.mount();
 </script>
 {% endblock %}

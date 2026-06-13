@@ -46,12 +46,18 @@ class MessageSerializer(serializers.ModelSerializer):
     is_read = serializers.SerializerMethodField()
     maps_url = serializers.SerializerMethodField()
     map_preview_url = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
+    attachment_name = serializers.SerializerMethodField()
+    attachment_is_image = serializers.SerializerMethodField()
+    attachment_size = serializers.SerializerMethodField()
 
     class Meta:
         model = BookingMessage
         fields = [
             'id', 'message_type', 'sender_id', 'sender_name', 'sender_role',
-            'body', 'metadata', 'maps_url', 'map_preview_url', 'created_at', 'is_own', 'is_read',
+            'body', 'metadata', 'maps_url', 'map_preview_url',
+            'attachment_url', 'attachment_name', 'attachment_is_image', 'attachment_size',
+            'created_at', 'is_own', 'is_read',
         ]
         read_only_fields = fields
 
@@ -95,10 +101,38 @@ class MessageSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return map_preview_absolute_url(lat, lng, request=request)
 
+    def get_attachment_url(self, obj):
+        if obj.message_type != BookingMessage.MessageType.ATTACHMENT or not obj.attachment:
+            return None
+        request = self.context.get('request')
+        url = obj.attachment.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+    def get_attachment_name(self, obj):
+        if obj.message_type != BookingMessage.MessageType.ATTACHMENT:
+            return None
+        return (obj.metadata or {}).get('original_filename') or obj.body
+
+    def get_attachment_is_image(self, obj):
+        if obj.message_type != BookingMessage.MessageType.ATTACHMENT:
+            return False
+        return bool((obj.metadata or {}).get('is_image'))
+
+    def get_attachment_size(self, obj):
+        if obj.message_type != BookingMessage.MessageType.ATTACHMENT:
+            return None
+        return (obj.metadata or {}).get('size_bytes')
+
 
 class SendMessageSerializer(serializers.Serializer):
     message_type = serializers.ChoiceField(
-        choices=[BookingMessage.MessageType.TEXT, BookingMessage.MessageType.LOCATION],
+        choices=[
+            BookingMessage.MessageType.TEXT,
+            BookingMessage.MessageType.LOCATION,
+            BookingMessage.MessageType.ATTACHMENT,
+        ],
         default=BookingMessage.MessageType.TEXT,
         required=False,
     )
@@ -110,6 +144,9 @@ class SendMessageSerializer(serializers.Serializer):
 
     def validate(self, data):
         message_type = data.get('message_type') or BookingMessage.MessageType.TEXT
+        if message_type == BookingMessage.MessageType.ATTACHMENT:
+            data['body'] = (data.get('body') or '').strip()
+            return data
         if message_type == BookingMessage.MessageType.LOCATION:
             if data.get('latitude') is None or data.get('longitude') is None:
                 raise serializers.ValidationError(

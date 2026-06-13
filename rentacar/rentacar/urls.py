@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/cars/', include('cars.urls')),
     path('api/bookings/', include('bookings.urls')),
     path('api/messaging/', include('messaging.urls')),
+    path('api/announcements/', include('announcements.urls')),
 
 # Frontend pages
     path('', page_views.home, name='home'),

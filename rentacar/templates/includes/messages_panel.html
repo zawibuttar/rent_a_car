@@ -44,6 +44,12 @@
     <div class="messages-thread__compose" id="msgCompose" hidden>
       <div class="messages-compose">
         <div class="messages-compose__tools">
+          <button type="button" class="messages-compose__tool" id="msgAttachBtn"
+            title="Attach file" aria-label="Attach file">
+            <svg class="icon" aria-hidden="true"><use href="#icon-paperclip"/></svg>
+          </button>
+          <input type="file" class="visually-hidden" id="msgFileInput"
+            accept="image/*,.pdf,.doc,.docx,.txt" />
           <button type="button" class="messages-compose__tool" id="msgLocationBtn"
             title="Send current location" aria-label="Send current location">
             <svg class="icon" aria-hidden="true"><use href="#icon-pin"/></svg>

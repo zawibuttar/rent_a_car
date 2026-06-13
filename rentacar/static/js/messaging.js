@@ -52,6 +52,13 @@ const Messaging = {
     });
   },
 
+  formatFileSize(bytes) {
+    var n = parseInt(bytes, 10) || 0;
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1048576).toFixed(1) + ' MB';
+  },
+
   formatDayLabel(dateStr) {
     if (!dateStr) return '';
     var d = new Date(dateStr);
@@ -325,6 +332,51 @@ const Messaging = {
         + '</div>';
     }
 
+    if (m.message_type === 'attachment') {
+      var ownAtt = m.is_own ? ' messages-bubble--own' : ' messages-bubble--other';
+      var readMarkAtt = Messaging.readReceiptHtml(m);
+      var attName = UI.escHtml(m.attachment_name || m.body || 'Attachment');
+      var attUrl = m.attachment_url || m._local_preview || '#';
+      var attSize = m.attachment_size ? Messaging.formatFileSize(m.attachment_size) : '';
+      var caption = (m.body && m.body !== m.attachment_name) ? '<div class="messages-attachment__caption">' + UI.escHtml(m.body) + '</div>' : '';
+      var preview = '';
+      if (m.attachment_is_image && attUrl && attUrl !== '#') {
+        preview = '<a class="messages-attachment__preview" href="' + UI.escHtml(attUrl) + '" target="_blank" rel="noopener noreferrer">'
+          + '<img src="' + UI.escHtml(attUrl) + '" alt="" loading="lazy" />'
+          + '</a>';
+      } else {
+        preview = '<div class="messages-attachment__doc">'
+          + '<span class="messages-attachment__doc-icon">' + UI.icon('file', 'icon') + '</span>'
+          + '<div class="messages-attachment__doc-body">'
+          + '<div class="messages-attachment__doc-name">' + attName + '</div>'
+          + (attSize ? '<div class="messages-attachment__doc-size">' + UI.escHtml(attSize) + '</div>' : '')
+          + '</div></div>';
+      }
+      var actionBtns = '';
+      if (attUrl && attUrl !== '#') {
+        if (m.attachment_is_image) {
+          actionBtns = '<a class="messages-attachment__btn btn btn-sm" href="' + UI.escHtml(attUrl) + '" target="_blank" rel="noopener noreferrer" download>Download</a>';
+        } else {
+          actionBtns = '<div class="messages-attachment__actions">'
+            + '<a class="messages-attachment__btn btn btn-sm btn-primary" href="' + UI.escHtml(attUrl) + '" target="_blank" rel="noopener noreferrer">View</a>'
+            + '<a class="messages-attachment__btn btn btn-sm btn-ghost" href="' + UI.escHtml(attUrl) + '" target="_blank" rel="noopener noreferrer" download>Download</a>'
+            + '</div>';
+        }
+      }
+      return '<div class="messages-bubble messages-bubble--attachment' + ownAtt + pending + failed + '" role="article" data-message-id="' + UI.escHtml(String(m.id)) + '">'
+        + (m.is_own || !showSender ? '' : '<div class="messages-bubble__sender">' + UI.escHtml(m.sender_name) + '</div>')
+        + '<div class="messages-attachment-card">'
+        + preview
+        + '<div class="messages-attachment-card__body">'
+        + (m.attachment_is_image ? '<div class="messages-attachment__label">' + UI.icon('paperclip', 'icon icon-inline') + ' ' + attName + '</div>' : '')
+        + caption
+        + actionBtns
+        + '</div></div>'
+        + Messaging.messageFootHtml(m, readMarkAtt)
+        + (m._failed ? Messaging.failedActionsHtml(m) : '')
+        + '</div>';
+    }
+
     var own = m.is_own ? ' messages-bubble--own' : ' messages-bubble--other';
     var readMark = Messaging.readReceiptHtml(m);
     return '<div class="messages-bubble' + own + pending + failed + '" role="article" data-message-id="' + UI.escHtml(String(m.id)) + '">'
@@ -382,6 +434,7 @@ const Messaging = {
       var sameSender = !m.is_own
         && m.message_type !== 'system'
         && m.message_type !== 'location'
+        && m.message_type !== 'attachment'
         && m.sender_id
         && m.sender_id === lastSender;
       var bubble = Messaging.buildMessageHtml(m, { showSender: !sameSender });
@@ -486,6 +539,8 @@ const Messaging = {
     var pane = document.getElementById('msgThreadPane');
     var input = document.getElementById('msgInput');
     var locBtn = document.getElementById('msgLocationBtn');
+    var attachBtn = document.getElementById('msgAttachBtn');
+    var fileInput = document.getElementById('msgFileInput');
     var sendBtn = document.getElementById('msgSendBtn');
     var open = !!isOpen;
 
@@ -500,6 +555,8 @@ const Messaging = {
       compose.hidden = false;
       if (input) input.disabled = false;
       if (locBtn) locBtn.disabled = false;
+      if (attachBtn) attachBtn.disabled = false;
+      if (fileInput) fileInput.disabled = false;
       if (sendBtn) sendBtn.disabled = !((input && input.value.trim()));
     } else {
       compose.hidden = true;
@@ -508,6 +565,11 @@ const Messaging = {
         input.disabled = true;
       }
       if (locBtn) locBtn.disabled = true;
+      if (attachBtn) attachBtn.disabled = true;
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.disabled = true;
+      }
       if (sendBtn) sendBtn.disabled = true;
     }
     Messaging.autoResizeInput();
@@ -724,6 +786,69 @@ const Messaging = {
     });
   },
 
+  sendAttachment(file) {
+    if (!file || !Messaging.activeBookingId) return;
+    var attachBtn = document.getElementById('msgAttachBtn');
+    var fileInput = document.getElementById('msgFileInput');
+    var input = document.getElementById('msgInput');
+    var caption = input ? input.value.trim() : '';
+    var isImage = (file.type || '').indexOf('image/') === 0;
+    var localPreview = isImage ? URL.createObjectURL(file) : null;
+
+    var pending = Messaging.addPendingMessage({
+      message_type: 'attachment',
+      body: caption || file.name,
+      attachment_name: file.name,
+      attachment_size: file.size,
+      attachment_is_image: isImage,
+      _local_preview: localPreview,
+      sender_name: 'You',
+    });
+
+    if (attachBtn) attachBtn.disabled = true;
+    if (attachBtn) attachBtn.classList.add('messages-compose__tool--loading');
+
+    Messaging.fetchMessages(Messaging.activeBookingId).then(function (data) {
+      Messaging.renderMessages((data && data.messages) || [], { forceScroll: true });
+    }).catch(function () {});
+
+    var fd = new FormData();
+    fd.append('message_type', 'attachment');
+    fd.append('file', file);
+    if (caption) fd.append('body', caption);
+
+    API.upload('/api/messaging/threads/' + Messaging.activeBookingId + '/messages/', fd)
+      .then(function () {
+        if (localPreview) URL.revokeObjectURL(localPreview);
+        Messaging.pendingMessages = Messaging.pendingMessages.filter(function (m) { return m.id !== pending.id; });
+        if (input) input.value = '';
+        Messaging.syncComposeState();
+        return Messaging.loadThread(Messaging.activeBookingId, true);
+      })
+      .then(function () {
+        return Messaging.fetchThreads();
+      })
+      .then(function () {
+        Messaging.renderThreadList();
+        Messaging.updateUnreadBadge();
+      })
+      .catch(function (err) {
+        pending._pending = false;
+        pending._failed = true;
+        toast(err.message, 'error');
+        Messaging.fetchMessages(Messaging.activeBookingId).then(function (data) {
+          Messaging.renderMessages((data && data.messages) || [], { forceScroll: true });
+        }).catch(function () {});
+      })
+      .finally(function () {
+        if (fileInput) fileInput.value = '';
+        if (attachBtn) {
+          attachBtn.disabled = false;
+          attachBtn.classList.remove('messages-compose__tool--loading');
+        }
+      });
+  },
+
   viewBooking(bookingId) {
     var btn = document.getElementById('btn-bookings') || document.getElementById('btn-requests');
     var tab = document.getElementById('btn-requests') && btn && btn.id === 'btn-requests' ? 'requests' : 'bookings';
@@ -837,6 +962,17 @@ const Messaging = {
 
     var locBtn = document.getElementById('msgLocationBtn');
     if (locBtn) locBtn.addEventListener('click', Messaging.sendCurrentLocation);
+
+    var attachBtn = document.getElementById('msgAttachBtn');
+    var fileInput = document.getElementById('msgFileInput');
+    if (attachBtn && fileInput) {
+      attachBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files[0]) {
+          Messaging.sendAttachment(fileInput.files[0]);
+        }
+      });
+    }
 
     var input = document.getElementById('msgInput');
     if (input) {

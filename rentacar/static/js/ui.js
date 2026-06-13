@@ -19,6 +19,34 @@ const UI = {
     return '<svg class="' + className + '" aria-hidden="true"><use href="#icon-' + name + '"/></svg>';
   },
 
+  localDateInputValue(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  },
+
+  localTimeInputValue(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return h + ':' + min;
+  },
+
+  todayLocalDateValue() {
+    return UI.localDateInputValue(new Date());
+  },
+
+  isoFromLocalDateTime(dateStr, timeStr, defaultTime) {
+    if (!dateStr) return null;
+    const time = timeStr || defaultTime || '23:59';
+    const parsed = new Date(dateStr + 'T' + time);
+    if (isNaN(parsed.getTime())) return null;
+    return parsed.toISOString();
+  },
+
   initTheme() {
     const saved = localStorage.getItem('theme');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;

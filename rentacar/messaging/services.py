@@ -66,6 +66,28 @@ def create_location_message(booking, sender, latitude, longitude, label='', accu
     )
 
 
+def create_attachment_message(booking, sender, file_obj, caption=''):
+    from rentacar.message_attachment_validation import attachment_is_image
+
+    original_name = getattr(file_obj, 'name', '') or 'attachment'
+    content_type = getattr(file_obj, 'content_type', '') or ''
+    caption = (caption or '').strip()
+    metadata = {
+        'original_filename': original_name,
+        'content_type': content_type,
+        'size_bytes': file_obj.size,
+        'is_image': attachment_is_image(file_obj),
+    }
+    return BookingMessage.objects.create(
+        booking=booking,
+        sender=sender,
+        message_type=BookingMessage.MessageType.ATTACHMENT,
+        body=caption or original_name,
+        metadata=metadata,
+        attachment=file_obj,
+    )
+
+
 def create_note_message(booking, customer, note):
     note = (note or '').strip()
     if not note:
@@ -197,6 +219,12 @@ def last_message_preview(message):
         if message.sender_id:
             prefix = f'{sender_display_name(message.sender)}: '
         return f'{prefix}📍 {label}'
+    if message.message_type == BookingMessage.MessageType.ATTACHMENT:
+        filename = (message.metadata or {}).get('original_filename') or message.body or 'Attachment'
+        prefix = ''
+        if message.sender_id:
+            prefix = f'{sender_display_name(message.sender)}: '
+        return f'{prefix}📎 {filename}'
     prefix = ''
     if message.sender_id:
         prefix = f'{sender_display_name(message.sender)}: '

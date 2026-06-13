@@ -2,6 +2,7 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -223,6 +224,56 @@ class MessagingMessagesTests(MessagingSetupMixin, APITestCase):
         self.assertEqual(ctx['car_label'], 'Toyota Corolla (2022)')
         self.assertEqual(ctx['car_location'], 'Lahore')
         self.assertIn('other_party_name', ctx)
+
+    def test_customer_can_send_image_attachment(self):
+        _auth(self.client, self.customer)
+        url = reverse('messaging-thread-messages', kwargs={'booking_id': self.booking.pk})
+        png = SimpleUploadedFile('license.png', b'\x89PNG\r\n\x1a\n' + b'0' * 128, content_type='image/png')
+        response = self.client.post(url, {
+            'message_type': 'attachment',
+            'body': 'My license',
+            'file': png,
+        }, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.data['data']
+        self.assertEqual(data['message_type'], 'attachment')
+        self.assertTrue(data['attachment_is_image'])
+        self.assertIn('license.png', data['attachment_name'])
+        self.assertIsNotNone(data['attachment_url'])
+
+    def test_owner_can_send_pdf_attachment(self):
+        _auth(self.client, self.owner)
+        url = reverse('messaging-thread-messages', kwargs={'booking_id': self.booking.pk})
+        pdf = SimpleUploadedFile('contract.pdf', b'%PDF-1.4 test content', content_type='application/pdf')
+        response = self.client.post(url, {
+            'message_type': 'attachment',
+            'file': pdf,
+        }, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.data['data']
+        self.assertFalse(data['attachment_is_image'])
+        self.assertEqual(data['attachment_name'], 'contract.pdf')
+
+    def test_attachment_rejects_disallowed_type(self):
+        _auth(self.client, self.customer)
+        url = reverse('messaging-thread-messages', kwargs={'booking_id': self.booking.pk})
+        exe = SimpleUploadedFile('virus.exe', b'MZ', content_type='application/octet-stream')
+        response = self.client.post(url, {'file': exe}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_thread_preview_shows_attachment(self):
+        BookingMessage.objects.create(
+            booking=self.booking,
+            sender=self.customer,
+            message_type=BookingMessage.MessageType.ATTACHMENT,
+            body='ID scan',
+            metadata={'original_filename': 'id.pdf', 'is_image': False, 'size_bytes': 1024},
+        )
+        _auth(self.client, self.owner)
+        response = self.client.get(reverse('messaging-threads'))
+        preview = response.data['data'][0]['last_message']
+        self.assertIn('📎', preview)
+        self.assertIn('id.pdf', preview)
 
 
 class MapPreviewTests(MessagingSetupMixin, APITestCase):

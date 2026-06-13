@@ -1,7 +1,9 @@
 from rest_framework import permissions, status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from rentacar.message_attachment_validation import validate_message_attachment_file
 from rentacar.throttling import BookingRateThrottle
 
 from .map_preview import map_preview_response
@@ -9,6 +11,7 @@ from .permissions import can_post_message
 from .serializers import MessageSerializer, SendMessageSerializer, ThreadContextSerializer, ThreadSummarySerializer
 from .services import (
     counterparty_read_at,
+    create_attachment_message,
     create_location_message,
     create_text_message,
     get_booking_for_user,
@@ -38,6 +41,7 @@ class UnreadCountView(APIView):
 
 class ThreadMessagesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request, booking_id):
         booking = get_booking_for_user(request.user, booking_id)
@@ -75,22 +79,34 @@ class ThreadMessagesView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = SendMessageSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        validated = serializer.validated_data
-        if validated.get('message_type') == BookingMessage.MessageType.LOCATION:
-            message = create_location_message(
-                booking,
-                request.user,
-                latitude=float(validated['latitude']),
-                longitude=float(validated['longitude']),
-                label=validated.get('body', ''),
-                accuracy=validated.get('accuracy'),
-            )
+        upload_file = request.FILES.get('file')
+        message_type = request.data.get('message_type') or BookingMessage.MessageType.TEXT
+        if upload_file or message_type == BookingMessage.MessageType.ATTACHMENT:
+            if not upload_file:
+                return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+            err = validate_message_attachment_file(upload_file)
+            if err:
+                return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
+            caption = (request.data.get('body') or '').strip()
+            message = create_attachment_message(booking, request.user, upload_file, caption=caption)
         else:
-            message = create_text_message(booking, request.user, validated['body'])
+            serializer = SendMessageSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            validated = serializer.validated_data
+            if validated.get('message_type') == BookingMessage.MessageType.LOCATION:
+                message = create_location_message(
+                    booking,
+                    request.user,
+                    latitude=float(validated['latitude']),
+                    longitude=float(validated['longitude']),
+                    label=validated.get('body', ''),
+                    accuracy=validated.get('accuracy'),
+                )
+            else:
+                message = create_text_message(booking, request.user, validated['body'])
+
         mark_thread_read(booking, request.user)
         read_at = counterparty_read_at(booking, request.user)
         out = MessageSerializer(

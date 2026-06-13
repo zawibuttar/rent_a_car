@@ -27,6 +27,11 @@
         <span>Messages</span>
         <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
       </button>
+      <button class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg>
+        <span>Announcements</span>
+        <span class="s-badge" id="annUnreadBadge" data-ann-unread-badge hidden></span>
+      </button>
       <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
@@ -45,6 +50,7 @@
 
   <!-- ── Main ── -->
   <div class="dash-main">
+    {% include 'includes/announcement_banner.html' %}
 
     <!-- OVERVIEW TAB -->
     <div class="tab-panel active" id="tab-overview">
@@ -168,6 +174,17 @@
         </div>
       </div>
       {% include 'includes/messages_panel.html' %}
+    </div>
+
+    <!-- ANNOUNCEMENTS TAB -->
+    <div class="tab-panel" id="tab-announcements">
+      <div class="page-head">
+        <div>
+          <h1>Announcements</h1>
+          <p>Platform updates and notices from RentACar</p>
+        </div>
+      </div>
+      {% include 'includes/announcements_panel.html' %}
     </div>
 
     <!-- PROFILE TAB -->
@@ -336,6 +353,7 @@
 
 {% block scripts %}
 <script src="{% static 'js/messaging.js' %}"></script>
+<script src="{% static 'js/announcements.js' %}"></script>
 <script>
   /* ── Guard ─────────────────────────── */
   if (!API.loggedIn() || API.role() !== 'customer') {
@@ -371,6 +389,11 @@
           Messaging.activate();
         } else {
           Messaging.deactivate();
+        }
+        if (n === 'announcements') {
+          Announcements.activate();
+        } else {
+          Announcements.deactivate();
         }
         if (n === 'profile') loadProfile();
       },
@@ -677,5 +700,6 @@
     loadOverview();
   }
   Messaging.mount();
+  Announcements.mount();
 </script>
 {% endblock %}

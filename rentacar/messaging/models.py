@@ -9,6 +9,7 @@ class BookingMessage(models.Model):
         TEXT = 'text', 'Text'
         SYSTEM = 'system', 'System'
         LOCATION = 'location', 'Location'
+        ATTACHMENT = 'attachment', 'Attachment'
 
     booking = models.ForeignKey(
         Booking,
@@ -29,6 +30,7 @@ class BookingMessage(models.Model):
     )
     body = models.TextField()
     metadata = models.JSONField(blank=True, null=True)
+    attachment = models.FileField(upload_to='message_attachments/%Y/%m/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:

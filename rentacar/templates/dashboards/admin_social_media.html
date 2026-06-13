@@ -1,43 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Social Media Management — RentACar{% endblock %}
 
 {% block content %}
 <div class="dash-layout role-admin">
 
   <!-- ── Sidebar ── -->
-  <aside class="sidebar">
-    <div class="sidebar-user">
-      <div class="sidebar-avatar" id="sAvatar"></div>
-      <div>
-        <div class="sidebar-name" id="sName"></div>
-        <span class="sidebar-role">Admin</span>
-      </div>
-    </div>
-
-    <div class="sidebar-menu">
-      <a href="/dashboard/admin/?tab=overview" class="s-item" id="btn-overview">
-        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
-      </a>
-      <a href="/dashboard/admin/?tab=cars" class="s-item" id="btn-cars">
-        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
-      </a>
-      <a href="/dashboard/admin/?tab=owners" class="s-item" id="btn-owners">
-        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
-        <span>Owner Verifications</span>
-      </a>
-      <a href="/dashboard/admin/social-media/" class="s-item active" id="btn-social">
-        <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
-        Social Media
-      </a>
-      <a href="/dashboard/admin/?tab=bookings" class="s-item" id="btn-bookings">
-        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
-      </a>
-      <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">
-        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
-      </button>
-    </div>
-  </aside>
+  {% include 'includes/admin_sidebar.html' with nav_mode='links' active_nav='social' %}
 
   <!-- ── Main ── -->
   <div class="dash-main">
@@ -130,6 +99,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/messaging.js' %}"></script>
 <script>
 /* ── Guard ──────────────────────────── */
 const user = API.getUser();
@@ -304,5 +274,23 @@ async function deleteSocialMediaLink(id) {
 
 document.getElementById('socialPlatform').addEventListener('change', toggleSocialPlatformCustom);
 fetchSocialMediaList();
+
+function updatePendingOwnersBadge(count) {
+  var badge = document.getElementById('pendingOwnersBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.hidden = false;
+    badge.textContent = count > 99 ? '99+' : String(count);
+  } else {
+    badge.hidden = true;
+    badge.textContent = '';
+  }
+}
+
+Messaging.updateUnreadBadge();
+API.fetchAllPages('/api/accounts/admin/owners/').then(function (owners) {
+  var pending = owners.filter(function (o) { return !o.is_verified; }).length;
+  updatePendingOwnersBadge(pending);
+}).catch(function () {});
 </script>
 {% endblock %}

@@ -47,6 +47,7 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 # Upload limits (car images)
 CAR_IMAGE_MAX_BYTES = int(os.getenv('CAR_IMAGE_MAX_BYTES', str(10 * 1024 * 1024)))
 CAR_IMAGE_MAX_COUNT = int(os.getenv('CAR_IMAGE_MAX_COUNT', '10'))
+MESSAGE_ATTACHMENT_MAX_BYTES = int(os.getenv('MESSAGE_ATTACHMENT_MAX_BYTES', str(10 * 1024 * 1024)))
 
 # Cache (Redis when CACHE_ENABLED=1, else in-memory for local dev)
 CACHE_ENABLED = os.getenv('CACHE_ENABLED', '0').lower() in ('1', 'true', 'yes')
@@ -88,6 +89,7 @@ INSTALLED_APPS = [
     'cars',
     'bookings',
     'messaging',
+    'announcements',
 
     # Third-party apps
     'rest_framework',
