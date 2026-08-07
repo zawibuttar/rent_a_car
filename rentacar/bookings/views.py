@@ -18,6 +18,8 @@ from rentacar.throttling import AdminRateThrottle, BookingRateThrottle
 from .filters import BookingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as drf_filters
+from messaging.hooks import on_booking_created, on_booking_note, on_booking_status_changed
+from messaging.services import sender_display_name
 
 # Create your views here.
 
@@ -30,6 +32,9 @@ class BookingCreateView(APIView):
         if serializer.is_valid():
             booking = serializer.save()
             booking = Booking.objects.select_related('car__owner', 'customer').prefetch_related('car__images').get(pk=booking.pk)
+            on_booking_created(booking)
+            if booking.note:
+                on_booking_note(booking, booking.customer, booking.note)
             invalidate_booking_caches(
                 user_id=request.user.id,
                 owner_id=booking.car.owner_id,
@@ -85,6 +90,7 @@ class CancelBookingView(APIView):
 
         booking.status = 'cancelled'
         booking.save()
+        on_booking_status_changed(booking, 'cancelled', sender_display_name(request.user))
         invalidate_booking_caches(
             user_id=request.user.id,
             owner_id=booking.car.owner_id,
@@ -130,6 +136,11 @@ class BookingStatusUpdateView(APIView):
 
         if serializer.is_valid():
             serializer.save()
+            on_booking_status_changed(
+                booking,
+                booking.status,
+                sender_display_name(request.user),
+            )
             invalidate_booking_caches(
                 user_id=booking.customer_id,
                 owner_id=request.user.id,
@@ -159,6 +170,7 @@ class CompleteBookingView(APIView):
                 )
             booking.status = 'completed'
             booking.save(update_fields=['status', 'updated_at'])
+            on_booking_status_changed(booking, 'completed', sender_display_name(request.user))
             OwnerProfile.objects.filter(user=request.user).update(
                 total_earnings=F('total_earnings') + booking.total_cost
             )
@@ -231,6 +243,7 @@ class AdminBookingActionView(APIView):
                 )
             booking.status = new_status
             booking.save(update_fields=['status', 'updated_at'])
+            on_booking_status_changed(booking, new_status, sender_display_name(request.user))
             if new_status == 'completed' and old_status == 'approved':
                 OwnerProfile.objects.filter(user=booking.car.owner).update(
                     total_earnings=F('total_earnings') + booking.total_cost

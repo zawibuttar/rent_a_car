@@ -1,5 +1,6 @@
 import django_filters
 
+from .enums import CarCategory, CarType
 from .models import Car
 
 
@@ -23,26 +24,28 @@ def _filter_listing(queryset, value):
 
 
 class AdminCarFilter(django_filters.FilterSet):
-    car_type = django_filters.CharFilter(field_name='car_type')
+    car_type = django_filters.ChoiceFilter(choices=CarType.choices)
+    category = django_filters.ChoiceFilter(choices=CarCategory.choices)
     is_approved = django_filters.BooleanFilter(field_name='is_approved')
     is_available = django_filters.BooleanFilter(field_name='is_available')
     listing = django_filters.ChoiceFilter(choices=LISTING_CHOICES, method='filter_listing')
 
     class Meta:
         model = Car
-        fields = ['car_type', 'is_approved', 'is_available', 'listing']
+        fields = ['car_type', 'category', 'is_approved', 'is_available', 'listing']
 
     def filter_listing(self, queryset, name, value):
         return _filter_listing(queryset, value)
 
 
 class OwnerCarFilter(django_filters.FilterSet):
-    car_type = django_filters.CharFilter(field_name='car_type')
+    car_type = django_filters.ChoiceFilter(choices=CarType.choices)
+    category = django_filters.ChoiceFilter(choices=CarCategory.choices)
     listing = django_filters.ChoiceFilter(choices=LISTING_CHOICES, method='filter_listing')
 
     class Meta:
         model = Car
-        fields = ['car_type', 'listing']
+        fields = ['car_type', 'category', 'listing']
 
     def filter_listing(self, queryset, name, value):
         if value == 'live':

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Owner Dashboard — RentACar{% endblock %}
 
 {% block content %}
@@ -15,28 +16,38 @@
     </div>
 
     <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+      <button type="button" class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
       </button>
-      <button class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">
+      <button type="button" class="s-item" id="btn-mycars" onclick="showTab('mycars', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> My Cars
       </button>
-      <button class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">
+      <button type="button" class="s-item" id="btn-addcar" onclick="showTab('addcar', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add Listing
       </button>
-      <button class="s-item" id="btn-requests" onclick="showTab('requests', this)">
+      <button type="button" class="s-item" id="btn-requests" onclick="showTab('requests', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
         <span>Booking Requests</span>
         <span class="s-badge" id="pendingReqBadge" hidden></span>
       </button>
-      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
+      <button type="button" class="s-item" id="btn-messages" onclick="showTab('messages', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
+        <span>Messages</span>
+        <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
+      </button>
+      <button type="button" class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg>
+        <span>Announcements</span>
+        <span class="s-badge" id="annUnreadBadge" data-ann-unread-badge hidden></span>
+      </button>
+      <button type="button" class="s-item" id="btn-profile" onclick="showTab('profile', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
-      <button class="s-item" id="btn-password" onclick="showTab('password', this)">
+      <button type="button" class="s-item" id="btn-password" onclick="showTab('password', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
       </button>
       <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">
+      <button type="button" class="s-item danger" onclick="doLogout()">
         <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
       </button>
     </div>
@@ -44,6 +55,7 @@
 
   <!-- ── Main ── -->
   <div class="dash-main">
+    {% include 'includes/announcement_banner.html' %}
 
     <!-- ══ OVERVIEW TAB ══ -->
     <div class="tab-panel active" id="tab-overview">
@@ -94,6 +106,7 @@
             <thead>
               <tr>
                 <th>Car</th>
+                <th class="col-hide-sm">Category</th>
                 <th class="col-hide-sm">Type</th>
                 <th>Rate</th>
                 <th class="col-hide-sm">Location</th>
@@ -102,7 +115,7 @@
             </thead>
             <tbody id="oCarsPreview">
               <tr>
-                <td colspan="5">
+                <td colspan="6">
                   <div class="loading"><span class="spinner"></span></div>
                 </td>
               </tr>
@@ -240,16 +253,17 @@
                   min="1990" max="2030" />
               </div>
             </div>
-            <div class="form-grid-2 form-grid-2--narrow">
+            <div class="form-grid-2">
               <div class="form-group">
-                <label class="form-label" for="cType">Car type <span class="req">*</span></label>
+                <label class="form-label" for="cCategory">Category <span class="req">*</span></label>
+                <select class="form-control" id="cCategory" required>
+                  <!-- Populated from taxonomy API -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cType">Vehicle type <span class="req">*</span></label>
                 <select class="form-control" id="cType" required>
-                  <option value="sedan">Sedan</option>
-                  <option value="suv">SUV</option>
-                  <option value="luxury">Luxury</option>
-                  <option value="hatchback">Hatchback</option>
-                  <option value="truck">Truck</option>
-                  <option value="van">Van</option>
+                  <!-- Populated dynamically -->
                 </select>
               </div>
             </div>
@@ -257,10 +271,10 @@
 
           <section class="form-section" aria-labelledby="addSectionPricing">
             <div class="form-section-head">
-              <h2 class="form-section-title" id="addSectionPricing">Rental options &amp; pricing</h2>
-              <p class="form-section-desc">Choose how renters can book and set a price for each option.</p>
+              <h2 class="form-section-title" id="addSectionPricing">Rental periods &amp; pricing</h2>
+              <p class="form-section-desc">How customers can rent this vehicle — enable each period and set its price.</p>
             </div>
-            <div class="rental-options" role="group" aria-label="Rental types offered">
+            <div class="rental-options" role="group" aria-label="Rental periods offered">
               <label class="form-check-label rental-option-check">
                 <input type="checkbox" id="cRentHourly" onchange="toggleRentalPriceFields('c')" />
                 Hourly
@@ -297,6 +311,18 @@
                 <input class="form-control" type="number" id="cPriceMonth" min="1" step="0.01" placeholder="900.00" />
               </div>
             </div>
+            
+            <div class="form-grid-2" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label class="form-label" for="cDiscountPercentage">Discount percentage (%, optional)</label>
+                <input class="form-control" type="number" id="cDiscountPercentage" min="0" max="100" placeholder="e.g., 10" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cDiscountedPrice">Discounted price ($/day, optional)</label>
+                <input class="form-control" type="number" id="cDiscountedPrice" min="0" step="0.01" placeholder="e.g., 40.00" />
+              </div>
+            </div>
+            <div class="discount-preview" id="cDiscountPreview" hidden aria-live="polite"></div>
           </section>
 
           <section class="form-section" aria-labelledby="addSectionDesc">
@@ -379,7 +405,7 @@
                 <th class="col-hide-sm">Duration</th>
                 <th class="col-hide-sm">Type</th>
                 <th>Total</th>
-                <th class="col-hide-sm">Note</th>
+                <th class="col-hide-sm">Messages</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -395,6 +421,28 @@
         </div>
       </div>
       <div id="reqsPagination" class="pagination-wrap" hidden></div>
+    </div>
+
+    <!-- ══ MESSAGES TAB ══ -->
+    <div class="tab-panel" id="tab-messages">
+      <div class="page-head">
+        <div>
+          <h1>Messages</h1>
+          <p>Chat with customers about booking requests and rentals</p>
+        </div>
+      </div>
+      {% include 'includes/messages_panel.html' %}
+    </div>
+
+    <!-- ══ ANNOUNCEMENTS TAB ══ -->
+    <div class="tab-panel" id="tab-announcements">
+      <div class="page-head">
+        <div>
+          <h1>Announcements</h1>
+          <p>Platform updates and notices from RentACar</p>
+        </div>
+      </div>
+      {% include 'includes/announcements_panel.html' %}
     </div>
 
     <!-- ══ PROFILE TAB ══ -->
@@ -508,109 +556,151 @@
 </div>
 
 <!-- Edit Car Modal -->
-<div class="modal-bg" id="editCarModal">
-  <div class="modal modal--wide">
+<div class="modal-bg" id="editCarModal" hidden aria-hidden="true">
+  <div class="modal modal--wide modal--form" role="dialog" aria-modal="true" aria-labelledby="editCarModalTitle">
     <div class="modal-head">
-      <h3>Edit Car</h3>
-      <button class="btn-close-modal" onclick="closeModal('editCarModal')" aria-label="Close">&times;</button>
+      <div>
+        <h3 id="editCarModalTitle">Edit listing</h3>
+        <p class="modal-form-intro" id="editCarModalSubtitle">Update vehicle details, pricing, and availability.</p>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="closeModal('editCarModal')" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editCarId" />
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label class="form-label">Brand</label>
-          <input class="form-control" type="text" id="eBrand" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Model</label>
-          <input class="form-control" type="text" id="eModel" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Year</label>
-          <input class="form-control" type="number" id="eYear" min="1990" max="2026" />
-        </div>
-      </div>
-
-      <p class="form-label" style="margin-bottom:8px">Rental options</p>
-      <div class="rental-options" role="group">
-        <label class="form-check-label rental-option-check">
-          <input type="checkbox" id="eRentHourly" onchange="toggleRentalPriceFields('e')" /> Hourly
-        </label>
-        <label class="form-check-label rental-option-check">
-          <input type="checkbox" id="eRentDaily" onchange="toggleRentalPriceFields('e')" /> Daily
-        </label>
-        <label class="form-check-label rental-option-check">
-          <input type="checkbox" id="eRentWeekly" onchange="toggleRentalPriceFields('e')" /> Weekly
-        </label>
-        <label class="form-check-label rental-option-check">
-          <input type="checkbox" id="eRentMonthly" onchange="toggleRentalPriceFields('e')" /> Monthly
-        </label>
-      </div>
-      <div class="rental-prices form-grid-2" style="margin-top:10px">
-        <div class="form-group rental-price-field" id="ePriceHourWrap" hidden>
-          <label class="form-label">Price per hour ($)</label>
-          <input class="form-control" type="number" id="ePriceHour" step="0.01" />
-        </div>
-        <div class="form-group rental-price-field" id="ePriceDayWrap">
-          <label class="form-label">Price per day ($)</label>
-          <input class="form-control" type="number" id="ePrice" step="0.01" />
-        </div>
-        <div class="form-group rental-price-field" id="ePriceWeekWrap" hidden>
-          <label class="form-label">Price per week ($)</label>
-          <input class="form-control" type="number" id="ePriceWeek" step="0.01" />
-        </div>
-        <div class="form-group rental-price-field" id="ePriceMonthWrap" hidden>
-          <label class="form-label">Price per month ($)</label>
-          <input class="form-control" type="number" id="ePriceMonth" step="0.01" />
-        </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label class="form-label">Car Type</label>
-          <select class="form-control" id="eType">
-            <option value="sedan">Sedan</option>
-            <option value="suv">SUV</option>
-            <option value="luxury">Luxury</option>
-            <option value="hatchback">Hatchback</option>
-            <option value="truck">Truck</option>
-            <option value="van">Van</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Location</label>
-          <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
-            <input class="form-control" type="text" id="eLocation" data-location-autocomplete
-              placeholder="Start typing any city in Pakistan" autocomplete="off"
-              aria-autocomplete="list" aria-expanded="false" />
-            <div class="location-suggestions" id="eLocationSuggestions" data-location-suggestions hidden></div>
+      <div class="modal-form-sections">
+        <section class="form-section" aria-labelledby="editSectionVehicle">
+          <div class="form-section-head">
+            <h4 class="form-section-title" id="editSectionVehicle">Vehicle details</h4>
+            <p class="form-section-desc">Basic information shown on your listing card.</p>
           </div>
-        </div>
-      </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="eBrand">Brand</label>
+              <input class="form-control" type="text" id="eBrand" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eModel">Model</label>
+              <input class="form-control" type="text" id="eModel" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eYear">Year</label>
+              <input class="form-control" type="number" id="eYear" min="1990" max="2026" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eCategory">Category</label>
+              <select class="form-control" id="eCategory">
+                <!-- Populated from taxonomy API -->
+              </select>
+            </div>
+            <div class="form-group form-grid-2__full">
+              <label class="form-label" for="eType">Vehicle type</label>
+              <select class="form-control" id="eType"></select>
+            </div>
+          </div>
+        </section>
 
-      <div class="form-group">
-        <label class="form-label">Description</label>
-        <textarea class="form-control" id="eDesc" rows="3"></textarea>
-      </div>
+        <section class="form-section" aria-labelledby="editSectionPricing">
+          <div class="form-section-head">
+            <h4 class="form-section-title" id="editSectionPricing">Rental periods &amp; pricing</h4>
+            <p class="form-section-desc">How customers can rent this vehicle — enable each period and set its price.</p>
+          </div>
+          <div class="rental-options" role="group" aria-label="Rental periods offered">
+            <label class="form-check-label rental-option-check">
+              <input type="checkbox" id="eRentHourly" onchange="toggleRentalPriceFields('e')" /> Hourly
+            </label>
+            <label class="form-check-label rental-option-check">
+              <input type="checkbox" id="eRentDaily" onchange="toggleRentalPriceFields('e')" /> Daily
+            </label>
+            <label class="form-check-label rental-option-check">
+              <input type="checkbox" id="eRentWeekly" onchange="toggleRentalPriceFields('e')" /> Weekly
+            </label>
+            <label class="form-check-label rental-option-check">
+              <input type="checkbox" id="eRentMonthly" onchange="toggleRentalPriceFields('e')" /> Monthly
+            </label>
+          </div>
+          <div class="rental-prices form-grid-2">
+            <div class="form-group rental-price-field" id="ePriceHourWrap" hidden>
+              <label class="form-label" for="ePriceHour">Price per hour ($)</label>
+              <input class="form-control" type="number" id="ePriceHour" step="0.01" min="0" />
+            </div>
+            <div class="form-group rental-price-field" id="ePriceDayWrap">
+              <label class="form-label" for="ePrice">Price per day ($)</label>
+              <input class="form-control" type="number" id="ePrice" step="0.01" min="0" />
+            </div>
+            <div class="form-group rental-price-field" id="ePriceWeekWrap" hidden>
+              <label class="form-label" for="ePriceWeek">Price per week ($)</label>
+              <input class="form-control" type="number" id="ePriceWeek" step="0.01" min="0" />
+            </div>
+            <div class="form-group rental-price-field" id="ePriceMonthWrap" hidden>
+              <label class="form-label" for="ePriceMonth">Price per month ($)</label>
+              <input class="form-control" type="number" id="ePriceMonth" step="0.01" min="0" />
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="eDiscountPercentage">Discount % <span class="text-caption">(optional)</span></label>
+              <input class="form-control" type="number" id="eDiscountPercentage" min="0" max="100" placeholder="e.g. 10" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eDiscountedPrice">Discounted $/day <span class="text-caption">(optional)</span></label>
+              <input class="form-control" type="number" id="eDiscountedPrice" min="0" step="0.01" placeholder="e.g. 250" />
+            </div>
+          </div>
+          <div class="discount-preview" id="eDiscountPreview" hidden aria-live="polite"></div>
+        </section>
 
-      <div class="form-group">
-        <label class="form-check-label">
-          <input type="checkbox" id="eAvailable" />
-          Open for bookings (shows on Browse when approved)
-        </label>
-      </div>
+        <section class="form-section" aria-labelledby="editSectionLocation">
+          <div class="form-section-head">
+            <h4 class="form-section-title" id="editSectionLocation">Pickup location</h4>
+            <p class="form-section-desc">City or area where renters collect the vehicle.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="eLocation">Location</label>
+            <div class="location-autocomplete-wrap" data-location-autocomplete-wrap>
+              <input class="form-control" type="text" id="eLocation" data-location-autocomplete
+                placeholder="Start typing any city in Pakistan" autocomplete="off"
+                aria-autocomplete="list" aria-expanded="false" />
+              <div class="location-suggestions" id="eLocationSuggestions" data-location-suggestions hidden></div>
+            </div>
+          </div>
+        </section>
 
-      <div class="form-group">
-        <label class="form-label">Upload More Images</label>
-        <input class="form-control" type="file" id="eImages" multiple accept="image/*" />
-      </div>
+        <section class="form-section" aria-labelledby="editSectionDesc">
+          <div class="form-section-head">
+            <h4 class="form-section-title" id="editSectionDesc">Description</h4>
+            <p class="form-section-desc">Tell renters about features, condition, or pickup notes.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="eDesc">Listing description</label>
+            <textarea class="form-control" id="eDesc" rows="4" placeholder="Optional details for renters…"></textarea>
+          </div>
+        </section>
 
-      <div class="err-box" id="editCarErr"></div>
+        <section class="form-section form-section--last" aria-labelledby="editSectionPublish">
+          <div class="form-section-head">
+            <h4 class="form-section-title" id="editSectionPublish">Availability &amp; photos</h4>
+            <p class="form-section-desc">Control whether this listing accepts new bookings.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-check-label">
+              <input type="checkbox" id="eAvailable" />
+              Open for bookings (shows on Browse when approved)
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="eImages">Add more images</label>
+            <input class="form-control" type="file" id="eImages" multiple accept="image/*" />
+            <p class="form-hint">Existing photos are kept. Upload additional images here.</p>
+          </div>
+        </section>
+      </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('editCarModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveCarEdit()">Save Changes</button>
+      <div class="err-box" id="editCarErr"></div>
+      <div class="modal-foot__actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('editCarModal')">Cancel</button>
+        <button type="button" class="btn btn-primary" id="editCarSaveBtn" onclick="saveCarEdit()">Save changes</button>
+      </div>
     </div>
   </div>
 </div>
@@ -618,6 +708,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/messaging.js' %}"></script>
+<script src="{% static 'js/announcements.js' %}"></script>
 <script>
   /* ── Guard ──────────────────────────── */
   if (!API.loggedIn() || API.role() !== 'owner') {
@@ -651,6 +743,16 @@
         if (n === 'overview') loadOverview();
         if (n === 'mycars') fetchOwnerCars();
         if (n === 'requests') fetchOwnerRequests();
+        if (n === 'messages') {
+          Messaging.activate();
+        } else {
+          Messaging.deactivate();
+        }
+        if (n === 'announcements') {
+          Announcements.activate();
+        } else {
+          Announcements.deactivate();
+        }
         if (n === 'profile') loadOwnerProfile();
         if (n === 'addcar') resetAddForm();
       },
@@ -725,7 +827,7 @@
       /* cars preview table */
       if (!cars.length) {
         document.getElementById('oCarsPreview').innerHTML =
-          '<tr><td colspan="5">'
+          '<tr><td colspan="6">'
           + UI.emptyState(
             'No cars listed yet',
             'Publish your first listing to appear on Browse Cars.',
@@ -741,7 +843,9 @@
               + '<td><strong>' + UI.escHtml(c.brand + ' ' + c.model) + '</strong>'
               + '<div class="text-subline">' + UI.escHtml(c.year) + '</div></td>'
               + '<td class="col-hide-sm"><span class="badge badge-blue">'
-              + UI.escHtml(c.car_type) + '</span></td>'
+              + UI.escHtml(c.category_display || UI.formatCategoryLabel(c.category)) + '</span></td>'
+              + '<td class="col-hide-sm"><span class="badge badge-gray">'
+              + UI.escHtml(c.car_type_display || UI.formatCarType(c.car_type)) + '</span></td>'
               + (function () {
                 var r = UI.primaryRateDisplay(c);
                 return '<td class="td-money">$' + r.value
@@ -853,7 +957,10 @@
           + '<div class="car-body">'
           + previewLink
           + '<div class="car-title">' + UI.escHtml(car.brand + ' ' + car.model + ' (' + car.year + ')') + '</div>'
-          + '<div class="car-badges">' + carListingBadges(car) + '</div>'
+          + '<div class="car-badges">'
+          + '<span class="badge badge-blue">' + UI.escHtml(car.category_display || UI.formatCategoryLabel(car.category)) + '</span>'
+          + '<span class="badge badge-gray">' + UI.escHtml(car.car_type_display || UI.formatCarType(car.car_type)) + '</span>'
+          + carListingBadges(car) + '</div>'
           + (UI.bookedSlotsSummary(car)
             ? '<div class="owner-car-booked-row">' + UI.bookedSlotsSummary(car) + '</div>'
             : '')
@@ -861,6 +968,15 @@
           + '<div class="car-footer">'
           + (function () {
             var r = UI.primaryRateDisplay(car);
+            var d = UI.discountMeta(car);
+            if (d && r.unit === 'day') {
+              return '<div class="car-price car-price--discounted">'
+                + '<span class="listing-card-badge listing-card-badge--discount listing-card-badge--inline">'
+                + UI.escHtml(d.shortLabel) + '</span>'
+                + '<span class="car-price-old">$' + d.original.toFixed(2) + '</span>'
+                + '<span class="car-price-sale">$' + d.final.toFixed(2) + '</span>'
+                + '<span>/' + UI.escHtml(r.unit) + '</span></div>';
+            }
             return '<div class="car-price">$' + r.value
               + '<span>/' + UI.escHtml(r.unit) + '</span></div>';
           })()
@@ -896,6 +1012,60 @@
       var on = document.getElementById(prefix + 'Rent' + label).checked;
       var wrap = document.getElementById(prefix + 'Price' + map[label] + 'Wrap');
       if (wrap) wrap.hidden = !on;
+    });
+    updateDiscountPreview(prefix);
+  }
+
+  function updateDiscountPreview(prefix) {
+    var preview = document.getElementById(prefix + 'DiscountPreview');
+    if (!preview) return;
+    var dailyOn = document.getElementById(prefix + 'RentDaily').checked;
+    var priceEl = document.getElementById(prefix === 'c' ? 'cPrice' : 'ePrice');
+    var pctEl = document.getElementById(prefix + 'DiscountPercentage');
+    var fixedEl = document.getElementById(prefix + 'DiscountedPrice');
+    var original = priceEl ? parseFloat(priceEl.value) : NaN;
+    var pct = pctEl && pctEl.value.trim() ? parseInt(pctEl.value, 10) : null;
+    var fixed = fixedEl && fixedEl.value.trim() ? parseFloat(fixedEl.value) : null;
+    if (!dailyOn || isNaN(original) || original <= 0) {
+      preview.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+    var final = null;
+    var labelPct = null;
+    if (fixed != null && !isNaN(fixed) && fixed < original) {
+      final = fixed;
+      labelPct = Math.round((1 - final / original) * 100);
+    } else if (pct != null && !isNaN(pct) && pct > 0 && pct <= 100) {
+      final = +(original * (1 - pct / 100)).toFixed(2);
+      labelPct = pct;
+    }
+    if (final == null || !labelPct) {
+      preview.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+    preview.hidden = false;
+    preview.innerHTML = '<span class="discount-preview-label">Listing preview</span>'
+      + '<span class="listing-card-badge listing-card-badge--discount listing-card-badge--inline">-'
+      + labelPct + '%</span>'
+      + '<span class="discount-preview-price">'
+      + '<span class="listing-card-price-val listing-card-price-val--old">$' + original.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-val listing-card-price-val--sale">$' + final.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-unit">per day</span>'
+      + '</span>';
+  }
+
+  function initDiscountPreview(prefix) {
+    ['DiscountPercentage', 'DiscountedPrice'].forEach(function (suffix) {
+      var el = document.getElementById(prefix + suffix);
+      if (el) el.addEventListener('input', function () { updateDiscountPreview(prefix); });
+    });
+    var priceEl = document.getElementById(prefix === 'c' ? 'cPrice' : 'ePrice');
+    if (priceEl) priceEl.addEventListener('input', function () { updateDiscountPreview(prefix); });
+    ['RentHourly', 'RentDaily', 'RentWeekly', 'RentMonthly'].forEach(function (suffix) {
+      var el = document.getElementById(prefix + suffix);
+      if (el) el.addEventListener('change', function () { updateDiscountPreview(prefix); });
     });
   }
 
@@ -933,7 +1103,7 @@
   }
 
   function resetAddForm() {
-    ['cBrand', 'cModel', 'cYear', 'cPrice', 'cPriceHour', 'cPriceWeek', 'cPriceMonth', 'cLocation', 'cDesc'].forEach(function (id) {
+    ['cBrand', 'cModel', 'cYear', 'cPrice', 'cPriceHour', 'cPriceWeek', 'cPriceMonth', 'cLocation', 'cDesc', 'cDiscountPercentage', 'cDiscountedPrice'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -1015,11 +1185,40 @@
     previewImgs({ files: dt.files });
   }
 
+  function populateOwnerTypeDropdown(category, typeSelectId, currentVal) {
+    var typeEl = document.getElementById(typeSelectId);
+    if (!typeEl || !CarTaxonomy.populateTypeSelect) return;
+    CarTaxonomy.populateTypeSelect(typeEl, category, currentVal || '', false);
+  }
+
+  function initOwnerTaxonomySelects() {
+    var cCategory = document.getElementById('cCategory');
+    var eCategory = document.getElementById('eCategory');
+    if (cCategory) CarTaxonomy.populateCategorySelect(cCategory);
+    if (eCategory) CarTaxonomy.populateCategorySelect(eCategory);
+    if (cCategory) populateOwnerTypeDropdown(cCategory.value, 'cType');
+  }
+
   function initListingForm() {
     var zone = document.getElementById('uploadZone');
     var input = document.getElementById('cImages');
     var desc = document.getElementById('cDesc');
     if (!zone || !input) return;
+
+    var cCategory = document.getElementById('cCategory');
+    if (cCategory) {
+      cCategory.addEventListener('change', function () {
+        populateOwnerTypeDropdown(cCategory.value, 'cType');
+      });
+      populateOwnerTypeDropdown(cCategory.value, 'cType');
+    }
+
+    var eCategory = document.getElementById('eCategory');
+    if (eCategory) {
+      eCategory.addEventListener('change', function () {
+        populateOwnerTypeDropdown(eCategory.value, 'eType');
+      });
+    }
 
     zone.addEventListener('click', function (e) {
       if (e.target.closest('.preview-rm')) return;
@@ -1079,12 +1278,15 @@
       desc.addEventListener('input', updateDescCount);
       updateDescCount();
     }
+    initDiscountPreview('c');
+    initDiscountPreview('e');
   }
 
   async function addCar() {
     var brand = document.getElementById('cBrand').value.trim();
     var model = document.getElementById('cModel').value.trim();
     var year = parseInt(document.getElementById('cYear').value);
+    var category = document.getElementById('cCategory').value;
     var carType = document.getElementById('cType').value;
     var locationInput = document.getElementById('cLocation');
     var location = locationInput ? locationInput.value.trim() : '';
@@ -1119,13 +1321,21 @@
     btn.textContent = 'Submitting...';
 
     try {
+      var discountPctVal = document.getElementById('cDiscountPercentage').value.trim();
+      var discountPriceVal = document.getElementById('cDiscountedPrice').value.trim();
+      var discountPct = discountPctVal ? parseInt(discountPctVal, 10) : null;
+      var discountPrice = discountPriceVal ? parseFloat(discountPriceVal) : null;
+
       var body = Object.assign({
         brand: brand,
         model: model,
         year: year,
+        category: category,
         car_type: carType,
         location: location,
         description: desc,
+        discount_percentage: discountPct,
+        discounted_price: discountPrice,
       }, rental.data);
       var resp = await API.post('/api/cars/create/', body);
 
@@ -1168,12 +1378,26 @@
     document.getElementById('ePrice').value = car.price_per_day || '';
     document.getElementById('ePriceWeek').value = car.price_per_week || '';
     document.getElementById('ePriceMonth').value = car.price_per_month || '';
+    document.getElementById('eDiscountPercentage').value = car.discount_percentage !== null && car.discount_percentage !== undefined ? car.discount_percentage : '';
+    document.getElementById('eDiscountedPrice').value = car.discounted_price !== null && car.discounted_price !== undefined ? car.discounted_price : '';
     toggleRentalPriceFields('e');
-    document.getElementById('eType').value = car.car_type;
+    var eCategoryVal = car.category || 'car';
+    document.getElementById('eCategory').value = eCategoryVal;
+    populateOwnerTypeDropdown(eCategoryVal, 'eType', car.car_type);
     LocationAutocomplete.markSelected(document.getElementById('eLocation'), car.location);
     document.getElementById('eDesc').value = car.description || '';
     document.getElementById('eAvailable').checked = car.is_available;
+    document.getElementById('eImages').value = '';
+    var subtitle = document.getElementById('editCarModalSubtitle');
+    if (subtitle) {
+      var parts = [car.brand, car.model].filter(Boolean).join(' ');
+      subtitle.textContent = parts
+        ? parts + (car.year ? ' · ' + car.year : '') + ' — update details below.'
+        : 'Update vehicle details, pricing, and availability.';
+    }
     document.getElementById('editCarErr').style.display = 'none';
+    var modalBody = document.querySelector('#editCarModal .modal-body');
+    if (modalBody) modalBody.scrollTop = 0;
     openModal('editCarModal');
   }
 
@@ -1200,15 +1424,29 @@
       return;
     }
 
+    var saveBtn = document.getElementById('editCarSaveBtn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+    }
+
     try {
+      var discountPctVal = document.getElementById('eDiscountPercentage').value.trim();
+      var discountPriceVal = document.getElementById('eDiscountedPrice').value.trim();
+      var discountPct = discountPctVal ? parseInt(discountPctVal, 10) : null;
+      var discountPrice = discountPriceVal ? parseFloat(discountPriceVal) : null;
+
       var patchBody = Object.assign({
         brand: document.getElementById('eBrand').value,
         model: document.getElementById('eModel').value,
         year: parseInt(document.getElementById('eYear').value),
+        category: document.getElementById('eCategory').value,
         car_type: document.getElementById('eType').value,
         location: editLocationInput.value.trim(),
         description: document.getElementById('eDesc').value,
         is_available: document.getElementById('eAvailable').checked,
+        discount_percentage: discountPct,
+        discounted_price: discountPrice,
       }, rental.data);
       await API.patch('/api/cars/' + id + '/manage/', patchBody);
 
@@ -1228,6 +1466,11 @@
     } catch (err) {
       errBox.textContent = err.message;
       errBox.style.display = 'block';
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save changes';
+      }
     }
   }
 
@@ -1257,6 +1500,7 @@
     var tbody = document.getElementById('reqsTable');
     tbody.innerHTML = UI.tableLoadingRow(10);
     try {
+      await Messaging.fetchThreads().catch(function () {});
       var meta = await UI.fetchListPage(ownerRequestsQuery(), ownerRequestsState.page, UI_PAGE.table);
       ownerRequestsState.page = meta.page;
       renderRequests(meta);
@@ -1296,6 +1540,8 @@
       if (b.status === 'pending') {
         actions =
           '<div class="table-actions">'
+          + '<button type="button" class="btn btn-ghost btn-sm" '
+          + 'onclick="Messaging.openThread(' + b.id + ')">Message</button>'
           + '<button type="button" class="btn btn-success btn-sm" '
           + 'onclick="respondBooking(' + b.id + ',\'approved\')">Approve</button>'
           + '<button type="button" class="btn btn-outline btn-sm" '
@@ -1304,14 +1550,19 @@
       } else if (b.status === 'approved') {
         actions =
           '<div class="table-actions">'
+          + '<button type="button" class="btn btn-ghost btn-sm" '
+          + 'onclick="Messaging.openThread(' + b.id + ')">Message</button>'
           + '<button type="button" class="btn btn-primary btn-sm" '
           + 'onclick="completeBooking(' + b.id + ')">Mark complete</button>'
           + '</div>';
       } else {
-        actions = UI.tableEmpty();
+        actions = '<div class="table-actions">'
+          + '<button type="button" class="btn btn-ghost btn-sm" '
+          + 'onclick="Messaging.openThread(' + b.id + ')">Message</button>'
+          + '</div>';
       }
 
-      return '<tr>'
+      return '<tr data-booking-row="' + b.id + '">'
         + UI.tdSerial(meta.rangeStart + i)
         + '<td>'
         + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
@@ -1327,8 +1578,7 @@
         + UI.escHtml(UI.rentalTypeLabel(b.rental_type)) + '</span></td>'
         + '<td class="td-money">$'
         + parseFloat(b.total_cost).toFixed(2) + '</td>'
-        + '<td class="td-meta td-note col-hide-sm">'
-        + UI.escHtml(b.note || '—') + '</td>'
+        + '<td class="td-meta col-hide-sm">' + Messaging.threadPreviewHtml(b.id) + '</td>'
         + '<td>' + statusBadge(b.status) + '</td>'
         + '<td>' + actions + '</td>'
         + '</tr>';
@@ -1477,7 +1727,14 @@
   initListingForm();
   initLocationAutocomplete();
   toggleRentalPriceFields('c');
-  if (!UI.openDashboardTabFromHash()) {
+  CarTaxonomy.load().then(function () {
+    initOwnerTaxonomySelects();
+  }).catch(function () {
+    initOwnerTaxonomySelects();
+  });
+  Messaging.mount();
+  Announcements.mount();
+  if (!UI.bootDashboardTab()) {
     loadOverview();
   }
 </script>

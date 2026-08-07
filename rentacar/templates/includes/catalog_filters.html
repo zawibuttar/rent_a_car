@@ -1,4 +1,3 @@
-{# Catalog filter bar — shared by home (no inline search) and browse (with search) #}
 <div class="filters-bar" id="catalogFiltersBar">
   {% if show_inline_search %}
   <div class="filter-field filter-field--grow">
@@ -9,16 +8,16 @@
       aria-label="Search cars"/>
   </div>
   {% endif %}
-  <div class="filter-field">
+  <div class="filter-field" id="fCategoryField">
+    <label for="fCategory">Category</label>
+    <select id="fCategory" aria-label="Filter by category">
+      <!-- Populated from taxonomy API -->
+    </select>
+  </div>
+  <div class="filter-field" id="fTypeField">
     <label for="fType">Car Type</label>
     <select id="fType" aria-label="Filter by car type">
-      <option value="">All Types</option>
-      <option value="sedan">Sedan</option>
-      <option value="suv">SUV</option>
-      <option value="luxury">Luxury</option>
-      <option value="hatchback">Hatchback</option>
-      <option value="truck">Truck</option>
-      <option value="van">Van</option>
+      <option value="">Select Type</option>
     </select>
   </div>
   <div class="filter-field filter-field--narrow">

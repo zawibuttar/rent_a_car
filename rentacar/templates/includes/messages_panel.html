@@ -1,0 +1,70 @@
+<div class="messages-layout" id="messagesPanel">
+  <aside class="messages-inbox" id="msgInbox" aria-label="Message threads">
+    <div class="messages-inbox__head">
+      <h2 class="messages-inbox__title">Messages</h2>
+      <label class="visually-hidden" for="msgSearch">Search conversations</label>
+      <input type="search" class="form-control messages-search" id="msgSearch"
+        placeholder="Search by name, car, or message…" autocomplete="off" />
+      <div class="messages-filters" role="tablist" aria-label="Filter conversations">
+        <button type="button" class="messages-filter messages-filter--active" data-filter="all" role="tab" aria-selected="true">All</button>
+        <button type="button" class="messages-filter" data-filter="unread" role="tab" aria-selected="false">Unread</button>
+        <button type="button" class="messages-filter" data-filter="active" role="tab" aria-selected="false">Active</button>
+      </div>
+    </div>
+    <div class="messages-inbox__list" id="msgThreadList" role="list">
+      <div class="messages-skeleton" id="msgInboxSkeleton" aria-hidden="true">
+        <div class="messages-skeleton__row"></div>
+        <div class="messages-skeleton__row"></div>
+        <div class="messages-skeleton__row"></div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="messages-thread" id="msgThreadPane" aria-label="Conversation">
+    <div class="messages-thread__head" id="msgThreadHead">
+      <div class="messages-thread__placeholder" id="msgThreadPlaceholder">
+        <svg class="icon icon-lg" aria-hidden="true"><use href="#icon-message"/></svg>
+        <h3>Select a conversation</h3>
+        <p>Choose a booking thread to coordinate pickup and rental details.</p>
+      </div>
+    </div>
+
+    <div class="messages-thread__context" id="msgThreadContext" hidden></div>
+
+    <div class="messages-thread__body-wrap" id="msgBodyWrap">
+      <button type="button" class="messages-new-chip" id="msgNewChip" hidden>New messages</button>
+      <div class="messages-thread__body" id="msgThreadBody" role="log" aria-live="polite"></div>
+    </div>
+
+    <div class="messages-thread__closed" id="msgClosed" hidden>
+      <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg>
+      <span>This booking is closed. Messaging is no longer available.</span>
+    </div>
+
+    <div class="messages-thread__compose" id="msgCompose" hidden>
+      <div class="messages-compose">
+        <div class="messages-compose__tools">
+          <button type="button" class="messages-compose__tool" id="msgAttachBtn"
+            title="Attach file" aria-label="Attach file">
+            <svg class="icon" aria-hidden="true"><use href="#icon-paperclip"/></svg>
+          </button>
+          <input type="file" class="visually-hidden" id="msgFileInput"
+            accept="image/*,.pdf,.doc,.docx,.txt" />
+          <button type="button" class="messages-compose__tool" id="msgLocationBtn"
+            title="Send current location" aria-label="Send current location">
+            <svg class="icon" aria-hidden="true"><use href="#icon-pin"/></svg>
+          </button>
+        </div>
+        <div class="messages-compose__input-wrap">
+          <label class="visually-hidden" for="msgInput">Type a message</label>
+          <textarea class="messages-compose__input" id="msgInput" rows="1" maxlength="2000"
+            placeholder="Message…"></textarea>
+        </div>
+        <button type="button" class="messages-compose__send" id="msgSendBtn"
+          title="Send message" aria-label="Send message" disabled>
+          <svg class="icon" aria-hidden="true"><use href="#icon-send"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>

@@ -4,6 +4,7 @@
 const Catalog = {
   page: 1,
   searchTimer: null,
+
   sortLabels: {
     '-created_at': 'Newest first',
     price_per_day: 'Price: low to high',
@@ -11,13 +12,10 @@ const Catalog = {
     '-year': 'Newest year',
     year: 'Oldest year',
   },
-  typeLabels: {
-    sedan: 'Sedan',
-    suv: 'SUV',
-    luxury: 'Luxury',
-    hatchback: 'Hatchback',
-    truck: 'Truck',
-    van: 'Van',
+
+  getCategory() {
+    const el = document.getElementById('fCategory');
+    return el ? el.value : '';
   },
 
   getSearchText() {
@@ -35,29 +33,70 @@ const Catalog = {
     if (hero) hero.value = value;
   },
 
+  getType() {
+    const el = document.getElementById('fType');
+    return el ? el.value : '';
+  },
+
+  setCategory(value) {
+    Catalog.setCategoryAndType(value || '', '');
+  },
+
+  populateTypeDropdown(category) {
+    const typeEl = document.getElementById('fType');
+    if (!typeEl) return;
+    if (!category) {
+      typeEl.innerHTML = '<option value="">Select Type</option>';
+      return;
+    }
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.populateTypeSelect) {
+      CarTaxonomy.populateTypeSelect(typeEl, category, '', true);
+    }
+    const fTypeField = document.getElementById('fTypeField');
+    if (fTypeField) {
+      fTypeField.style.display = '';
+    }
+  },
+
+  setCategoryAndType(category, type) {
+    const catEl = document.getElementById('fCategory');
+    if (catEl) catEl.value = category || '';
+
+    Catalog.populateTypeDropdown(category || '');
+
+    const typeEl = document.getElementById('fType');
+    if (typeEl) typeEl.value = type || '';
+  },
+
   getFilterState() {
     const typeEl = document.getElementById('fType');
-    const minEl = document.getElementById('fMin');
-    const maxEl = document.getElementById('fMax');
+    const minEl  = document.getElementById('fMin');
+    const maxEl  = document.getElementById('fMax');
     const sortEl = document.getElementById('fSort');
+
+    const sidebarType = Catalog.getType();
+    const type = sidebarType || (typeEl ? typeEl.value : '');
+
     return {
-      search: Catalog.getSearchText(),
-      type: typeEl ? typeEl.value : '',
-      min: minEl ? minEl.value : '',
-      max: maxEl ? maxEl.value : '',
-      sort: sortEl ? sortEl.value : '-created_at',
+      search  : Catalog.getSearchText(),
+      type    : type,
+      min     : minEl ? minEl.value : '',
+      max     : maxEl ? maxEl.value : '',
+      sort    : sortEl ? sortEl.value : '-created_at',
       location: typeof LocationState !== 'undefined' && LocationState.getQuery ? LocationState.getQuery() : '',
+      category: Catalog.getCategory(),
     };
   },
 
   buildApiUrl(page) {
     const f = Catalog.getFilterState();
     let url = '/api/cars/?ordering=' + encodeURIComponent(f.sort) + '&page=' + page;
-    if (f.search) url += '&search=' + encodeURIComponent(f.search);
-    if (f.type) url += '&car_type=' + encodeURIComponent(f.type);
-    if (f.min) url += '&min_price=' + encodeURIComponent(f.min);
-    if (f.max) url += '&max_price=' + encodeURIComponent(f.max);
+    if (f.search)   url += '&search='   + encodeURIComponent(f.search);
+    if (f.type)     url += '&car_type=' + encodeURIComponent(f.type);
+    if (f.min)      url += '&min_price=' + encodeURIComponent(f.min);
+    if (f.max)      url += '&max_price=' + encodeURIComponent(f.max);
     if (f.location) url += '&location=' + encodeURIComponent(f.location);
+    if (f.category) url += '&category=' + encodeURIComponent(f.category);
     return url;
   },
 
@@ -68,10 +107,33 @@ const Catalog = {
     const chips = [];
 
     if (f.search) chips.push('<span class="filter-chip">Search: ' + UI.escHtml(f.search) + '</span>');
-    if (f.type) chips.push('<span class="filter-chip">' + UI.escHtml(Catalog.typeLabels[f.type] || f.type) + '</span>');
+
+    if (f.category) {
+      chips.push(
+        '<span class="filter-chip filter-chip--category">'
+        + UI.escHtml(
+          (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getCategoryLabel)
+            ? CarTaxonomy.getCategoryLabel(f.category)
+            : f.category
+        )
+        + '</span>'
+      );
+    }
+
+    if (f.type) {
+      chips.push(
+        '<span class="filter-chip">'
+        + UI.escHtml(
+          (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getTypeLabel)
+            ? CarTaxonomy.getTypeLabel(f.type)
+            : f.type
+        )
+        + '</span>'
+      );
+    }
     if (f.min && f.max) chips.push('<span class="filter-chip">$' + UI.escHtml(f.min) + '–$' + UI.escHtml(f.max) + '/day</span>');
-    else if (f.min) chips.push('<span class="filter-chip">Min $' + UI.escHtml(f.min) + '/day</span>');
-    else if (f.max) chips.push('<span class="filter-chip">Max $' + UI.escHtml(f.max) + '/day</span>');
+    else if (f.min)     chips.push('<span class="filter-chip">Min $' + UI.escHtml(f.min) + '/day</span>');
+    else if (f.max)     chips.push('<span class="filter-chip">Max $' + UI.escHtml(f.max) + '/day</span>');
     if (f.location) {
       chips.push(
         '<span class="filter-chip filter-chip--location">City: ' + UI.escHtml(f.location)
@@ -82,7 +144,10 @@ const Catalog = {
       chips.push('<span class="filter-chip">' + UI.escHtml(Catalog.sortLabels[f.sort] || f.sort) + '</span>');
     }
 
-    if (!chips.length) {
+    const hasActiveFilters = f.search || f.category || f.type || f.min || f.max || f.location
+      || (f.sort && f.sort !== '-created_at');
+
+    if (!hasActiveFilters) {
       wrap.hidden = true;
       wrap.innerHTML = '';
       return;
@@ -104,14 +169,12 @@ const Catalog = {
     if (page === undefined) page = Catalog.page;
     Catalog.page = page;
 
-    const grid = document.getElementById('carsGrid');
+    const grid    = document.getElementById('carsGrid');
     const countEl = document.getElementById('carCount');
     if (!grid) return;
 
     grid.classList.remove('cars-grid--reveal');
-    grid.innerHTML = UI.listingSkeletonCards(
-      Math.min(UI_PAGE.catalog, 6)
-    );
+    grid.innerHTML = UI.listingSkeletonCards(Math.min(UI_PAGE.catalog, 6));
 
     try {
       const data = await API.get(Catalog.buildApiUrl(page));
@@ -120,7 +183,7 @@ const Catalog = {
       if (countEl) {
         countEl.innerHTML = UI.resultsSummary({
           total: meta.count,
-          label: meta.count === 1 ? 'car' : 'cars',
+          label: meta.count === 1 ? 'vehicle' : 'vehicles',
         });
         UI.animateResultsCount(countEl);
       }
@@ -129,10 +192,10 @@ const Catalog = {
 
       if (!meta.items.length) {
         const f = Catalog.getFilterState();
-        const hint = f.search || f.type || f.min || f.max || f.location
-          ? 'Try another city or adjust the listing filters.'
-          : 'Check back later for new listings.';
-        const hasFilters = f.search || f.type || f.min || f.max || f.location
+        const hint = f.search || f.type || f.min || f.max || f.location || f.category
+          ? 'Try adjusting the listing filters.'
+          : 'No vehicles available yet. Check back soon.';
+        const hasFilters = f.search || f.category || f.type || f.min || f.max || f.location
           || (f.sort && f.sort !== '-created_at');
         const actions = [];
         if (f.location) {
@@ -142,21 +205,16 @@ const Catalog = {
           actions.push('<button type="button" class="btn btn-primary" id="catalogEmptyReset">Reset listing filters</button>');
         }
         grid.innerHTML = '<div class="grid-span-full">'
-          + UI.emptyState('No cars found', hint, actions.join(''))
+          + UI.emptyState('No vehicles found', hint, actions.join(''))
           + '</div>';
         const emptyCity = document.getElementById('catalogEmptyCity');
         if (emptyCity && typeof LocationState !== 'undefined' && LocationState.open) {
-          emptyCity.addEventListener('click', function () {
-            LocationState.open();
-          });
+          emptyCity.addEventListener('click', function () { LocationState.open(); });
         }
         const emptyReset = document.getElementById('catalogEmptyReset');
         if (emptyReset) emptyReset.addEventListener('click', Catalog.resetFilters);
         UI.mountPagination('carsPagination', {
-          count: 0,
-          totalPages: 1,
-          page: 1,
-          pageSize: UI_PAGE.catalog,
+          count: 0, totalPages: 1, page: 1, pageSize: UI_PAGE.catalog,
         }, function () {});
         return;
       }
@@ -170,11 +228,11 @@ const Catalog = {
       UI.mountPagination('carsPagination', meta, function (p) {
         Catalog.loadCars(p);
         UI.scrollToEl('carsGrid');
-      }, { label: 'cars' });
+      }, { label: 'vehicles' });
 
     } catch (err) {
       grid.innerHTML = '<div class="grid-span-full">'
-        + UI.emptyState('Failed to load cars', err.message,
+        + UI.emptyState('Failed to load vehicles', err.message,
           '<button type="button" class="btn btn-outline" onclick="Catalog.loadCars(1)">Try again</button>')
         + '</div>';
       const pag = document.getElementById('carsPagination');
@@ -190,15 +248,22 @@ const Catalog = {
     Catalog.loadCars(1);
   },
 
+  clearCategoryFilter() {
+    Catalog.setCategoryAndType('', '');
+    Catalog.page = 1;
+    Catalog.loadCars(1);
+  },
+
   resetFilters() {
     Catalog.setSearchText('');
+    Catalog.setCategoryAndType('', '');
     const typeEl = document.getElementById('fType');
-    const minEl = document.getElementById('fMin');
-    const maxEl = document.getElementById('fMax');
+    const minEl  = document.getElementById('fMin');
+    const maxEl  = document.getElementById('fMax');
     const sortEl = document.getElementById('fSort');
     if (typeEl) typeEl.value = '';
-    if (minEl) minEl.value = '';
-    if (maxEl) maxEl.value = '';
+    if (minEl)  minEl.value  = '';
+    if (maxEl)  maxEl.value  = '';
     if (sortEl) sortEl.value = '-created_at';
     Catalog.page = 1;
     Catalog.loadCars(1);
@@ -207,7 +272,7 @@ const Catalog = {
   debouncedSearch() {
     clearTimeout(Catalog.searchTimer);
     Catalog.searchTimer = setTimeout(function () {
-      const hero = document.getElementById('heroInput');
+      const hero   = document.getElementById('heroInput');
       const inline = document.getElementById('fSearch');
       if (hero && inline) inline.value = hero.value.trim();
       Catalog.page = 1;
@@ -220,8 +285,13 @@ const Catalog = {
     Catalog.loadCars(1);
   },
 
+  onTypeChange() {
+    Catalog.page = 1;
+    Catalog.loadCars(1);
+  },
+
   heroSearch() {
-    const hero = document.getElementById('heroInput');
+    const hero   = document.getElementById('heroInput');
     const inline = document.getElementById('fSearch');
     if (hero && inline) inline.value = hero.value.trim();
     Catalog.page = 1;
@@ -229,42 +299,81 @@ const Catalog = {
   },
 
   init() {
-    const typeEl = document.getElementById('fType');
-    const minEl = document.getElementById('fMin');
-    const maxEl = document.getElementById('fMax');
-    const sortEl = document.getElementById('fSort');
+    const typeEl   = document.getElementById('fType');
+    const minEl    = document.getElementById('fMin');
+    const maxEl    = document.getElementById('fMax');
+    const sortEl   = document.getElementById('fSort');
     const searchEl = document.getElementById('fSearch');
-    const hero = document.getElementById('heroInput');
+    const hero     = document.getElementById('heroInput');
     const resetBtn = document.getElementById('catalogResetBtn');
+    const catEl    = document.getElementById('fCategory');
 
-    if (typeEl) typeEl.addEventListener('change', Catalog.onFilterChange);
-    if (minEl) minEl.addEventListener('change', Catalog.onFilterChange);
-    if (maxEl) maxEl.addEventListener('change', Catalog.onFilterChange);
-    if (sortEl) sortEl.addEventListener('change', Catalog.onFilterChange);
-    if (searchEl) searchEl.addEventListener('input', Catalog.debouncedSearch);
-    if (resetBtn) resetBtn.addEventListener('click', Catalog.resetFilters);
+    function bindEvents() {
+      if (typeEl)   typeEl.addEventListener('change', Catalog.onTypeChange);
+      if (minEl)    minEl.addEventListener('change', Catalog.onFilterChange);
+      if (maxEl)    maxEl.addEventListener('change', Catalog.onFilterChange);
+      if (sortEl)   sortEl.addEventListener('change', Catalog.onFilterChange);
+      if (searchEl) searchEl.addEventListener('input', Catalog.debouncedSearch);
+      if (resetBtn) resetBtn.addEventListener('click', Catalog.resetFilters);
 
-    if (hero) {
-      hero.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          Catalog.heroSearch();
+      if (catEl) {
+        catEl.addEventListener('change', function () {
+          Catalog.setCategoryAndType(catEl.value, '');
+          Catalog.onFilterChange();
+        });
+      }
+
+      if (hero) {
+        hero.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            Catalog.heroSearch();
+          }
+        });
+      }
+
+      const heroBtn = document.getElementById('heroSearchBtn');
+      if (heroBtn) heroBtn.addEventListener('click', Catalog.heroSearch);
+
+      document.addEventListener('location:changed', function (event) {
+        Catalog.page = 1;
+        Catalog.loadCars(1);
+        if (event.detail && document.getElementById('carsGrid')) {
+          UI.scrollToEl('carsGrid');
         }
       });
     }
 
-    const heroBtn = document.getElementById('heroSearchBtn');
-    if (heroBtn) heroBtn.addEventListener('click', Catalog.heroSearch);
+    function startBrowse() {
+      const urlParams       = new URLSearchParams(window.location.search);
+      const initialCategory = urlParams.get('category') || '';
+      const initialType     = urlParams.get('car_type') || urlParams.get('type') || '';
+      const validCategories = CarTaxonomy.getCategories().map(function (c) { return c.value; });
 
-    document.addEventListener('location:changed', function (event) {
-      Catalog.page = 1;
-      Catalog.loadCars(1);
-      if (event.detail && document.getElementById('carsGrid')) {
-        UI.scrollToEl('carsGrid');
+      if (initialCategory && validCategories.indexOf(initialCategory) !== -1) {
+        Catalog.setCategoryAndType(initialCategory, initialType);
+        if (typeEl && initialType) typeEl.value = initialType;
+      } else {
+        Catalog.setCategoryAndType('', '');
       }
-    });
 
-    Catalog.loadCars(1);
+      Catalog.loadCars(1);
+    }
+
+    const taxonomyReady = (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.load)
+      ? CarTaxonomy.load()
+      : Promise.resolve();
+
+    taxonomyReady.then(function () {
+      if (catEl && CarTaxonomy.populateCategorySelect) {
+        CarTaxonomy.populateCategorySelect(catEl, '', true);
+      }
+      bindEvents();
+      startBrowse();
+    }).catch(function () {
+      bindEvents();
+      startBrowse();
+    });
   },
 };
 

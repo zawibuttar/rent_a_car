@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path('api/cars/', include('cars.urls')),
     path('api/bookings/', include('bookings.urls')),
+    path('api/messaging/', include('messaging.urls')),
+    path('api/announcements/', include('announcements.urls')),
 
 # Frontend pages
     path('', page_views.home, name='home'),
@@ -39,8 +41,21 @@ urlpatterns = [
     path('dashboard/customer/', page_views.customer_dashboard, name='customer-dashboard'),
     path('dashboard/owner/', page_views.owner_dashboard, name='owner-dashboard'),
     path('dashboard/admin/', page_views.admin_dashboard, name='admin-dashboard'),
+    path('dashboard/admin/social-media/', page_views.admin_social_media, name='admin-social-media-page'),
+    path('dashboard/admin/hero-banners/', page_views.admin_hero_banners, name='admin-hero-banners-page'),
+    path('terms/', page_views.terms, name='terms'),
+    path('privacy/', page_views.privacy, name='privacy'),
+    path('contact/', page_views.contact, name='contact-support'),
+
+
     # Browser requests to /favicon.ico are redirected to the static favicon asset.
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.svg', permanent=False)),
 ]
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+from django.urls import re_path
+from django.views.static import serve
+
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
+    }),
+]

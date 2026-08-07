@@ -50,9 +50,9 @@
 
       <section class="book-section" aria-labelledby="bookTypeHeading">
         <h4 class="book-section-title" id="bookTypeHeading">
-          <span class="book-section-num">1</span> Rental type
+          <span class="book-section-num">1</span> Booking period
         </h4>
-        <div class="rental-type-pills" id="bookRentalTypes" role="group" aria-label="Rental type"></div>
+        <div class="rental-type-pills" id="bookRentalTypes" role="group" aria-label="Booking period"></div>
       </section>
 
       <section class="book-section" aria-labelledby="bookDatesHeading">
@@ -89,8 +89,9 @@
 
       <section class="book-section" aria-labelledby="bookMessageHeading">
         <h4 class="book-section-title" id="bookMessageHeading">
-          <span class="book-section-num">4</span> Message <span class="text-caption">(optional)</span>
+          <span class="book-section-num">4</span> Start conversation <span class="text-caption">(optional)</span>
         </h4>
+        <p class="form-hint form-hint--compact">This message starts a booking thread with the owner. You can continue chatting in Messages on your dashboard.</p>
         <div class="form-group book-section-field">
           <label class="visually-hidden" for="bookNote">Message for owner</label>
           <textarea class="form-control" id="bookNote" rows="3" maxlength="500"
@@ -124,11 +125,6 @@ const CAR_ID = {{ car_id }};
 let carData = null;
 let selectedRentalType = 'daily';
 
-function formatCarType(t) {
-  if (!t) return '';
-  return t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ');
-}
-
 function buildGallery(images, car) {
   const noImg = window.STATIC_NO_IMAGE;
   const list = images.length ? images : [];
@@ -140,6 +136,7 @@ function buildGallery(images, car) {
   let mainHtml =
     '<div class="detail-gallery-main" id="galleryMain">'
     + (count > 1 ? '<span class="detail-gallery-badge" id="galleryBadge">1 / ' + count + '</span>' : '')
+    + UI.detailGalleryDiscountBadgeHtml(car)
     + '<img id="mainImg" src="' + UI.escHtml(mainSrc) + '" alt="' + title + '"'
     + (count ? '' : ' class="thumb-placeholder"')
     + '/>'
@@ -276,7 +273,8 @@ function renderCar(car) {
   }
 
   const images = car.images || [];
-  const typeLabel = formatCarType(car.car_type);
+  const typeLabel = car.car_type_display || UI.formatCarType(car.car_type);
+  const categoryLabel = car.category_display || UI.formatCategoryLabel(car.category || 'car');
   let availBadge = '';
   if (car.is_currently_booked) {
     const activeSlot = (car.booked_slots || []).find(function (s) { return s.is_active; });
@@ -320,6 +318,7 @@ function renderCar(car) {
     + '<div class="card-body">'
     + '<div class="detail-specs-grid">'
     + '<div class="detail-spec"><div class="detail-spec-val">' + (car.year || '—') + '</div><div class="detail-spec-lbl">Year</div></div>'
+    + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(categoryLabel) + '</div><div class="detail-spec-lbl">Category</div></div>'
     + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(typeLabel) + '</div><div class="detail-spec-lbl">Type</div></div>'
     + '<div class="detail-spec"><div class="detail-spec-val">' + UI.escHtml(car.location || '—') + '</div><div class="detail-spec-lbl">Location</div></div>'
     + '</div>'
@@ -336,7 +335,7 @@ function renderCar(car) {
     + '<p class="detail-subtitle">'
     + '<span>' + (car.year || '') + '</span>'
     + '<span class="dot">·</span>'
-    + '<span>' + UI.escHtml(typeLabel) + '</span>'
+    + '<span>' + UI.escHtml(categoryLabel) + (typeLabel ? ' · ' + UI.escHtml(typeLabel) : '') + '</span>'
     + '</p>'
     + '<div class="detail-badges">' + availBadge + '</div>'
     + '<div class="detail-rating-row">' + UI.reviewSummaryLine(car) + '</div>'
@@ -347,8 +346,7 @@ function renderCar(car) {
       }).join(' ');
       return '<div class="detail-price-block">'
         + '<div class="detail-rental-chips">' + chips + '</div>'
-        + '<div class="detail-price">$' + rate.value
-        + '<span> / ' + rate.unit + '</span></div>'
+        + UI.detailDiscountPriceHtml(car, rate)
         + '<p class="detail-price-hint">Final total depends on rental type and schedule.</p>'
         + '</div>';
     })()
@@ -390,7 +388,15 @@ function updateMobileBookBar(car) {
   const role = API.role();
   const loggedIn = API.loggedIn();
   const rate = UI.primaryRateDisplay(car);
-  priceEl.innerHTML = '$' + rate.value + '<span>' + rate.label + '</span>';
+  const discount = UI.discountMeta(car);
+  if (discount && rate.unit === 'day') {
+    priceEl.innerHTML = '<span class="detail-price-val detail-price-val--old" aria-hidden="true">$'
+      + discount.original.toFixed(2) + '</span>'
+      + '<span class="detail-price-val detail-price-val--sale">$'
+      + discount.final.toFixed(2) + '</span><span>' + rate.label + '</span>';
+  } else {
+    priceEl.innerHTML = '$' + rate.value + '<span>' + rate.label + '</span>';
+  }
 
   if (loggedIn && role === 'customer' && car.is_available) {
     bar.classList.add('is-visible');
@@ -580,18 +586,28 @@ function getBookingPayload() {
 function openBookingModal() {
   if (!carData) return;
   const title = carData.brand + ' ' + carData.model;
-  const typeLabel = formatCarType(carData.car_type);
+  const typeLabel = carData.car_type_display || UI.formatCarType(carData.car_type);
+  const categoryLabel = carData.category_display || UI.formatCategoryLabel(carData.category || 'car');
   const rate = UI.primaryRateDisplay(carData);
   const meta = document.getElementById('bookModalMeta');
   const titleEl = document.getElementById('bookModalTitle');
   if (titleEl) titleEl.textContent = title;
   if (meta) {
-    meta.textContent = [
+    var priceMetaStr = '';
+    var discount = UI.discountMeta(carData);
+    if (discount && rate.unit === 'day') {
+      priceMetaStr = 'from <span class="listing-card-price-val listing-card-price-val--old">$'
+        + discount.original.toFixed(2) + '</span> <span class="listing-card-price-val listing-card-price-val--sale">$'
+        + discount.final.toFixed(2) + '</span>/' + rate.unit;
+    } else {
+      priceMetaStr = 'from $' + rate.value + '/' + rate.unit;
+    }
+    meta.innerHTML = [
       carData.year || '',
-      typeLabel,
+      categoryLabel + (typeLabel ? ' · ' + typeLabel : ''),
       carData.location || '',
     ].filter(Boolean).join(' · ')
-      + ' · from $' + rate.value + '/' + rate.unit;
+      + ' · ' + priceMetaStr;
   }
   document.getElementById('bookErr').style.display = 'none';
   const hint = document.getElementById('bookDateHint');
@@ -682,16 +698,17 @@ function calcCost() {
     weekly: 'Price per week',
     monthly: 'Price per month',
   };
-  const ratePrices = {
-    hourly: carData.price_per_hour,
-    daily: carData.price_per_day,
-    weekly: carData.price_per_week,
-    monthly: carData.price_per_month,
-  };
 
   document.getElementById('costDays').textContent = result.duration;
   if (rateLabel) rateLabel.textContent = rateNames[win.rental_type] || 'Rate';
-  document.getElementById('costPpd').textContent = '$' + parseFloat(ratePrices[win.rental_type] || 0).toFixed(2);
+  const costPpd = document.getElementById('costPpd');
+  if (costPpd) {
+    if (result.originalRate != null && result.originalRate > result.rate) {
+      costPpd.innerHTML = '<span class="cost-rate-old">$' + result.originalRate.toFixed(2) + '</span> $' + result.rate.toFixed(2);
+    } else {
+      costPpd.textContent = '$' + parseFloat(result.rate || 0).toFixed(2);
+    }
+  }
   document.getElementById('costTotal').textContent = totalStr;
 
   if (box) {
@@ -738,9 +755,9 @@ async function confirmBooking() {
     });
 
     closeModal('bookModal');
-    toast('Booking request sent. The owner will review it soon.', 'success');
+    toast('Booking request sent. Continue the conversation in Messages on your dashboard.', 'success');
     setTimeout(function () {
-      window.location.href = '/dashboard/customer/';
+      window.location.href = '/dashboard/customer/#messages';
     }, 1200);
 
   } catch (err) {

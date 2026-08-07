@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Contact Support — RentACar{% endblock %}
+
+{% block content %}
+<div class="static-page static-page--wide">
+  <header class="static-page__hero">
+    <span class="static-page__eyebrow">
+      <i class="ti ti-headset" aria-hidden="true"></i> Support
+    </span>
+    <h1>Contact Support</h1>
+    <p>Whether you are booking your first rental or listing a vehicle, our team is here to help with account, verification, and marketplace questions.</p>
+  </header>
+
+  <article class="static-page__card">
+    <div class="static-page__card-head">
+      <div>
+        <h2>Get in touch</h2>
+        <p>Choose the channel that works best for you. We aim to respond within one business day.</p>
+      </div>
+    </div>
+
+    <div class="static-page__prose">
+      <div class="contact-grid">
+        <div class="contact-card">
+          <div class="contact-card__icon" aria-hidden="true">
+            <i class="ti ti-mail"></i>
+          </div>
+          <h3>Email support</h3>
+          <p>Account help, bookings, listings, and billing questions</p>
+          <a href="mailto:support@rentacar.pk">support@rentacar.pk</a>
+        </div>
+
+        <div class="contact-card">
+          <div class="contact-card__icon" aria-hidden="true">
+            <i class="ti ti-clock"></i>
+          </div>
+          <h3>Support hours</h3>
+          <p>Monday – Saturday</p>
+          <p class="contact-card__emphasis">9:00 AM – 9:00 PM (PKT)</p>
+        </div>
+
+        <div class="contact-card">
+          <div class="contact-card__icon" aria-hidden="true">
+            <i class="ti ti-map-pin"></i>
+          </div>
+          <h3>Head office</h3>
+          <p>Lahore, Punjab<br>Pakistan</p>
+          <a href="/cars/">Browse available cities</a>
+        </div>
+      </div>
+
+      <section class="static-page__section static-page__section--flush">
+        <h3>Before you write to us</h3>
+        <p>To help us resolve your request faster, include your registered email, account role (customer or owner), and—if applicable—the booking or listing ID. Screenshots are welcome for technical issues.</p>
+        <div class="static-page__note">
+          For account deletion requests, email us from your registered address with the subject line <strong>Account Deletion Request</strong>. We will confirm identity before processing.
+        </div>
+      </section>
+
+      <section class="static-page__section">
+        <h3>Frequently asked questions</h3>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>How do I list my car on RentACar?</summary>
+            <div class="faq-item__body">
+              <p>Register as an owner, complete your profile, and submit any required verification documents. Once approved, open the Owner Dashboard, add your vehicle details, upload photos, set pricing and availability, and publish your listing.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>How long does owner verification take?</summary>
+            <div class="faq-item__body">
+              <p>Our administrators typically review owner profiles within 24–48 business hours. You will see your verification status update in the dashboard once the review is complete.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>How do bookings and payments work?</summary>
+            <div class="faq-item__body">
+              <p>Customers submit booking requests with preferred dates and rental type. Owners approve or decline requests in the dashboard. Unless an online payment feature is explicitly offered, payment is arranged directly between the customer and owner after confirmation.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>Can I cancel or change a booking?</summary>
+            <div class="faq-item__body">
+              <p>Changes depend on the booking status and owner availability. Contact the other party through the details provided in your dashboard, or email support if you need assistance coordinating a change.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>How is my personal data used?</summary>
+            <div class="faq-item__body">
+              <p>We use your information to operate accounts, process bookings, verify owners, and improve the Platform. We do not sell personal data. Read our <a href="/privacy/">Privacy Policy</a> for full details.</p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <nav class="static-page__links" aria-label="Related pages">
+        <a href="/terms/"><i class="ti ti-file-text" aria-hidden="true"></i> Terms &amp; Conditions</a>
+        <a href="/privacy/"><i class="ti ti-shield-check" aria-hidden="true"></i> Privacy Policy</a>
+        <a href="/login/"><i class="ti ti-login" aria-hidden="true"></i> Sign in</a>
+      </nav>
+    </div>
+  </article>
+</div>
+{% endblock %}
+
+{% block footer %}{% include 'includes/footer.html' %}{% endblock %}

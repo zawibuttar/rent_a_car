@@ -3,6 +3,7 @@ from .views import *
 
 urlpatterns = [
     path('', CarListView.as_view(), name='car-list'),
+    path('taxonomy/', CarTaxonomyView.as_view(), name='car-taxonomy'),
     path('location/search/', LocationSearchView.as_view(), name='location-search'),
     path('location/reverse/', LocationReverseView.as_view(), name='location-reverse'),
     path('<int:pk>/', CarDetailView.as_view(), name='car-detail'),

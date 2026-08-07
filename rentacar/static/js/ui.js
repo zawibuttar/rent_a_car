@@ -19,6 +19,34 @@ const UI = {
     return '<svg class="' + className + '" aria-hidden="true"><use href="#icon-' + name + '"/></svg>';
   },
 
+  localDateInputValue(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  },
+
+  localTimeInputValue(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return h + ':' + min;
+  },
+
+  todayLocalDateValue() {
+    return UI.localDateInputValue(new Date());
+  },
+
+  isoFromLocalDateTime(dateStr, timeStr, defaultTime) {
+    if (!dateStr) return null;
+    const time = timeStr || defaultTime || '23:59';
+    const parsed = new Date(dateStr + 'T' + time);
+    if (isNaN(parsed.getTime())) return null;
+    return parsed.toISOString();
+  },
+
   initTheme() {
     const saved = localStorage.getItem('theme');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -125,7 +153,18 @@ const UI = {
 
   formatCarType(type) {
     if (!type) return '';
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getTypeLabel) {
+      return CarTaxonomy.getTypeLabel(type);
+    }
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+  },
+
+  formatCategoryLabel(category) {
+    if (!category) return '';
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getCategoryLabel) {
+      return CarTaxonomy.getCategoryLabel(category);
+    }
+    return category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ');
   },
 
   formatDisplayName(name) {
@@ -157,6 +196,9 @@ const UI = {
   },
 
   rentalTypeLabel(type) {
+    if (typeof CarTaxonomy !== 'undefined' && CarTaxonomy.getRentalDurationLabel) {
+      return CarTaxonomy.getRentalDurationLabel(type) || type || '—';
+    }
     const labels = {
       hourly: 'Hourly',
       daily: 'Daily',
@@ -168,8 +210,9 @@ const UI = {
 
   primaryRateDisplay(car) {
     if (!car) return { value: '0.00', unit: 'day', label: 'per day' };
+    const dailyPrice = car.has_discount ? car.final_price : car.price_per_day;
     const types = [
-      { on: car.rent_daily, price: car.price_per_day, unit: 'day', label: 'per day' },
+      { on: car.rent_daily, price: dailyPrice, unit: 'day', label: 'per day' },
       { on: car.rent_hourly, price: car.price_per_hour, unit: 'hour', label: 'per hour' },
       { on: car.rent_weekly, price: car.price_per_week, unit: 'week', label: 'per week' },
       { on: car.rent_monthly, price: car.price_per_month, unit: 'month', label: 'per month' },
@@ -223,6 +266,8 @@ const UI = {
         total: (exactHours * rate).toFixed(2),
         duration: UI.formatHourlyDuration(end - start),
         unitLabel: UI.formatHourlyDuration(end - start),
+        rate: rate,
+        originalRate: null,
       };
     }
 
@@ -238,10 +283,14 @@ const UI = {
       if (!car.rent_daily || !car.price_per_day) {
         return { error: 'Daily rental is not available for this car.' };
       }
+      const originalRate = parseFloat(car.price_per_day);
+      const rate = car.has_discount ? parseFloat(car.final_price) : originalRate;
       return {
-        total: (days * parseFloat(car.price_per_day)).toFixed(2),
+        total: (days * rate).toFixed(2),
         duration: days + ' day' + (days !== 1 ? 's' : ''),
         unitLabel: days + 'd',
+        rate: rate,
+        originalRate: car.has_discount ? originalRate : null,
       };
     }
     if (rentalType === 'weekly') {
@@ -250,10 +299,13 @@ const UI = {
       }
       if (days < 7) return { error: 'Minimum weekly rental is 7 days.' };
       const weeks = Math.ceil(days / 7);
+      const rate = parseFloat(car.price_per_week);
       return {
-        total: (weeks * parseFloat(car.price_per_week)).toFixed(2),
+        total: (weeks * rate).toFixed(2),
         duration: weeks + ' week' + (weeks !== 1 ? 's' : ''),
         unitLabel: weeks + 'w',
+        rate: rate,
+        originalRate: null,
       };
     }
     if (rentalType === 'monthly') {
@@ -262,10 +314,13 @@ const UI = {
       }
       if (days < 30) return { error: 'Minimum monthly rental is 30 days.' };
       const months = Math.ceil(days / 30);
+      const rate = parseFloat(car.price_per_month);
       return {
-        total: (months * parseFloat(car.price_per_month)).toFixed(2),
+        total: (months * rate).toFixed(2),
         duration: months + ' month' + (months !== 1 ? 's' : ''),
         unitLabel: months + 'mo',
+        rate: rate,
+        originalRate: null,
       };
     }
     return { error: 'Invalid rental type.' };
@@ -533,12 +588,96 @@ const UI = {
     el.classList.add('results-bar__count--pop');
   },
 
+  discountMeta(car) {
+    if (!car || !car.has_discount || !car.price_per_day) return null;
+    const original = parseFloat(car.price_per_day);
+    const final = parseFloat(car.final_price);
+    if (isNaN(original) || isNaN(final) || final >= original) return null;
+    let pct = null;
+    if (car.discount_percentage != null && car.discount_percentage > 0) {
+      pct = car.discount_percentage;
+    } else {
+      pct = Math.round((1 - final / original) * 100);
+    }
+    if (!pct || pct <= 0) return null;
+    return {
+      pct: pct,
+      original: original,
+      final: final,
+      label: pct + '% OFF',
+      shortLabel: '-' + pct + '%',
+    };
+  },
+
+  listingDiscountBadgeHtml(car) {
+    const d = UI.discountMeta(car);
+    if (!d) return '';
+    return '<span class="listing-card-badge listing-card-badge--discount" aria-label="'
+      + UI.escHtml(d.label) + '">'
+      + '<span class="listing-card-discount-pct">' + UI.escHtml(d.shortLabel) + '</span>'
+      + '</span>';
+  },
+
+  listingDiscountPriceHtml(car, rate, showFrom) {
+    const d = UI.discountMeta(car);
+    if (!d || rate.unit !== 'day') {
+      return '<div class="listing-card-price">'
+        + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+        + '<span class="listing-card-price-line">'
+        + '<span class="listing-card-price-val">$' + rate.value + '</span>'
+        + '<span class="listing-card-price-unit">' + UI.escHtml(rate.label) + '</span>'
+        + '</span></div>';
+    }
+    return '<div class="listing-card-price listing-card-price--discounted">'
+      + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
+      + '<span class="listing-card-price-line">'
+      + '<span class="listing-card-price-val listing-card-price-val--old" aria-hidden="true">$'
+      + d.original.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-val listing-card-price-val--sale">$'
+      + d.final.toFixed(2) + '</span>'
+      + '<span class="listing-card-price-unit">' + UI.escHtml(rate.label) + '</span>'
+      + '</span>'
+      + '<span class="listing-card-price-save">Save ' + d.pct + '%</span>'
+      + '</div>';
+  },
+
+  detailDiscountPriceHtml(car, rate) {
+    const d = UI.discountMeta(car);
+    if (!d || rate.unit !== 'day') {
+      return '<div class="detail-price">$' + rate.value + '<span> / ' + rate.unit + '</span></div>';
+    }
+    return '<div class="detail-price-wrap detail-price-wrap--discounted">'
+      + '<span class="detail-discount-badge">' + UI.escHtml(d.label) + '</span>'
+      + '<div class="detail-price detail-price--discounted">'
+      + '<span class="detail-price-val detail-price-val--old" aria-hidden="true">$'
+      + d.original.toFixed(2) + '</span>'
+      + '<span class="detail-price-val detail-price-val--sale">$'
+      + d.final.toFixed(2) + '</span>'
+      + '<span class="detail-price-unit">/ ' + rate.unit + '</span>'
+      + '</div>'
+      + '<p class="detail-price-save">You save ' + d.pct + '% on the daily rate</p>'
+      + '</div>';
+  },
+
+  detailGalleryDiscountBadgeHtml(car) {
+    const d = UI.discountMeta(car);
+    if (!d) return '';
+    return '<span class="detail-gallery-discount" aria-label="' + UI.escHtml(d.label) + '">'
+      + UI.escHtml(d.shortLabel) + '</span>';
+  },
+
   listingCard(car, opts) {
     opts = opts || {};
     const ctaLabel = opts.ctaLabel || 'View details';
     const title = ((car.brand || '') + ' ' + (car.model || '')).trim() || 'Car listing';
     const year = car.year ? String(car.year) : '';
-    const type = UI.formatCarType(car.car_type);
+    const type = car.car_type_display || UI.formatCarType(car.car_type);
+    const category = car.category;
+    let badgeLabel = type;
+    if (category && category !== 'car') {
+      const catLabel = car.category_display || UI.formatCategoryLabel(category);
+      badgeLabel = catLabel + (type ? ' · ' + type : '');
+    }
     const rate = UI.primaryRateDisplay(car);
     const price = rate.value;
     const priceUnit = rate.label;
@@ -556,19 +695,22 @@ const UI = {
         + '</span>'
       : '';
 
-    const ariaParts = [title, year, type, location, 'from $' + price + ' ' + priceUnit];
+    const ariaParts = [title, year, badgeLabel || type, location, 'from $' + price + ' ' + priceUnit];
     if (status.label) ariaParts.push(status.label);
+    const discount = UI.discountMeta(car);
 
     const cardClass = 'listing-card'
-      + (status.modifier ? ' listing-card--' + status.modifier : '');
+      + (status.modifier ? ' listing-card--' + status.modifier : '')
+      + (discount && rate.unit === 'day' ? ' listing-card--discounted' : '');
 
     return '<a class="' + cardClass + '" href="/cars/' + encodeURIComponent(car.id) + '/"'
       + ' aria-label="' + UI.escHtml(ariaParts.filter(Boolean).join(', ')) + '">'
       + '<div class="listing-card-media">'
       + '<div class="listing-card-thumb">' + img + '</div>'
-      + (type
-        ? '<span class="listing-card-badge listing-card-badge--type">' + UI.escHtml(type) + '</span>'
+      + (badgeLabel
+        ? '<span class="listing-card-badge listing-card-badge--type">' + UI.escHtml(badgeLabel) + '</span>'
         : '')
+      + (discount && rate.unit === 'day' ? UI.listingDiscountBadgeHtml(car) : '')
       + '<span class="listing-card-badge listing-card-badge--status ' + status.statusClass + '">'
       + '<span class="listing-card-status-dot" aria-hidden="true"></span>'
       + '<span>' + UI.escHtml(status.label) + '</span>'
@@ -592,13 +734,7 @@ const UI = {
       + '</div>'
       + availabilityHtml
       + '<div class="listing-card-foot">'
-      + '<div class="listing-card-price">'
-      + (showFrom ? '<span class="listing-card-price-from">From</span>' : '')
-      + '<span class="listing-card-price-line">'
-      + '<span class="listing-card-price-val">$' + price + '</span>'
-      + '<span class="listing-card-price-unit">' + UI.escHtml(priceUnit) + '</span>'
-      + '</span>'
-      + '</div>'
+      + UI.listingDiscountPriceHtml(car, rate, showFrom)
       + '<span class="listing-card-cta">'
       + '<span class="listing-card-cta-text">' + UI.escHtml(ctaLabel) + '</span>'
       + UI.icon('arrow-left', 'icon icon-cta')
@@ -634,17 +770,86 @@ const UI = {
     const panel = document.getElementById(opts.panelPrefix + opts.tabId);
     if (panel) panel.classList.add('active');
     if (opts.btn) opts.btn.classList.add('active');
+    UI.syncDashboardTabUrl(opts.tabId);
+    UI.setDashboardMessagesLayout(opts.tabId === 'messages');
     if (opts.onActivate) opts.onActivate(opts.tabId);
     UI.closeSidebarDrawer();
+  },
+
+  getActiveDashboardTab() {
+    const panel = document.querySelector('.tab-panel.active');
+    if (!panel || !panel.id || panel.id.indexOf('tab-') !== 0) return '';
+    return panel.id.replace(/^tab-/, '');
+  },
+
+  syncDashboardTabUrl(tabId) {
+    if (!tabId || !document.querySelector('.dash-layout')) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tab');
+    url.hash = tabId;
+    const next = url.pathname + url.search + url.hash;
+    const current = window.location.pathname + window.location.search + window.location.hash;
+    if (next !== current) {
+      history.replaceState(null, '', next);
+    }
+  },
+
+  setDashboardMessagesLayout(isMessagesTab) {
+    document.querySelectorAll('.dash-layout').forEach(function (layout) {
+      layout.classList.toggle('dash-layout--messages-tab', !!isMessagesTab);
+    });
   },
 
   openDashboardTabFromHash() {
     const hash = (location.hash || '').replace('#', '').trim();
     if (!hash || !document.querySelector('.dash-layout')) return false;
+    if (UI.getActiveDashboardTab() === hash) return true;
     const btn = document.getElementById('btn-' + hash);
     if (!btn || typeof showTab !== 'function') return false;
     showTab(hash, btn);
     return true;
+  },
+
+  bootDashboardTab(fallbackTab) {
+    if (UI.openDashboardTabFromHash()) return true;
+    const tab = new URLSearchParams(window.location.search).get('tab') || fallbackTab || '';
+    if (tab && document.getElementById('btn-' + tab) && typeof showTab === 'function') {
+      showTab(tab, document.getElementById('btn-' + tab));
+      return true;
+    }
+    return false;
+  },
+
+  initDashboardTabRouting() {
+    if (UI._dashboardTabRoutingInit) return;
+    UI._dashboardTabRoutingInit = true;
+    window.addEventListener('hashchange', function () {
+      UI.openDashboardTabFromHash();
+    });
+  },
+
+  interceptDashboardNavLinks() {
+    const currentPath = window.location.pathname.replace(/\/$/, '');
+    const isDashboard = /^\/dashboard\/(admin|owner|customer)$/.test(currentPath);
+    if (!isDashboard || !document.querySelector('.dash-layout')) return;
+
+    function handleInPlaceNav(event, tabId) {
+      event.preventDefault();
+      const btn = document.getElementById('btn-' + tabId);
+      if (btn && typeof showTab === 'function') {
+        showTab(tabId, btn);
+      }
+    }
+
+    const dashLink = document.getElementById('nav-dash-link');
+    if (dashLink) {
+      dashLink.addEventListener('click', function (event) {
+        const targetPath = (dashLink.getAttribute('href') || '').replace(/\/$/, '').split('#')[0];
+        if (targetPath && currentPath === targetPath.replace(/\/$/, '')) {
+          handleInPlaceNav(event, 'overview');
+        }
+      });
+    }
   },
 
   closeSidebarDrawer() {
@@ -1157,9 +1362,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () { UI.toggleTheme(); });
   });
   UI.initSidebarDrawer();
-  window.addEventListener('hashchange', function () {
-    UI.openDashboardTabFromHash();
-  });
+  UI.initDashboardTabRouting();
   UI.refreshTableScrollHints();
   window.addEventListener('resize', function () {
     UI.refreshTableScrollHints();

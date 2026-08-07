@@ -1,0 +1,18 @@
+{% load static %}
+<div class="hero-scene" aria-hidden="true">
+  <div class="hero-scene__media">
+    <img
+      class="hero-scene__photo"
+      src="{% if hero_banner_url %}{{ hero_banner_url }}{% else %}{{ hero_banner_fallback }}{% endif %}"
+      alt=""
+      width="1920"
+      height="1080"
+      loading="eager"
+      decoding="async"
+      fetchpriority="high"
+    />
+  </div>
+  <div class="hero-scene__overlay"></div>
+  <div class="hero-scene__vignette"></div>
+  <div class="hero-scene__grain"></div>
+</div>

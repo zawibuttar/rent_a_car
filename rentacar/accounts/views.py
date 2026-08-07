@@ -11,8 +11,10 @@ from .permissions import IsPlatformAdmin
 from rentacar.caching import (
     ADMIN_OWNERS_KEY,
     NoCacheMixin,
+    PublicCacheHeadersMixin,
     RedisListCacheMixin,
     invalidate_admin_lists,
+    invalidate_social_media_cache,
 )
 from rentacar.throttling import AdminRateThrottle, AuthRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
@@ -178,6 +180,56 @@ class AdminOwnerVerificationView(APIView):
             'message': f"Owner profile has been {'verified' if profile.is_verified else 'marked as unverified' }.",
             'owner_profile': OwnerProfileSerializer(profile).data
         }, status=status.HTTP_200_OK)
+
+
+class PublicSocialMediaLinkListView(PublicCacheHeadersMixin, generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+    serializer_class = SocialMediaLinkSerializer
+    queryset = SocialMediaLink.objects.filter(is_active=True)
+    pagination_class = None
+
+
+class AdminSocialMediaLinkListCreateView(NoCacheMixin, generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    serializer_class = SocialMediaLinkSerializer
+    queryset = SocialMediaLink.objects.all()
+    pagination_class = None
+
+    def perform_create(self, serializer):
+        serializer.save()
+        invalidate_social_media_cache()
+
+
+class AdminSocialMediaLinkDetailView(NoCacheMixin, generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    serializer_class = SocialMediaLinkSerializer
+    queryset = SocialMediaLink.objects.all()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        invalidate_social_media_cache()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        invalidate_social_media_cache()
+
+
+class AdminHeroBannerListCreateView(NoCacheMixin, generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    serializer_class = HeroBannerSerializer
+    queryset = HeroBanner.objects.all()
+    pagination_class = None
+
+
+class AdminHeroBannerDetailView(NoCacheMixin, generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    throttle_classes = [AdminRateThrottle]
+    serializer_class = HeroBannerSerializer
+    queryset = HeroBanner.objects.all()
 
 
 class ChangePasswordView(APIView):

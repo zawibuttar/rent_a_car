@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Customer Dashboard — RentACar{% endblock %}
 
 {% block content %}
@@ -15,23 +16,33 @@
     </div>
 
     <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+      <button type="button" class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
       </button>
-      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
+      <button type="button" class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> My Bookings
       </button>
-      <button class="s-item" id="btn-profile" onclick="showTab('profile', this)">
+      <button type="button" class="s-item" id="btn-messages" onclick="showTab('messages', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
+        <span>Messages</span>
+        <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
+      </button>
+      <button type="button" class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg>
+        <span>Announcements</span>
+        <span class="s-badge" id="annUnreadBadge" data-ann-unread-badge hidden></span>
+      </button>
+      <button type="button" class="s-item" id="btn-profile" onclick="showTab('profile', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-user"/></svg> My Profile
       </button>
-      <button class="s-item" id="btn-password" onclick="showTab('password', this)">
+      <button type="button" class="s-item" id="btn-password" onclick="showTab('password', this)">
         <svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg> Change Password
       </button>
       <div class="s-divider"></div>
       <a href="/cars/" class="s-item">
         <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg> Browse Cars
       </a>
-      <button class="s-item danger" onclick="doLogout()">
+      <button type="button" class="s-item danger" onclick="doLogout()">
         <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
       </button>
     </div>
@@ -39,6 +50,7 @@
 
   <!-- ── Main ── -->
   <div class="dash-main">
+    {% include 'includes/announcement_banner.html' %}
 
     <!-- OVERVIEW TAB -->
     <div class="tab-panel active" id="tab-overview">
@@ -151,6 +163,28 @@
       </div>
       <div id="bookingsPagination" class="pagination-wrap" hidden></div>
 
+    </div>
+
+    <!-- MESSAGES TAB -->
+    <div class="tab-panel" id="tab-messages">
+      <div class="page-head">
+        <div>
+          <h1>Messages</h1>
+          <p>Coordinate pickup and details with owners for your bookings</p>
+        </div>
+      </div>
+      {% include 'includes/messages_panel.html' %}
+    </div>
+
+    <!-- ANNOUNCEMENTS TAB -->
+    <div class="tab-panel" id="tab-announcements">
+      <div class="page-head">
+        <div>
+          <h1>Announcements</h1>
+          <p>Platform updates and notices from RentACar</p>
+        </div>
+      </div>
+      {% include 'includes/announcements_panel.html' %}
     </div>
 
     <!-- PROFILE TAB -->
@@ -318,6 +352,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/messaging.js' %}"></script>
+<script src="{% static 'js/announcements.js' %}"></script>
 <script>
   /* ── Guard ─────────────────────────── */
   if (!API.loggedIn() || API.role() !== 'customer') {
@@ -349,6 +385,16 @@
       onActivate: function (n) {
         if (n === 'overview') loadOverview();
         if (n === 'bookings') fetchCustomerBookings();
+        if (n === 'messages') {
+          Messaging.activate();
+        } else {
+          Messaging.deactivate();
+        }
+        if (n === 'announcements') {
+          Announcements.activate();
+        } else {
+          Announcements.deactivate();
+        }
         if (n === 'profile') loadProfile();
       },
     });
@@ -429,6 +475,7 @@
     var tbody = document.getElementById('bookingsTable');
     tbody.innerHTML = UI.tableLoadingRow(9);
     try {
+      await Messaging.fetchThreads().catch(function () {});
       var meta = await UI.fetchListPage(customerBookingsQuery(), bookingsState.page, UI_PAGE.table);
       bookingsState.page = meta.page;
       renderBookings(meta);
@@ -465,23 +512,20 @@
     }
 
     tbody.innerHTML = meta.items.map(function (b, i) {
-      var actions = '';
+      var actions = '<div class="table-actions">'
+        + '<button type="button" class="btn btn-ghost btn-sm" '
+        + 'onclick="Messaging.openThread(' + b.id + ')">Message</button>';
 
       if (b.status === 'pending' || b.status === 'approved') {
-        actions = '<div class="table-actions">'
-          + '<button type="button" class="btn btn-danger btn-sm" '
-          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>'
-          + '</div>';
+        actions += '<button type="button" class="btn btn-danger btn-sm" '
+          + 'onclick="cancelBooking(' + b.id + ')">Cancel</button>';
       } else if (b.status === 'completed') {
-        actions = '<div class="table-actions">'
-          + '<button type="button" class="btn btn-outline btn-sm" '
-          + 'onclick="openReview(' + b.id + ')">Review</button>'
-          + '</div>';
-      } else {
-        actions = UI.tableEmpty();
+        actions += '<button type="button" class="btn btn-outline btn-sm" '
+          + 'onclick="openReview(' + b.id + ')">Review</button>';
       }
+      actions += '</div>';
 
-      return '<tr>'
+      return '<tr data-booking-row="' + b.id + '">'
         + UI.tdSerial(meta.rangeStart + i)
         + '<td>'
         + '<a href="/cars/' + encodeURIComponent(b.car.id) + '/" class="text-strong">'
@@ -652,8 +696,10 @@
       fetchCustomerBookings();
     },
   });
-  if (!UI.openDashboardTabFromHash()) {
+  if (!UI.bootDashboardTab()) {
     loadOverview();
   }
+  Messaging.mount();
+  Announcements.mount();
 </script>
 {% endblock %}

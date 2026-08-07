@@ -24,9 +24,9 @@
     {% endif %}
     {% if variant == 'admin_bookings' or variant == 'customer_bookings' or variant == 'owner_requests' %}
     <div class="filter-field">
-      <label for="{{ toolbar_id }}Rental">Rental type</label>
-      <select id="{{ toolbar_id }}Rental" aria-label="Filter by rental type">
-        <option value="">All types</option>
+      <label for="{{ toolbar_id }}Rental">Booking period</label>
+      <select id="{{ toolbar_id }}Rental" aria-label="Filter by booking period">
+        <option value="">All periods</option>
         <option value="hourly">Hourly</option>
         <option value="daily">Daily</option>
         <option value="weekly">Weekly</option>

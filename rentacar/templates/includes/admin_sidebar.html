@@ -1,0 +1,79 @@
+<aside class="sidebar">
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sAvatar"></div>
+    <div>
+      <div class="sidebar-name" id="sName"></div>
+      <span class="sidebar-role">Admin</span>
+    </div>
+  </div>
+
+  <div class="sidebar-menu">
+    {% if nav_mode == 'links' %}
+      <a href="/dashboard/admin/#overview" class="s-item{% if active_nav == 'overview' %} active{% endif %}" id="btn-overview">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </a>
+      <a href="/dashboard/admin/#cars" class="s-item{% if active_nav == 'cars' %} active{% endif %}" id="btn-cars">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
+      </a>
+      <a href="/dashboard/admin/#owners" class="s-item{% if active_nav == 'owners' %} active{% endif %}" id="btn-owners">
+        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+        <span>Owner Verifications</span>
+        <span class="s-badge" id="pendingOwnersBadge" hidden></span>
+      </a>
+      <a href="/dashboard/admin/social-media/" class="s-item{% if active_nav == 'social' %} active{% endif %}" id="btn-social">
+        <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
+        Social Media
+      </a>
+      <a href="/dashboard/admin/hero-banners/" class="s-item{% if active_nav == 'hero' %} active{% endif %}" id="btn-hero">
+        <svg class="icon" aria-hidden="true"><use href="#icon-camera"/></svg>
+        Home Hero
+      </a>
+      <a href="/dashboard/admin/#bookings" class="s-item{% if active_nav == 'bookings' %} active{% endif %}" id="btn-bookings">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
+      </a>
+      <a href="/dashboard/admin/#announcements" class="s-item{% if active_nav == 'announcements' %} active{% endif %}" id="btn-announcements">
+        <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg> Announcements
+      </a>
+      <a href="/dashboard/admin/#messages" class="s-item{% if active_nav == 'messages' %} active{% endif %}" id="btn-messages">
+        <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
+        <span>Messages</span>
+        <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
+      </a>
+    {% else %}
+      <button type="button" class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
+      </button>
+      <button type="button" class="s-item" id="btn-cars" onclick="showTab('cars', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
+      </button>
+      <button type="button" class="s-item" id="btn-owners" onclick="showTab('owners', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
+        <span>Owner Verifications</span>
+        <span class="s-badge" id="pendingOwnersBadge" hidden></span>
+      </button>
+      <a class="s-item" id="btn-social" href="/dashboard/admin/social-media/">
+        <svg class="icon" aria-hidden="true"><use href="#icon-share"/></svg>
+        Social Media
+      </a>
+      <a class="s-item" id="btn-hero" href="/dashboard/admin/hero-banners/">
+        <svg class="icon" aria-hidden="true"><use href="#icon-camera"/></svg>
+        Home Hero
+      </a>
+      <button type="button" class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
+      </button>
+      <button type="button" class="s-item" id="btn-announcements" onclick="showTab('announcements', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-megaphone"/></svg> Announcements
+      </button>
+      <button type="button" class="s-item" id="btn-messages" onclick="showTab('messages', this)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg>
+        <span>Messages</span>
+        <span class="s-badge" id="msgUnreadBadge" data-msg-unread-badge hidden></span>
+      </button>
+    {% endif %}
+    <div class="s-divider"></div>
+    <button type="button" class="s-item danger" onclick="doLogout()">
+      <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
+    </button>
+  </div>
+</aside>

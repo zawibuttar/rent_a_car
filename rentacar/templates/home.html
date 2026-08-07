@@ -5,43 +5,56 @@
 {% block content %}
 <div class="page-wrap">
 
-  <div class="hero">
-    <h1>Find Your Perfect Rental Car</h1>
-    <p>Browse verified cars from trusted owners. Instant booking, transparent pricing.</p>
-    <div class="hero-search">
-      <input type="search" class="search-input" id="heroInput"
-        placeholder="Search by brand, model or city..."
-        autocomplete="off"
-        aria-label="Search cars"/>
-      <button type="button" class="btn btn-primary" id="heroSearchBtn">Search</button>
+  <div class="hero hero--rental">
+    {% include 'includes/hero_scene.html' %}
+    <div class="hero-content">
+      <p class="hero-eyebrow">Trusted peer-to-peer rentals</p>
+      <h1>Find Your Perfect Rental Car</h1>
+      <p>Browse verified cars from trusted owners. Instant booking, transparent pricing.</p>
+      <div class="hero-search">
+        <input type="search" class="search-input" id="heroInput"
+          placeholder="Search by brand, model or city..."
+          autocomplete="off"
+          aria-label="Search cars"/>
+        <button type="button" class="btn btn-primary" id="heroSearchBtn">Search</button>
+      </div>
+      <p class="hero-cta">
+        <a href="/cars/" class="btn btn-ghost btn-sm hero-cta-link">Browse all cars</a>
+      </p>
+      <ul class="hero-trust" aria-label="Platform highlights">
+        <li><svg class="icon" aria-hidden="true"><use href="#icon-shield"/></svg> Verified owners</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> Instant booking</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#icon-dollar"/></svg> Clear pricing</li>
+      </ul>
     </div>
-    <p class="hero-cta">
-      <a href="/cars/" class="btn btn-ghost btn-sm">Browse all cars</a>
-    </p>
   </div>
 
   {% include 'includes/popular_cities.html' %}
 
-  <div class="list-toolbar__filters">
-    {% include 'includes/catalog_filters.html' %}
-    <div class="active-filters" id="activeFilters" hidden></div>
-  </div>
-
-  <div class="results-bar">
-    <h2>Available Cars</h2>
-    <span id="carCount" class="results-bar__count text-caption"></span>
-  </div>
-
-  <div id="carsGrid" class="cars-grid">
-    <div class="loading grid-span-full">
-      <span class="spinner spinner-lg"></span> Loading cars...
+  <div class="browse-layout">
+    <div class="list-toolbar__filters">
+      {% include 'includes/catalog_filters.html' %}
+      <div class="active-filters" id="activeFilters" hidden></div>
     </div>
+
+    <div class="results-bar">
+      <h2>Available Cars</h2>
+      <span id="carCount" class="results-bar__count text-caption"></span>
+    </div>
+
+    <div id="carsGrid" class="cars-grid">
+      <div class="loading grid-span-full">
+        <span class="spinner spinner-lg"></span> Loading cars...
+      </div>
+    </div>
+    <div id="carsPagination" class="pagination-wrap" hidden></div>
   </div>
-  <div id="carsPagination" class="pagination-wrap" hidden></div>
 
 </div>
 {% endblock %}
 
+{% block footer %}{% include 'includes/footer.html' %}{% endblock %}
+
 {% block scripts %}
-<script src="{% static 'js/catalog.js' %}"></script>
+<script src="{% static 'js/catalog.js' %}?v=1.2.0"></script>
 {% endblock %}

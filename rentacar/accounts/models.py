@@ -61,3 +61,59 @@ class OwnerProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s Owner Profile"
+
+
+class SocialMediaLink(models.Model):
+    platform_name = models.CharField(max_length=50)
+    url = models.URLField(max_length=500)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['platform_name', 'created_at']
+
+    def __str__(self):
+        return f"{self.platform_name} ({'active' if self.is_active else 'inactive'})"
+
+    @property
+    def name(self):
+        return self.platform_name
+
+    @property
+    def icon(self):
+        # Normalize name for lookup
+        key = (self.platform_name or '').lower().strip()
+        if 'facebook' in key:
+            return 'ti ti-brand-facebook'
+        elif 'instagram' in key:
+            return 'ti ti-brand-instagram'
+        elif 'twitter' in key or key == 'x' or 'twitter/x' in key:
+            return 'ti ti-brand-x'
+        elif 'linkedin' in key:
+            return 'ti ti-brand-linkedin'
+        elif 'youtube' in key:
+            return 'ti ti-brand-youtube'
+        elif 'tiktok' in key:
+            return 'ti ti-brand-tiktok'
+        elif 'pinterest' in key:
+            return 'ti ti-brand-pinterest'
+        elif 'whatsapp' in key:
+            return 'ti ti-brand-whatsapp'
+        else:
+            return 'ti ti-share'  # Fallback icon
+
+
+class HeroBanner(models.Model):
+    title = models.CharField(max_length=120, blank=True)
+    image = models.ImageField(upload_to='hero_banners/%Y/%m/')
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        label = self.title or f'Hero #{self.pk}'
+        return f'{label} ({self.width}x{self.height})' if self.width and self.height else label

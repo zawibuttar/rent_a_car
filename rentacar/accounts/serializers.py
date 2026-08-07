@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from .models import User, CustomerProfile, OwnerProfile
+from .models import User, CustomerProfile, OwnerProfile, SocialMediaLink, HeroBanner
 
 ALLOWED_REGISTER_ROLES = {User.Role.CUSTOMER, User.Role.OWNER}
 
@@ -104,6 +104,87 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'is_verified', 'total_earnings', 'created_at']
 
 
+
+
+class SocialMediaLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialMediaLink
+        fields = ['id', 'platform_name', 'url', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_platform_name(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Platform name is required.')
+        return value
+
+    def validate_url(self, value):
+        value = (value or '').strip()
+        if not value.startswith(('http://', 'https://')):
+            raise serializers.ValidationError('URL must start with http:// or https://')
+        return value
+
+
+class HeroBannerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    orientation_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HeroBanner
+        fields = [
+            'id', 'title', 'image', 'image_url', 'width', 'height',
+            'orientation_label', 'is_active', 'created_at',
+        ]
+        read_only_fields = ['id', 'width', 'height', 'created_at', 'image_url', 'orientation_label']
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get('request')
+        url = obj.image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+    def get_orientation_label(self, obj):
+        if obj.width and obj.height:
+            return f'{obj.width}×{obj.height} landscape'
+        return 'Landscape'
+
+    def validate_image(self, image_file):
+        from rentacar.image_validation import validate_hero_banner_image
+
+        if not image_file and self.instance:
+            return image_file
+        err = validate_hero_banner_image(image_file)
+        if err:
+            raise serializers.ValidationError(err)
+        return image_file
+
+    def validate(self, attrs):
+        if not self.instance and not attrs.get('image'):
+            raise serializers.ValidationError({'image': 'Image file is required.'})
+        return attrs
+
+    def create(self, validated_data):
+        image_file = validated_data.get('image')
+        if image_file:
+            from rentacar.image_validation import read_image_dimensions
+
+            width, height = read_image_dimensions(image_file)
+            validated_data['width'] = width
+            validated_data['height'] = height
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        image_file = validated_data.get('image')
+        if image_file:
+            from rentacar.image_validation import read_image_dimensions
+
+            width, height = read_image_dimensions(image_file)
+            validated_data['width'] = width
+            validated_data['height'] = height
+        return super().update(instance, validated_data)
 
 
 class ChangePasswordSerializer(serializers.Serializer):

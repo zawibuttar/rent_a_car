@@ -1,40 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Admin Panel — RentACar{% endblock %}
 
 {% block content %}
 <div class="dash-layout role-admin">
 
   <!-- ── Sidebar ── -->
-  <aside class="sidebar">
-    <div class="sidebar-user">
-      <div class="sidebar-avatar" id="sAvatar"></div>
-      <div>
-        <div class="sidebar-name" id="sName"></div>
-        <span class="sidebar-role">Admin</span>
-      </div>
-    </div>
-
-    <div class="sidebar-menu">
-      <button class="s-item active" id="btn-overview" onclick="showTab('overview', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-chart"/></svg> Overview
-      </button>
-      <button class="s-item" id="btn-cars" onclick="showTab('cars', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-car"/></svg> All Cars
-      </button>
-      <button class="s-item" id="btn-owners" onclick="showTab('owners', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-users"/></svg>
-        <span>Owner Verifications</span>
-        <span class="s-badge" id="pendingOwnersBadge" hidden></span>
-      </button>
-      <button class="s-item" id="btn-bookings" onclick="showTab('bookings', this)">
-        <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> All Bookings
-      </button>
-      <div class="s-divider"></div>
-      <button class="s-item danger" onclick="doLogout()">
-        <svg class="icon" aria-hidden="true"><use href="#icon-logout"/></svg> Logout
-      </button>
-    </div>
-  </aside>
+  {% include 'includes/admin_sidebar.html' with nav_mode='spa' %}
 
   <!-- ── Main ── -->
   <div class="dash-main">
@@ -122,12 +94,13 @@
           <table>
             <thead>
               <tr>
-                <th>No.</th><th>Car</th><th>Owner</th><th class="col-hide-sm">Type</th>
+                <th>No.</th><th>Car</th><th>Owner</th>
+                <th class="col-hide-sm">Category</th><th class="col-hide-sm">Type</th>
                 <th>Price/day</th><th class="col-hide-sm">Location</th><th>Visibility</th><th>Available</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="allCarsTable">
-              <tr><td colspan="9">
+              <tr><td colspan="10">
                 <div class="loading"><span class="spinner"></span></div>
               </td></tr>
             </tbody>
@@ -159,11 +132,11 @@
               <tr>
                 <th>No.</th><th>Customer</th><th>Car</th><th class="col-hide-sm">Owner</th>
                 <th>Period</th><th class="col-hide-sm">Duration</th>
-                <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th>
+                <th class="col-hide-sm">Type</th><th>Cost</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="allBookingsTable">
-              <tr><td colspan="9">
+              <tr><td colspan="10">
                 <div class="loading"><span class="spinner"></span></div>
               </td></tr>
             </tbody>
@@ -172,6 +145,99 @@
       </div>
       <div id="adminBookingsPagination" class="pagination-wrap" hidden></div>
 
+    </div>
+
+    <!-- ══ ANNOUNCEMENTS TAB ══ -->
+    <div class="tab-panel" id="tab-announcements">
+      <div class="page-head">
+        <div>
+          <h1>Announcements</h1>
+          <p>Broadcast platform updates to customers and owners</p>
+        </div>
+        <button type="button" class="btn btn-primary" id="annCreateBtn">+ New announcement</button>
+      </div>
+
+      <div class="card" id="annAdminForm" hidden>
+        <div class="card-head">
+          <h2 id="annFormTitle">New announcement</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="annTitle">Title</label>
+            <input type="text" id="annTitle" class="form-control" maxlength="200" placeholder="Announcement title">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="annBody">Body</label>
+            <textarea id="annBody" class="form-control" rows="5" placeholder="Message for your audience"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="annImage">Image (optional)</label>
+            <div class="announcement-image-field">
+              <div class="announcement-image-field__preview" id="annImagePreview" hidden>
+                <img id="annImagePreviewImg" src="" alt="">
+                <button type="button" class="btn btn-ghost btn-sm" id="annImageRemoveBtn">Remove image</button>
+              </div>
+              <input type="file" id="annImage" class="form-control" accept="image/*">
+            </div>
+            <p class="form-hint">JPG, PNG, GIF, or WebP up to 10 MB. Shown in the banner and announcement detail.</p>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="annAudience">Audience</label>
+              <select id="annAudience" class="form-control">
+                <option value="all">All users</option>
+                <option value="customers">Customers only</option>
+                <option value="owners">Owners only</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="annExpiresDate">Expires (optional)</label>
+              <div class="datetime-picker">
+                <input type="date" id="annExpiresDate" class="form-control datetime-picker__date" aria-label="Expiry date">
+                <input type="time" id="annExpiresTime" class="form-control datetime-picker__time" aria-label="Expiry time">
+              </div>
+              <p class="form-hint">Leave blank to keep visible until deactivated. If only a date is set, expiry defaults to 11:59 PM.</p>
+            </div>
+          </div>
+          <label class="form-check">
+            <input type="checkbox" id="annActive" checked>
+            <span>Active (visible to audience)</span>
+          </label>
+          <div class="form-actions">
+            <button type="button" class="btn btn-primary" id="annSaveBtn">Save</button>
+            <button type="button" class="btn btn-ghost" id="annCancelBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap table-wrap--scroll-hint">
+          <table>
+            <thead>
+              <tr>
+                <th>No.</th><th>Title</th><th>Audience</th><th>Status</th>
+                <th>Published</th><th class="col-hide-sm">Expires</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="annAdminTable">
+              <tr><td colspan="7">
+                <div class="loading"><span class="spinner"></span></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MESSAGES TAB ══ -->
+    <div class="tab-panel" id="tab-messages">
+      <div class="page-head">
+        <div>
+          <h1>Messages</h1>
+          <p>View and moderate booking conversations across the platform</p>
+        </div>
+      </div>
+      {% include 'includes/messages_panel.html' %}
     </div>
 
     <!-- ══ OWNER APPROVALS TAB ══ -->
@@ -207,12 +273,14 @@
       <div id="adminOwnersPagination" class="pagination-wrap" hidden></div>
 
     </div>
-
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/messaging.js' %}"></script>
+<script src="{% static 'js/announcements_admin.js' %}"></script>
 <script>
 /* ── Guard ──────────────────────────── */
 const user = API.getUser();
@@ -244,6 +312,12 @@ function showTab(name, btn) {
       if (n === 'cars') fetchAdminCarsList();
       if (n === 'owners') fetchAdminOwnersList();
       if (n === 'bookings') fetchAdminBookingsList();
+      if (n === 'announcements') AnnouncementsAdmin.load();
+      if (n === 'messages') {
+        Messaging.activate();
+      } else {
+        Messaging.deactivate();
+      }
     },
   });
 }
@@ -478,7 +552,7 @@ function renderCarsTable(meta) {
   });
 
   if (!meta.items.length) {
-    tbody.innerHTML = '<tr><td colspan="9">'
+    tbody.innerHTML = '<tr><td colspan="10">'
       + tableFilterEmptyHtml('No cars found', 'adminCarsFilters', adminCarsState.statusTab,
         "UI.resetTableFilters('adminCarsFilters','adminCarsFilterTabs');adminCarsState.page=1;adminCarsState.statusTab='all';fetchAdminCarsList();")
       + '</td></tr>';
@@ -506,7 +580,10 @@ function renderCarsTable(meta) {
         : '')
       + '</td>'
       + '<td class="text-small">' + UI.escHtml(UI.ownerDisplayName(c.owner || c)) + '</td>'
-      + '<td class="col-hide-sm"><span class="badge badge-blue">' + UI.escHtml(c.car_type) + '</span></td>'
+      + '<td class="col-hide-sm"><span class="badge badge-blue">'
+      + UI.escHtml(c.category_display || UI.formatCategoryLabel(c.category)) + '</span></td>'
+      + '<td class="col-hide-sm"><span class="badge badge-gray">'
+      + UI.escHtml(c.car_type_display || UI.formatCarType(c.car_type)) + '</span></td>'
       + '<td class="td-money">$'
       + parseFloat(c.price_per_day).toFixed(2) + '</td>'
       + '<td class="td-meta col-hide-sm">' + UI.escHtml(c.location) + '</td>'
@@ -531,8 +608,9 @@ function renderCarsTable(meta) {
 /* ══ ALL BOOKINGS ═══════════════════ */
 async function fetchAdminBookingsList() {
   var tbody = document.getElementById('allBookingsTable');
-  tbody.innerHTML = UI.tableLoadingRow(9);
+  tbody.innerHTML = UI.tableLoadingRow(10);
   try {
+    await Messaging.fetchThreads().catch(function () {});
     var url = adminListQuery('/api/bookings/admin/all/', adminBookingsState, 'adminBookingsFilters', 'bookings');
     var meta = await UI.fetchListPage(url, adminBookingsState.page, UI_PAGE.table);
     adminBookingsState.page = meta.page;
@@ -553,7 +631,7 @@ function renderBookingsTable(meta) {
   });
 
   if (!meta.items.length) {
-    tbody.innerHTML = '<tr><td colspan="9">'
+    tbody.innerHTML = '<tr><td colspan="10">'
       + tableFilterEmptyHtml('No bookings found', 'adminBookingsFilters', adminBookingsState.statusTab,
         "UI.resetTableFilters('adminBookingsFilters','adminBookingsFilterTabs');adminBookingsState.page=1;adminBookingsState.statusTab='';fetchAdminBookingsList();")
       + '</td></tr>';
@@ -562,7 +640,7 @@ function renderBookingsTable(meta) {
   }
 
   tbody.innerHTML = meta.items.map(function(b, i) {
-    return '<tr>'
+    return '<tr data-booking-row="' + b.id + '">'
       + UI.tdSerial(meta.rangeStart + i)
       + '<td>'
       + '<strong>' + UI.escHtml(b.customer.username) + '</strong>'
@@ -583,6 +661,8 @@ function renderBookingsTable(meta) {
       + '<td class="td-money">$'
       + parseFloat(b.total_cost).toFixed(2) + '</td>'
       + '<td>' + statusBadge(b.status) + '</td>'
+      + '<td><button type="button" class="btn btn-ghost btn-sm" '
+      + 'onclick="Messaging.openThread(' + b.id + ')">Message</button></td>'
       + '</tr>';
   }).join('');
 
@@ -667,7 +747,6 @@ async function updateOwnerStatus(id, isVerified) {
     loadOverview(true);
   } catch(err) { toast(err.message, 'error'); }
 }
-
 /* ── Boot ───────────────────────────── */
 UI.initTableFilters({
   toolbarId: 'adminCarsFilters',
@@ -711,8 +790,10 @@ UI.initTableFilters({
     fetchAdminOwnersList();
   },
 });
-if (!UI.openDashboardTabFromHash()) {
+if (!UI.bootDashboardTab()) {
   loadOverview();
 }
+Messaging.mount();
+AnnouncementsAdmin.mount();
 </script>
 {% endblock %}
